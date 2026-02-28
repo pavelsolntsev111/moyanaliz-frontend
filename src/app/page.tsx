@@ -5,6 +5,7 @@ import UploadZone from "@/components/UploadZone";
 import SexAgeModal from "@/components/SexAgeModal";
 import AnalyzingAnimation from "@/components/AnalyzingAnimation";
 import PaywallScreen from "@/components/PaywallScreen";
+import Link from "next/link";
 import LabLogos from "@/components/LabLogos";
 import TrustSections from "@/components/TrustSections";
 import { uploadFile, createPayment } from "@/lib/api";
@@ -57,7 +58,28 @@ export default function Home() {
   );
 
   return (
-    <div className="max-w-2xl mx-auto px-4 py-8 sm:py-14">
+    <div className="max-w-4xl mx-auto px-4 py-8 sm:py-14">
+      {/* Nav */}
+      {step === "upload" && (
+        <nav className="flex items-center justify-center gap-4 sm:gap-6 mb-8 text-sm flex-wrap">
+          <a href="#how" className="text-muted hover:text-primary transition">
+            Как это работает
+          </a>
+          <a href="#report" className="text-muted hover:text-primary transition">
+            Пример отчёта
+          </a>
+          <a href="#safety" className="text-muted hover:text-primary transition">
+            Безопасность
+          </a>
+          <a href="#faq" className="text-muted hover:text-primary transition">
+            FAQ
+          </a>
+          <Link href="/blog" className="text-muted hover:text-primary transition">
+            Блог
+          </Link>
+        </nav>
+      )}
+
       {/* Header */}
       <div className="text-center mb-10">
         <div className="inline-flex items-center gap-2 mb-4">
@@ -77,9 +99,9 @@ export default function Home() {
             Мой <span className="text-primary">Анализ</span>
           </h1>
         </div>
-        <p className="text-muted text-base sm:text-lg max-w-md mx-auto">
-          Загрузите результаты анализов — получите понятную расшифровку
-          с&nbsp;помощью ИИ
+        <p className="text-muted text-base sm:text-lg max-w-xl mx-auto">
+          Подробное объяснение медицинских анализов от&nbsp;искусственного
+          интеллекта, основанного на&nbsp;экспертизе лучших мировых врачей
         </p>
       </div>
 
@@ -123,7 +145,7 @@ export default function Home() {
       {/* How it works */}
       {step === "upload" && (
         <>
-          <div className="mt-12 grid gap-5 sm:grid-cols-3">
+          <div id="how" className="mt-12 grid gap-5 sm:grid-cols-3 scroll-mt-8">
             {[
               {
                 icon: (

@@ -21,7 +21,7 @@ export default function PaywallScreen({ orderId, onPay, loading }: Props) {
   const emailValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 
   return (
-    <div className="max-w-lg mx-auto px-4 py-8">
+    <div className="max-w-2xl mx-auto px-4 py-8">
       <div className="text-center mb-6">
         <div className="inline-flex items-center gap-2 bg-success/10 text-success px-4 py-1.5 rounded-full text-sm font-medium mb-4">
           <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">

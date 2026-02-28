@@ -45,7 +45,7 @@ export default function ResultPage({ params }: Props) {
 
   if (error) {
     return (
-      <div className="max-w-lg mx-auto px-4 py-16 text-center">
+      <div className="max-w-2xl mx-auto px-4 py-16 text-center">
         <h1 className="text-xl font-bold text-danger mb-2">Ошибка</h1>
         <p className="text-muted">{error}</p>
       </div>
@@ -54,7 +54,7 @@ export default function ResultPage({ params }: Props) {
 
   if (!status) {
     return (
-      <div className="max-w-lg mx-auto px-4 py-16 text-center">
+      <div className="max-w-2xl mx-auto px-4 py-16 text-center">
         <Spinner />
         <p className="mt-4 text-muted">Загрузка...</p>
       </div>
@@ -64,7 +64,7 @@ export default function ResultPage({ params }: Props) {
   // State 1: Awaiting payment confirmation
   if (status.payment_status === "awaiting" || status.payment_status === "pending") {
     return (
-      <div className="max-w-lg mx-auto px-4 py-16 text-center">
+      <div className="max-w-2xl mx-auto px-4 py-16 text-center">
         <Spinner />
         <h1 className="text-xl font-semibold mt-4">Ожидаем подтверждение оплаты...</h1>
         <p className="text-sm text-muted mt-2">
@@ -77,7 +77,7 @@ export default function ResultPage({ params }: Props) {
   // State 2: Payment failed
   if (status.payment_status === "failed") {
     return (
-      <div className="max-w-lg mx-auto px-4 py-16 text-center">
+      <div className="max-w-2xl mx-auto px-4 py-16 text-center">
         <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-danger/10 flex items-center justify-center">
           <svg className="w-8 h-8 text-danger" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M6 18 18 6M6 6l12 12" />
@@ -100,7 +100,7 @@ export default function ResultPage({ params }: Props) {
   // State 3: Processing
   if (status.processing_status === "processing" || status.processing_status === "not_started") {
     return (
-      <div className="max-w-lg mx-auto px-4 py-16 text-center">
+      <div className="max-w-2xl mx-auto px-4 py-16 text-center">
         <Spinner />
         <h1 className="text-xl font-semibold mt-4">Анализируем ваши результаты...</h1>
         <p className="text-sm text-muted mt-2">Обычно это занимает 30–60 секунд</p>
@@ -114,7 +114,7 @@ export default function ResultPage({ params }: Props) {
   // State 4: Completed
   if (status.processing_status === "completed") {
     return (
-      <div className="max-w-lg mx-auto px-4 py-16 text-center">
+      <div className="max-w-2xl mx-auto px-4 py-16 text-center">
         <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-success/10 flex items-center justify-center">
           <svg className="w-8 h-8 text-success" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
             <path strokeLinecap="round" strokeLinejoin="round" d="m4.5 12.75 6 6 9-13.5" />
@@ -144,7 +144,7 @@ export default function ResultPage({ params }: Props) {
 
   // State 5: Error
   return (
-    <div className="max-w-lg mx-auto px-4 py-16 text-center">
+    <div className="max-w-2xl mx-auto px-4 py-16 text-center">
       <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-danger/10 flex items-center justify-center">
         <svg className="w-8 h-8 text-danger" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
           <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m9-.75a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9 3.75h.008v.008H12v-.008Z" />

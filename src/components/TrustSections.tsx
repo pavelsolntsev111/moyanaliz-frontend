@@ -31,15 +31,36 @@ function StatsSection() {
 /* ─── Block 2: Report example ─── */
 function ReportSection() {
   const rows = [
-    { name: "Гемоглобин", value: "142 г/л", status: "normal" as const },
-    { name: "Глюкоза", value: "6.2 ммоль/л", status: "warning" as const },
-    { name: "Холестерин", value: "7.8 ммоль/л", status: "danger" as const },
+    {
+      name: "Гемоглобин",
+      value: "142 г/л",
+      status: "normal" as const,
+      what: "Гемоглобин — белок в эритроцитах, который переносит кислород от лёгких ко всем органам и тканям. При низком гемоглобине клетки получают меньше кислорода — появляются слабость, головокружение и одышка.",
+      interpretation:
+        "В пределах нормы (130–160 г/л для мужчин). Кислородная ёмкость крови достаточна, признаков анемии нет. Уровень железа и витамина B12, вероятно, в порядке. Повторный контроль — при плановом обследовании через 6–12 месяцев.",
+    },
+    {
+      name: "Глюкоза",
+      value: "6.2 ммоль/л",
+      status: "warning" as const,
+      what: "Глюкоза — основной источник энергии для клеток. Поступает из углеводов: хлеб, крупы, фрукты, сладости. Уровень натощак показывает, насколько эффективно организм регулирует сахар в крови с помощью инсулина.",
+      interpretation:
+        "Выше верхней границы нормы натощак (референс 3.9–5.5 ммоль/л). Такой уровень может указывать на преддиабет — состояние, при котором углеводный обмен уже нарушен, но диабета ещё нет. Рекомендуется сдать гликированный гемоглобин (HbA1c) — он покажет средний уровень сахара за последние 3 месяца. До визита к врачу имеет смысл сократить быстрые углеводы и добавить регулярную физическую активность.",
+    },
+    {
+      name: "Холестерин общий",
+      value: "7.8 ммоль/л",
+      status: "danger" as const,
+      what: "Холестерин — жироподобное вещество, необходимое для построения клеточных мембран и выработки гормонов. Однако избыток холестерина откладывается на стенках артерий, сужает их просвет и со временем может привести к инфаркту или инсульту.",
+      interpretation:
+        "Значительно выше нормы (референс до 5.2 ммоль/л). При таком уровне повышен риск развития атеросклероза — особенно если есть курение, гипертония или диабет в семье. Необходим развёрнутый липидный профиль: ЛПНП («плохой» холестерин), ЛПВП («хороший»), триглицериды — чтобы понять, за счёт какой фракции повышение. Обязательно обсудите результат с терапевтом или кардиологом.",
+    },
   ];
 
   const statusColor = {
-    normal: "bg-success/15 text-success",
-    warning: "bg-warning/15 text-warning",
-    danger: "bg-danger/15 text-danger",
+    normal: "bg-success/15 text-success border-success/20",
+    warning: "bg-warning/15 text-warning border-warning/20",
+    danger: "bg-danger/15 text-danger border-danger/20",
   };
 
   const statusLabel = {
@@ -48,13 +69,19 @@ function ReportSection() {
     danger: "Повышен",
   };
 
+  const dotColor = {
+    normal: "bg-success",
+    warning: "bg-warning",
+    danger: "bg-danger",
+  };
+
   return (
-    <section className="mt-10">
+    <section id="report" className="mt-10 scroll-mt-8">
       <h2 className="text-lg font-semibold text-center mb-4">
         Что вы получите
       </h2>
-      <div className="rounded-2xl border border-border bg-white p-5 sm:p-6 shadow-sm max-w-md mx-auto">
-        <div className="flex items-center gap-2 mb-4">
+      <div className="rounded-2xl border border-border bg-white p-5 sm:p-6 shadow-sm">
+        <div className="flex items-center gap-2 mb-5">
           <svg className="w-5 h-5 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z" />
           </svg>
@@ -63,31 +90,41 @@ function ReportSection() {
           </span>
         </div>
 
-        <div className="space-y-2 mb-4">
+        <div className="space-y-4">
           {rows.map((r) => (
-            <div
-              key={r.name}
-              className="flex items-center justify-between text-sm py-2 px-3 rounded-lg bg-card"
-            >
-              <span className="text-foreground">{r.name}</span>
-              <div className="flex items-center gap-2">
-                <span className="text-muted">{r.value}</span>
-                <span
-                  className={`text-xs font-medium px-2 py-0.5 rounded-full ${statusColor[r.status]}`}
-                >
-                  {statusLabel[r.status]}
-                </span>
+            <div key={r.name} className="rounded-xl bg-card p-4">
+              <div className="flex items-center justify-between mb-2">
+                <div className="flex items-center gap-2">
+                  <span className={`w-2 h-2 rounded-full shrink-0 ${dotColor[r.status]}`} />
+                  <span className="text-sm font-medium text-foreground">
+                    {r.name}
+                  </span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-sm text-muted">{r.value}</span>
+                  <span
+                    className={`text-xs font-medium px-2 py-0.5 rounded-full ${statusColor[r.status]}`}
+                  >
+                    {statusLabel[r.status]}
+                  </span>
+                </div>
               </div>
+              <p className="text-xs leading-relaxed text-foreground/60 mb-1.5 ml-4">
+                {r.what}
+              </p>
+              <p className="text-xs leading-relaxed text-foreground/80 pl-4 border-l-2 border-primary/30 ml-0.5 font-medium">
+                {r.interpretation}
+              </p>
             </div>
           ))}
         </div>
 
-        <div className="space-y-2 text-sm text-muted">
+        <div className="mt-5 pt-4 border-t border-border flex flex-col sm:flex-row gap-3 text-sm text-muted">
           <div className="flex items-start gap-2">
             <svg className="w-4 h-4 text-primary mt-0.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
               <path strokeLinecap="round" strokeLinejoin="round" d="m4.5 12.75 6 6 9-13.5" />
             </svg>
-            Интерпретация простым языком по каждому показателю
+            Такая расшифровка по каждому показателю
           </div>
           <div className="flex items-start gap-2">
             <svg className="w-4 h-4 text-primary mt-0.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -135,7 +172,7 @@ function SecuritySection() {
 
   return (
     <section className="mt-10">
-      <h2 className="text-lg font-semibold text-center mb-4">Безопасность</h2>
+      <h2 id="safety" className="text-lg font-semibold text-center mb-4 scroll-mt-8">Безопасность</h2>
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         {items.map((item) => (
           <div
@@ -177,10 +214,10 @@ function FAQSection() {
 
   return (
     <section className="mt-10">
-      <h2 className="text-lg font-semibold text-center mb-4">
+      <h2 id="faq" className="text-lg font-semibold text-center mb-4 scroll-mt-8">
         Частые вопросы
       </h2>
-      <div className="space-y-2 max-w-lg mx-auto">
+      <div className="space-y-2">
         {faqItems.map((item, i) => {
           const isOpen = openIndex === i;
           return (
