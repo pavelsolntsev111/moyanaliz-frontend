@@ -54,57 +54,70 @@ export default function UploadZone({ onFileSelected }: Props) {
   );
 
   return (
-    <div
-      onDragOver={(e) => {
-        e.preventDefault();
-        setDragActive(true);
-      }}
-      onDragLeave={() => setDragActive(false)}
-      onDrop={handleDrop}
-      onClick={() => inputRef.current?.click()}
-      className={`
-        relative cursor-pointer rounded-2xl border-2 border-dashed p-10 text-center transition-all
-        ${
-          dragActive
-            ? "border-primary bg-primary/5 scale-[1.01]"
-            : "border-border hover:border-primary/50 hover:bg-card"
-        }
-      `}
-    >
-      <input
-        ref={inputRef}
-        type="file"
-        className="hidden"
-        accept=".pdf,.jpg,.jpeg,.png,.webp,.heic"
-        onChange={(e) => {
-          const file = e.target.files?.[0];
-          if (file) handleFile(file);
+    <div className="flex flex-col h-full">
+      <div
+        onDragOver={(e) => {
+          e.preventDefault();
+          setDragActive(true);
         }}
-      />
+        onDragLeave={() => setDragActive(false)}
+        onDrop={handleDrop}
+        onClick={() => inputRef.current?.click()}
+        className={`
+          relative cursor-pointer rounded-2xl border-2 border-dashed px-8 text-center transition-all flex-1 flex items-center justify-center
+          ${
+            dragActive
+              ? "border-primary bg-primary/5 scale-[1.01]"
+              : "border-border hover:border-primary/50 hover:bg-card"
+          }
+        `}
+      >
+        <input
+          ref={inputRef}
+          type="file"
+          className="hidden"
+          accept=".pdf,.jpg,.jpeg,.png,.webp,.heic"
+          onChange={(e) => {
+            const file = e.target.files?.[0];
+            if (file) handleFile(file);
+          }}
+        />
 
-      <div className="flex flex-col items-center gap-3">
-        <svg
-          className="w-12 h-12 text-primary"
-          fill="none"
-          viewBox="0 0 24 24"
-          stroke="currentColor"
-          strokeWidth={1.5}
-        >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            d="M12 16.5V9.75m0 0 3 3m-3-3-3 3M6.75 19.5a4.5 4.5 0 0 1-1.41-8.775 5.25 5.25 0 0 1 10.233-2.33 3 3 0 0 1 3.758 3.848A3.752 3.752 0 0 1 18 19.5H6.75Z"
-          />
-        </svg>
-        <p className="text-lg font-medium">
-          Перетащите файл сюда или нажмите для выбора
-        </p>
-        <p className="text-sm text-muted">PDF, JPEG, PNG, WebP, HEIC до 20 МБ</p>
+        <div className="flex flex-col items-center gap-3">
+          <svg
+            className="w-10 h-10 text-primary"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+            strokeWidth={1.5}
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              d="M12 16.5V9.75m0 0 3 3m-3-3-3 3M6.75 19.5a4.5 4.5 0 0 1-1.41-8.775 5.25 5.25 0 0 1 10.233-2.33 3 3 0 0 1 3.758 3.848A3.752 3.752 0 0 1 18 19.5H6.75Z"
+            />
+          </svg>
+          <p className="text-base text-muted">
+            Перетащите файл сюда или нажмите для выбора
+          </p>
+          <p className="text-sm text-muted/70">PDF, JPEG, PNG, WebP, HEIC до 20 МБ</p>
+        </div>
+
+        {error && (
+          <p className="mt-3 text-sm text-danger font-medium">{error}</p>
+        )}
       </div>
 
-      {error && (
-        <p className="mt-3 text-sm text-danger font-medium">{error}</p>
-      )}
+      {/* CTA */}
+      <button
+        onClick={() => inputRef.current?.click()}
+        className="w-full mt-3 py-3.5 rounded-xl bg-primary text-white font-bold text-lg hover:bg-primary-dark transition"
+      >
+        Расшифровать бесплатно
+      </button>
+      <p className="mt-2 text-center text-sm text-muted">
+        Бесплатно и без регистрации, за 2 минуты
+      </p>
     </div>
   );
 }

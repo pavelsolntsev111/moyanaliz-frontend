@@ -8,7 +8,7 @@ import PaywallScreen from "@/components/PaywallScreen";
 import Link from "next/link";
 import LabLogos from "@/components/LabLogos";
 import TrustSections from "@/components/TrustSections";
-import { uploadFile, createPayment } from "@/lib/api";
+import { uploadFile, createPayment, applyPromo } from "@/lib/api";
 
 type Step = "upload" | "modal" | "analyzing" | "paywall";
 
@@ -57,13 +57,27 @@ export default function Home() {
     [orderId]
   );
 
+  const handlePromo = useCallback(
+    async (email: string, promoCode: string) => {
+      setPayLoading(true);
+      try {
+        const res = await applyPromo(orderId, email, promoCode);
+        window.location.href = res.redirect_url;
+      } catch (e) {
+        setError(e instanceof Error ? e.message : "Ошибка применения промокода");
+        setPayLoading(false);
+      }
+    },
+    [orderId]
+  );
+
   return (
-    <div className="max-w-4xl mx-auto px-4 py-8 sm:py-14">
+    <div className="max-w-6xl mx-auto px-4 sm:px-8 py-6 sm:py-10">
       {/* Nav */}
       {step === "upload" && (
-        <nav className="flex items-center justify-center gap-4 sm:gap-6 mb-8 text-sm flex-wrap">
+        <nav className="flex items-center justify-center gap-5 sm:gap-8 mb-6 text-base flex-wrap">
           <a href="#how" className="text-muted hover:text-primary transition">
-            Как это работает
+            Что вы получите
           </a>
           <a href="#report" className="text-muted hover:text-primary transition">
             Пример отчёта
@@ -81,9 +95,9 @@ export default function Home() {
       )}
 
       {/* Header */}
-      <div className="text-center mb-10">
-        <div className="inline-flex items-center gap-2 mb-4">
-          <svg width="36" height="36" viewBox="0 0 36 36" fill="none">
+      <div className="text-center mb-8">
+        <div className="inline-flex items-center gap-3 mb-4">
+          <svg width="44" height="44" viewBox="0 0 36 36" fill="none">
             <rect width="36" height="36" rx="10" fill="#00b4bc" />
             <path
               d="M10 12h3v3h-3v-3zm0 5h3v3h-3v-3zm0 5h3v3h-3v-3zm5-10h8v2h-8v-2zm0 5h8v2h-8v-2zm0 5h6v2h-6v-2z"
@@ -95,13 +109,17 @@ export default function Home() {
               fill="#fff"
             />
           </svg>
-          <h1 className="text-3xl sm:text-4xl font-bold">
+          <span className="text-2xl sm:text-3xl font-bold">
             Мой <span className="text-primary">Анализ</span>
-          </h1>
+          </span>
         </div>
-        <p className="text-muted text-base sm:text-lg max-w-xl mx-auto">
-          Подробное объяснение медицинских анализов от&nbsp;искусственного
-          интеллекта, основанного на&nbsp;экспертизе лучших мировых врачей
+        <h1 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold leading-tight max-w-3xl mx-auto">
+          Получили анализы и&nbsp;переживаете из-за&nbsp;цифр?
+          <br />
+          <span className="text-primary">Расшифруем за&nbsp;2&nbsp;минуты</span>
+        </h1>
+        <p className="text-muted text-lg sm:text-xl max-w-2xl mx-auto mt-3">
+          Поможем понять, стоит&nbsp;ли переживать и&nbsp;нужно&nbsp;ли идти к&nbsp;врачу.
         </p>
       </div>
 
@@ -116,8 +134,6 @@ export default function Home() {
           </button>
         </div>
       )}
-
-      {step === "upload" && <UploadZone onFileSelected={handleFileSelected} />}
 
       {step === "modal" && file && (
         <SexAgeModal
@@ -138,59 +154,64 @@ export default function Home() {
         <PaywallScreen
           orderId={orderId}
           onPay={handlePay}
+          onPromo={handlePromo}
           loading={payLoading}
         />
       )}
 
-      {/* How it works */}
+      {/* Hero: cards left + upload right */}
       {step === "upload" && (
         <>
-          <div id="how" className="mt-12 grid gap-5 sm:grid-cols-3 scroll-mt-8">
-            {[
-              {
-                icon: (
-                  <svg className="w-8 h-8 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 16.5V9.75m0 0 3 3m-3-3-3 3M6.75 19.5a4.5 4.5 0 0 1-1.41-8.775 5.25 5.25 0 0 1 10.233-2.33 3 3 0 0 1 3.758 3.848A3.752 3.752 0 0 1 18 19.5H6.75Z" />
-                  </svg>
-                ),
-                title: "Загрузите",
-                desc: "PDF или фото анализов из лаборатории",
-              },
-              {
-                icon: (
-                  <svg className="w-8 h-8 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M9.75 3.104v5.714a2.25 2.25 0 0 1-.659 1.591L5 14.5M9.75 3.104c-.251.023-.501.05-.75.082m.75-.082a24.301 24.301 0 0 1 4.5 0m0 0v5.714c0 .597.237 1.17.659 1.591L19.8 15.3M14.25 3.104c.251.023.501.05.75.082M19.8 15.3l-1.57.393A9.065 9.065 0 0 1 12 15a9.065 9.065 0 0 0-6.23.693L5 14.5m14.8.8 1.402 1.402c1.232 1.232.65 3.318-1.067 3.611A48.309 48.309 0 0 1 12 21c-2.773 0-5.491-.235-8.135-.687-1.718-.293-2.3-2.379-1.067-3.61L5 14.5" />
-                  </svg>
-                ),
-                title: "Получите расшифровку",
-                desc: "ИИ проанализирует каждый показатель",
-              },
-              {
-                icon: (
-                  <svg className="w-8 h-8 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M20.25 8.511c.884.284 1.5 1.128 1.5 2.097v4.286c0 1.136-.847 2.1-1.98 2.193-.34.027-.68.052-1.02.072v3.091l-3-3c-1.354 0-2.694-.055-4.02-.163a2.115 2.115 0 0 1-.825-.242m9.345-8.334a2.126 2.126 0 0 0-.476-.095 48.64 48.64 0 0 0-8.048 0c-1.131.094-1.976 1.057-1.976 2.192v4.286c0 .837.46 1.58 1.155 1.951m9.345-8.334V6.637c0-1.621-1.152-3.026-2.76-3.235A48.455 48.455 0 0 0 11.25 3c-2.115 0-4.198.137-6.24.402-1.608.209-2.76 1.614-2.76 3.235v6.226c0 1.621 1.152 3.026 2.76 3.235.577.075 1.157.14 1.74.194V21l4.155-4.155" />
-                  </svg>
-                ),
-                title: "Обсудите с врачом",
-                desc: "Подготовленные вопросы для визита",
-              },
-            ].map((item) => (
-              <div
-                key={item.title}
-                className="text-center p-6 rounded-2xl bg-primary-light/50 border border-primary/10"
-              >
-                <div className="flex justify-center mb-3">{item.icon}</div>
-                <h3 className="font-semibold mb-1">{item.title}</h3>
-                <p className="text-sm text-muted">{item.desc}</p>
-              </div>
-            ))}
+          <div id="how" className="grid gap-6 lg:grid-cols-2 scroll-mt-8">
+            {/* Left: 3 benefit cards */}
+            <div className="grid grid-rows-3 gap-5">
+              {[
+                {
+                  icon: (
+                    <svg className="w-7 h-7 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M12 6.042A8.967 8.967 0 0 0 6 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 0 1 6 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 0 1 6-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0 0 18 18a8.967 8.967 0 0 0-6 2.292m0-14.25v14.25" />
+                    </svg>
+                  ),
+                  text: "Объясним каждый показатель",
+                },
+                {
+                  icon: (
+                    <svg className="w-7 h-7 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z" />
+                    </svg>
+                  ),
+                  text: "Оценим, насколько это серьёзно",
+                },
+                {
+                  icon: (
+                    <svg className="w-7 h-7 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M9 6.75V15m6-6v8.25m.503 3.498 4.875-2.437c.381-.19.622-.58.622-1.006V4.82c0-.836-.88-1.38-1.628-1.006l-3.869 1.934c-.317.159-.69.159-1.006 0L9.503 3.252a1.125 1.125 0 0 0-1.006 0L3.622 5.689C3.24 5.88 3 6.27 3 6.695V19.18c0 .836.88 1.38 1.628 1.006l3.869-1.934c.317-.159.69-.159 1.006 0l4.994 2.497c.317.158.69.158 1.006 0Z" />
+                    </svg>
+                  ),
+                  text: "Подскажем, что делать дальше",
+                },
+              ].map((item) => (
+                <div
+                  key={item.text}
+                  className="flex items-center gap-4 p-4 rounded-2xl bg-primary-light/50 border border-primary/10"
+                >
+                  <div className="shrink-0">{item.icon}</div>
+                  <span className="text-base font-semibold">{item.text}</span>
+                </div>
+              ))}
+            </div>
+
+            {/* Right: upload */}
+            <div className="flex flex-col h-full">
+              <UploadZone onFileSelected={handleFileSelected} />
+            </div>
           </div>
 
           <LabLogos />
 
           <TrustSections />
 
-          <p className="text-xs text-muted text-center mt-10">
+          <p className="text-sm text-muted text-center mt-12">
             Сервис носит информационный характер и не является медицинской услугой
           </p>
         </>

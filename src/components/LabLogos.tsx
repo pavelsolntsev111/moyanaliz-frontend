@@ -2,8 +2,8 @@ import Image from "next/image";
 
 export default function LabLogos() {
   return (
-    <div className="mt-10">
-      <p className="text-center text-sm text-muted mb-5">
+    <div className="mt-14">
+      <p className="text-center text-base text-muted mb-3">
         Расшифровываем и поясняем анализы:
       </p>
       <div className="flex items-center justify-center gap-6 sm:gap-10 flex-wrap">
@@ -63,7 +63,7 @@ export default function LabLogos() {
           />
         </div>
       </div>
-      <p className="text-center text-xs text-muted mt-4">
+      <p className="text-center text-sm text-muted mt-2">
         а также любые другие лаборатории
       </p>
     </div>

@@ -13,6 +13,10 @@ export default function PrivacyPage() {
         <p>
           Дата последнего обновления: 1 марта 2026 г.
         </p>
+        <p>
+          Оператор персональных данных — ООО «Настоящий Полет» (ОГРН 1247700663363,
+          ИНН 9701297934, КПП 770101001), управляющее сервисом «Мой Анализ» (moyanaliz.ru).
+        </p>
 
         <h2 className="text-lg font-semibold mt-6">1. Какие данные мы собираем</h2>
         <ul className="list-disc pl-5 space-y-1">
@@ -53,6 +57,15 @@ export default function PrivacyPage() {
         <p>
           Вы можете запросить удаление своих данных, написав на{" "}
           <a href="mailto:support@moyanaliz.ru" className="text-primary underline">support@moyanaliz.ru</a>.
+        </p>
+
+        <h2 className="text-lg font-semibold mt-6">7. Реквизиты оператора</h2>
+        <p>
+          ООО «Настоящий Полет»<br />
+          ОГРН: 1247700663363<br />
+          ИНН: 9701297934<br />
+          КПП: 770101001<br />
+          Email: <a href="mailto:support@moyanaliz.ru" className="text-primary underline">support@moyanaliz.ru</a>
         </p>
       </div>
     </div>

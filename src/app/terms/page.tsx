@@ -17,7 +17,11 @@ export default function TermsPage() {
         <h2 className="text-lg font-semibold mt-6">1. Общие положения</h2>
         <p>
           Сервис «Мой Анализ» (далее — «Сервис»), расположенный по адресу moyanaliz.ru,
-          предоставляет <strong>информационную услугу</strong> по расшифровке результатов
+          принадлежит и управляется ООО «Настоящий Полет» (ОГРН 1247700663363,
+          ИНН 9701297934, КПП 770101001).
+        </p>
+        <p>
+          Сервис предоставляет <strong>информационную услугу</strong> по расшифровке результатов
           лабораторных анализов с использованием технологий искусственного интеллекта.
         </p>
         <p>
@@ -54,7 +58,13 @@ export default function TermsPage() {
           пользователь может обратиться на support@moyanaliz.ru для решения вопроса.
         </p>
 
-        <h2 className="text-lg font-semibold mt-6">6. Контакты</h2>
+        <h2 className="text-lg font-semibold mt-6">6. Реквизиты и контакты</h2>
+        <p>
+          ООО «Настоящий Полет»<br />
+          ОГРН: 1247700663363<br />
+          ИНН: 9701297934<br />
+          КПП: 770101001
+        </p>
         <p>
           По всем вопросам: <a href="mailto:support@moyanaliz.ru" className="text-primary underline">support@moyanaliz.ru</a>
         </p>

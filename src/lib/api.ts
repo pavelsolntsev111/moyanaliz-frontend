@@ -48,6 +48,23 @@ export async function createPayment(
   });
 }
 
+export interface PromoResponse {
+  ok: boolean;
+  redirect_url: string;
+}
+
+export async function applyPromo(
+  orderId: string,
+  email: string,
+  promoCode: string
+): Promise<PromoResponse> {
+  return request<PromoResponse>("/api/v1/payment/promo", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ order_id: orderId, email, promo_code: promoCode }),
+  });
+}
+
 export interface OrderStatus {
   order_id: string;
   payment_status: string;
