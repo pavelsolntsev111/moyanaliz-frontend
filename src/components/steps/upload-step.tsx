@@ -157,7 +157,13 @@ export function UploadStep({ onFileSelected }: UploadStepProps) {
 
         {/* Labs - on first screen for trust */}
         <div className="mt-10">
-          <p className="text-sm font-medium text-muted-foreground">
+          <p className="text-base font-semibold text-foreground">
+            Анализ с помощью искусственного интеллекта
+          </p>
+          <p className="mt-1 text-sm text-muted-foreground">
+            ИИ прошёл обучение на результатах лучших мировых исследований
+          </p>
+          <p className="mt-4 text-sm font-medium text-muted-foreground">
             Работаем с результатами из любых лабораторий
           </p>
           <div className="mt-5 flex items-center justify-center gap-10">
