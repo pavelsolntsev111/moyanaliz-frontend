@@ -204,18 +204,18 @@ export function UploadStep({ onFileSelected }: UploadStepProps) {
           <div className="grid gap-8 sm:grid-cols-3 text-center">
             <div className="flex flex-col items-center gap-2">
               <Users className="h-6 w-6 text-primary" />
-              <p className="text-2xl font-bold text-foreground">10 000+</p>
-              <p className="text-sm text-muted-foreground">расшифровок выполнено</p>
+              <p className="text-2xl font-bold text-foreground">Более 10 тыс</p>
+              <p className="text-sm text-muted-foreground">Расшифровок выполнено</p>
             </div>
             <div className="flex flex-col items-center gap-2">
               <BarChart3 className="h-6 w-6 text-primary" />
-              <p className="text-2xl font-bold text-foreground">98%</p>
-              <p className="text-sm text-muted-foreground">точность распознавания</p>
+              <p className="text-2xl font-bold text-foreground">99%+</p>
+              <p className="text-sm text-muted-foreground">Точность распознавания</p>
             </div>
             <div className="flex flex-col items-center gap-2">
               <Star className="h-6 w-6 text-primary" />
               <p className="text-2xl font-bold text-foreground">4.8</p>
-              <p className="text-sm text-muted-foreground">средняя оценка пользователей</p>
+              <p className="text-sm text-muted-foreground">Средняя оценка пользователей</p>
             </div>
           </div>
         </div>
