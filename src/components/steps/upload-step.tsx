@@ -160,17 +160,17 @@ export function UploadStep({ onFileSelected }: UploadStepProps) {
           <p className="text-sm font-medium text-muted-foreground">
             Работаем с результатами из любых лабораторий
           </p>
-          <div className="mt-5 flex flex-wrap items-center justify-center gap-8">
+          <div className="mt-5 flex items-center justify-center gap-10">
             {labs.map((lab) => (
               <div
                 key={lab.name}
-                className="relative h-24 w-56 grayscale opacity-70 transition-all hover:grayscale-0 hover:opacity-100 sm:h-28 sm:w-64"
+                className="relative h-10 w-32 grayscale opacity-70 transition-all hover:grayscale-0 hover:opacity-100 sm:h-12 sm:w-40"
               >
                 <Image
                   src={lab.logo}
                   alt={lab.name}
                   fill
-                  className="object-contain"
+                  className="object-contain mix-blend-multiply"
                 />
               </div>
             ))}
