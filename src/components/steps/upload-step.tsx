@@ -164,13 +164,13 @@ export function UploadStep({ onFileSelected }: UploadStepProps) {
             {labs.map((lab) => (
               <div
                 key={lab.name}
-                className="relative h-12 w-28 grayscale opacity-70 transition-all hover:grayscale-0 hover:opacity-100 sm:h-14 sm:w-32"
+                className="relative h-24 w-56 grayscale opacity-70 transition-all hover:grayscale-0 hover:opacity-100 sm:h-28 sm:w-64"
               >
                 <Image
                   src={lab.logo}
                   alt={lab.name}
                   fill
-                  className="object-contain mix-blend-multiply"
+                  className="object-contain"
                 />
               </div>
             ))}
