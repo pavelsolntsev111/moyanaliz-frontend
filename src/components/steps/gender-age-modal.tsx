@@ -1,0 +1,138 @@
+"use client";
+
+import { useState } from "react";
+import type { Gender } from "@/lib/types";
+import { X } from "lucide-react";
+
+interface GenderAgeModalProps {
+  fileName: string;
+  onSubmit: (gender: Gender, age: number) => void;
+  onClose: () => void;
+}
+
+export function GenderAgeModal({
+  fileName,
+  onSubmit,
+  onClose,
+}: GenderAgeModalProps) {
+  const [gender, setGender] = useState<Gender | null>(null);
+  const [age, setAge] = useState("");
+  const [error, setError] = useState("");
+
+  const isValid =
+    gender !== null && Number(age) >= 1 && Number(age) <= 120 && age !== "";
+
+  function handleSubmit() {
+    if (!gender) {
+      setError("Выберите пол");
+      return;
+    }
+    const ageNum = Number(age);
+    if (!ageNum || ageNum < 1 || ageNum > 120) {
+      setError("Укажите корректный возраст (1–120)");
+      return;
+    }
+    onSubmit(gender, ageNum);
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      {/* Backdrop */}
+      <div
+        className="absolute inset-0 bg-foreground/40 backdrop-blur-sm"
+        onClick={onClose}
+        aria-hidden
+      />
+
+      {/* Dialog */}
+      <div className="relative z-10 w-full max-w-md rounded-2xl border border-border bg-card p-6 shadow-xl">
+        <button
+          onClick={onClose}
+          className="absolute right-4 top-4 text-muted-foreground transition-colors hover:text-foreground"
+          aria-label="Закрыть"
+        >
+          <X className="h-5 w-5" />
+        </button>
+
+        <h2 className="text-lg font-bold text-card-foreground">
+          Уточните данные
+        </h2>
+        <p className="mt-1 text-sm text-muted-foreground">
+          Для корректной расшифровки укажите пол и возраст пациента
+        </p>
+
+        <div className="mt-3 flex items-center gap-2 rounded-lg bg-muted px-3 py-2">
+          <div className="h-2 w-2 rounded-full bg-primary" />
+          <p className="truncate text-xs text-muted-foreground">{fileName}</p>
+        </div>
+
+        {/* Gender */}
+        <fieldset className="mt-5">
+          <legend className="text-sm font-medium text-card-foreground">
+            Пол
+          </legend>
+          <div className="mt-2 grid grid-cols-2 gap-3">
+            {(
+              [
+                { value: "male", label: "Мужской" },
+                { value: "female", label: "Женский" },
+              ] as const
+            ).map((option) => (
+              <button
+                key={option.value}
+                type="button"
+                onClick={() => {
+                  setGender(option.value);
+                  setError("");
+                }}
+                className={`rounded-xl border-2 px-4 py-3 text-sm font-medium transition-all ${
+                  gender === option.value
+                    ? "border-primary bg-primary/5 text-primary"
+                    : "border-border bg-card text-card-foreground hover:border-primary/40"
+                }`}
+              >
+                {option.label}
+              </button>
+            ))}
+          </div>
+        </fieldset>
+
+        {/* Age */}
+        <div className="mt-5">
+          <label
+            htmlFor="age-input"
+            className="text-sm font-medium text-card-foreground"
+          >
+            Возраст
+          </label>
+          <input
+            id="age-input"
+            type="number"
+            min={1}
+            max={120}
+            placeholder="Например, 35"
+            value={age}
+            onChange={(e) => {
+              setAge(e.target.value);
+              setError("");
+            }}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && isValid) handleSubmit();
+            }}
+            className="mt-2 w-full rounded-xl border-2 border-border bg-background px-4 py-3 text-sm text-foreground outline-none transition-colors placeholder:text-muted-foreground focus:border-primary"
+          />
+        </div>
+
+        {error && <p className="mt-3 text-sm text-destructive">{error}</p>}
+
+        <button
+          onClick={handleSubmit}
+          disabled={!isValid}
+          className="mt-6 w-full rounded-xl bg-primary px-4 py-3 text-sm font-semibold text-primary-foreground transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          Продолжить
+        </button>
+      </div>
+    </div>
+  );
+}

@@ -1,7 +1,6 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
-import Footer from "@/components/Footer";
 
 const inter = Inter({
   variable: "--font-inter",
@@ -11,7 +10,19 @@ const inter = Inter({
 export const metadata: Metadata = {
   title: "Мой Анализ — расшифровка лабораторных анализов",
   description:
-    "Информационная расшифровка результатов лабораторных анализов с помощью ИИ. Загрузите PDF или фото — получите понятный отчёт.",
+    "Загрузите фото или PDF лабораторного анализа и получите понятную расшифровку с пояснениями от ИИ. Быстро, точно, конфиденциально.",
+  icons: {
+    icon: [
+      { url: "/icon-light-32x32.png", media: "(prefers-color-scheme: light)" },
+      { url: "/icon-dark-32x32.png", media: "(prefers-color-scheme: dark)" },
+      { url: "/icon.svg", type: "image/svg+xml" },
+    ],
+    apple: "/apple-icon.png",
+  },
+};
+
+export const viewport: Viewport = {
+  themeColor: "#00b4bc",
 };
 
 export default function RootLayout({
@@ -21,10 +32,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="ru">
-      <body className={`${inter.variable} antialiased`}>
-        <main className="min-h-screen">{children}</main>
-        <Footer />
-      </body>
+      <body className={`${inter.variable} antialiased`}>{children}</body>
     </html>
   );
 }
