@@ -108,8 +108,7 @@ export function UploadStep({ onFileSelected }: UploadStepProps) {
           <span className="text-primary">за 5 минут</span>
         </h1>
         <p className="mx-auto mt-4 max-w-xl text-pretty text-base leading-relaxed text-muted-foreground sm:text-lg">
-          Загрузите фото или PDF лабораторного анализа и получите понятный
-          отчёт с пояснением каждого показателя
+          Загрузите свои анализы и получите понятный отчёт с пояснением каждого показателя
         </p>
 
         {/* Drop zone */}
