@@ -1,34 +1,55 @@
 "use client";
 
-import { useState, useCallback } from "react";
-import type { AppStep, Gender } from "@/lib/types";
+import { useState, useCallback, useRef } from "react";
+import type { AppStep, Gender, PreviewData } from "@/lib/types";
 import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
 import { UploadStep } from "@/components/steps/upload-step";
 import { GenderAgeModal } from "@/components/steps/gender-age-modal";
 import { AnalyzingStep } from "@/components/steps/analyzing-step";
 import { PaywallStep } from "@/components/steps/paywall-step";
-import { uploadFile, createPayment, applyPromo } from "@/lib/api";
+import { uploadFile, createPayment, applyPromo, detectPatient } from "@/lib/api";
+import type { DetectPatientResponse } from "@/lib/api";
+import { useRouter } from "next/navigation";
 
 export default function HomePage() {
+  const router = useRouter();
   const [step, setStep] = useState<AppStep>("upload");
   const [file, setFile] = useState<File | null>(null);
   const [orderId, setOrderId] = useState<string>("");
+  const [preview, setPreview] = useState<PreviewData | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [payLoading, setPayLoading] = useState(false);
+  const [patientSuggestion, setPatientSuggestion] = useState<DetectPatientResponse | null>(null);
+  const uploadDone = useRef(false);
 
-  const handleFileSelected = useCallback((f: File) => {
+  const [detecting, setDetecting] = useState(false);
+
+  const handleFileSelected = useCallback(async (f: File) => {
     setFile(f);
+    setPatientSuggestion(null);
+    setDetecting(true);
     setStep("modal");
+    try {
+      const suggestion = await detectPatient(f);
+      setPatientSuggestion(suggestion);
+    } catch {
+      // ignore — show form empty
+    } finally {
+      setDetecting(false);
+    }
   }, []);
 
   const handleModalSubmit = useCallback(
     async (gender: Gender, age: number) => {
       if (!file) return;
       setStep("analyzing");
+      uploadDone.current = false;
       try {
         const res = await uploadFile(file, gender, age);
         setOrderId(res.order_id);
+        setPreview(res.preview);
+        uploadDone.current = true;
       } catch (e) {
         setError(e instanceof Error ? e.message : "Ошибка загрузки");
         setStep("upload");
@@ -43,21 +64,25 @@ export default function HomePage() {
   }, []);
 
   const handleAnalyzingComplete = useCallback(() => {
-    if (orderId) setStep("paywall");
-  }, [orderId]);
+    setStep("paywall");
+  }, []);
 
   const handlePay = useCallback(
     async (email: string) => {
       setPayLoading(true);
       try {
         const res = await createPayment(orderId, email);
-        window.location.href = res.payment_url;
+        if (res.redirect_url.startsWith("http")) {
+          window.location.href = res.redirect_url;
+        } else {
+          router.push(res.redirect_url);
+        }
       } catch (e) {
         setError(e instanceof Error ? e.message : "Ошибка создания платежа");
         setPayLoading(false);
       }
     },
-    [orderId]
+    [orderId, router]
   );
 
   const handlePromo = useCallback(
@@ -65,7 +90,11 @@ export default function HomePage() {
       setPayLoading(true);
       try {
         const res = await applyPromo(orderId, email, promoCode);
-        window.location.href = res.redirect_url;
+        if (res.redirect_url.startsWith("http")) {
+          window.location.href = res.redirect_url;
+        } else {
+          router.push(res.redirect_url);
+        }
       } catch (e) {
         setError(
           e instanceof Error ? e.message : "Ошибка применения промокода"
@@ -73,7 +102,7 @@ export default function HomePage() {
         setPayLoading(false);
       }
     },
-    [orderId]
+    [orderId, router]
   );
 
   return (
@@ -98,12 +127,16 @@ export default function HomePage() {
         {step === "upload" && <UploadStep onFileSelected={handleFileSelected} />}
 
         {step === "analyzing" && (
-          <AnalyzingStep onComplete={handleAnalyzingComplete} />
+          <AnalyzingStep
+            onComplete={handleAnalyzingComplete}
+            isReady={uploadDone}
+          />
         )}
 
         {step === "paywall" && (
           <PaywallStep
             orderId={orderId}
+            preview={preview}
             onPay={handlePay}
             onPromo={handlePromo}
             loading={payLoading}
@@ -114,6 +147,9 @@ export default function HomePage() {
       {step === "modal" && file && (
         <GenderAgeModal
           fileName={file.name}
+          detecting={detecting}
+          suggestedSex={patientSuggestion?.patient_sex ?? null}
+          suggestedAge={patientSuggestion?.patient_age ?? null}
           onSubmit={handleModalSubmit}
           onClose={handleModalClose}
         />

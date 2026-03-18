@@ -1,177 +1,914 @@
 "use client"
 
-import { useState } from "react"
-import { Lock, Mail, Tag } from "lucide-react"
-import { mockIndicators } from "@/lib/mock-data"
+import { useState, useMemo, useEffect, useRef } from "react"
+import { motion } from "framer-motion"
+import {
+  Lock,
+  Mail,
+  Tag,
+  Check,
+  AlertTriangle,
+  CheckCircle2,
+  Stethoscope,
+  ArrowDown,
+  AlertOctagon,
+  ChevronRight,
+} from "lucide-react"
+import type { PreviewData, AnalysisIndicator, LightIndicator } from "@/lib/types"
 import { IndicatorCard } from "@/components/indicator-card"
+import { mockIndicators } from "@/lib/mock-data"
+
+// ─── Helpers ────────────────────────────────────────────────────────────────
 
 function isValidEmail(email: string) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
 }
 
+/** Health impact descriptions by indicator name (lowercase key) */
+const HEALTH_IMPACT: Record<string, string> = {
+  "витамин d": "иммунитет, настроение и здоровье костей",
+  "витамин 25(oh) d": "иммунитет, настроение и здоровье костей",
+  "витамин d 25(oh)": "иммунитет, настроение и здоровье костей",
+  "25(oh)d": "иммунитет, настроение и здоровье костей",
+  "ттг": "обмен веществ и работу щитовидной железы",
+  "тиреотропный гормон": "обмен веществ и работу щитовидной железы",
+  "ферритин": "запасы железа, энергию и состояние волос",
+  "железо": "запасы железа, энергию и состояние волос",
+  "железо сывороточное": "запасы железа, энергию и состояние волос",
+  "глюкоза": "энергию, вес и риск диабета",
+  "гемоглобин": "перенос кислорода и общую энергию",
+  "холестерин": "здоровье сосудов и риск атеросклероза",
+  "холестерин общий": "здоровье сосудов и риск атеросклероза",
+  "лейкоциты": "иммунную защиту организма",
+  "тромбоциты": "свёртываемость крови",
+  "алт": "функцию печени",
+  "аст": "функцию печени и сердца",
+  "креатинин": "функцию почек",
+  "мочевина": "функцию почек и белковый обмен",
+  "билирубин": "функцию печени и обмен гемоглобина",
+  "билирубин общий": "функцию печени и обмен гемоглобина",
+  "общий белок": "белковый обмен и иммунитет",
+  "кальций": "здоровье костей, мышц и нервной системы",
+  "соэ": "наличие воспалительных процессов",
+  "эритроциты": "перенос кислорода к тканям",
+  "т4 свободный": "обмен веществ и работу щитовидной железы",
+  "тироксин свободный": "обмен веществ и работу щитовидной железы",
+}
+
+function getHealthImpact(name: string): string | null {
+  const key = name.toLowerCase().trim()
+  return HEALTH_IMPACT[key] ?? null
+}
+
+function getDirectionText(status: AnalysisIndicator["status"]): string {
+  if (status === "low") return "ниже"
+  if (status === "high") return "выше"
+  if (status === "critical") return "критически отклоняется от"
+  return "вне"
+}
+
+function mapLightToAnalysis(ind: LightIndicator, index: number): AnalysisIndicator {
+  const numValue = parseFloat(ind.value.replace(",", "."))
+  const isNumeric = !isNaN(numValue) && ind.value.trim() !== ""
+
+  let refMin = 0
+  let refMax = 100
+  let hasRange = false
+  const minMaxMatch = ind.reference_range.match(/([\d.,]+)\s*[-–]\s*([\d.,]+)/)
+  const ltMatch = ind.reference_range.match(/^[<до]\s*([\d.,]+)/u)
+  const gtMatch = ind.reference_range.match(/^>\s*([\d.,]+)/)
+  if (minMaxMatch) {
+    refMin = parseFloat(minMaxMatch[1].replace(",", "."))
+    refMax = parseFloat(minMaxMatch[2].replace(",", "."))
+    hasRange = true
+  } else if (ltMatch) {
+    refMin = 0
+    refMax = parseFloat(ltMatch[1].replace(",", "."))
+    hasRange = true
+  } else if (gtMatch) {
+    const bound = parseFloat(gtMatch[1].replace(",", "."))
+    refMin = bound
+    refMax = bound * 3
+    hasRange = true
+  }
+
+  let status: AnalysisIndicator["status"] = "normal"
+  if (ind.status === "above_normal") status = "high"
+  else if (ind.status === "below_normal") status = "low"
+  else if (ind.status === "critical_high" || ind.status === "critical_low") status = "critical"
+
+  return {
+    id: `ind-${index}`,
+    name: ind.name,
+    shortName: ind.short_name,
+    value: isNumeric ? numValue : 0,
+    textValue: isNumeric ? undefined : ind.value,
+    unit: ind.unit,
+    status,
+    referenceMin: refMin,
+    referenceMax: refMax,
+    hasRange,
+    explanation: ind.short_description,
+  }
+}
+
+function selectOpenIndicators(indicators: AnalysisIndicator[]): {
+  open: AnalysisIndicator[]
+  lockedNormal: AnalysisIndicator[]
+  lockedAbnormal: AnalysisIndicator[]
+} {
+  const normal = indicators.filter((i) => i.status === "normal")
+  const abnormal = indicators.filter((i) => i.status !== "normal")
+
+  // Sort abnormal by deviation (most deviated last — "tension buildup")
+  const sortedAbnormal = [...abnormal].sort((a, b) => {
+    const devA = a.referenceMax > 0 ? Math.abs(a.value - (a.referenceMin + a.referenceMax) / 2) / (a.referenceMax - a.referenceMin || 1) : 0
+    const devB = b.referenceMax > 0 ? Math.abs(b.value - (b.referenceMin + b.referenceMax) / 2) / (b.referenceMax - b.referenceMin || 1) : 0
+    return devA - devB
+  })
+
+  if (normal.length >= 2) {
+    return { open: normal.slice(0, 2), lockedNormal: normal.slice(2), lockedAbnormal: sortedAbnormal }
+  } else if (normal.length === 1) {
+    return { open: [normal[0]], lockedNormal: [], lockedAbnormal: sortedAbnormal }
+  } else {
+    return { open: [], lockedNormal: [], lockedAbnormal: sortedAbnormal }
+  }
+}
+
+// ─── Range bar helpers ───────────────────────────────────────────────────────
+
+function getRangePosition(value: number, min: number, max: number) {
+  const range = max - min
+  const padding = range * 0.3
+  const totalMin = min - padding
+  const totalMax = max + padding
+  const totalRange = totalMax - totalMin
+  const pos = ((value - totalMin) / totalRange) * 100
+  return Math.max(2, Math.min(98, pos))
+}
+
+function getNormalZone(min: number, max: number) {
+  const range = max - min
+  const padding = range * 0.3
+  const totalMin = min - padding
+  const totalMax = max + padding
+  const totalRange = totalMax - totalMin
+  const left = ((min - totalMin) / totalRange) * 100
+  const right = ((max - totalMin) / totalRange) * 100
+  return { left, width: right - left }
+}
+
+// ─── Sub-components ──────────────────────────────────────────────────────────
+
+function GradientCard({
+  children,
+  glowColor = "rgba(0,180,188,0.12)",
+  className = "",
+}: {
+  children: React.ReactNode
+  glowColor?: string
+  className?: string
+}) {
+  return (
+    <div
+      style={{
+        background: "var(--border)",
+        borderRadius: 16,
+        padding: "2px",
+        boxShadow: `0 4px 8px rgba(0,0,0,0.05), 0 16px 40px ${glowColor}, 0 0 0 1px rgba(0,0,0,0.03)`,
+      }}
+      className={className}
+    >
+      <div
+        style={{
+          background: "linear-gradient(145deg, var(--card) 0%, var(--background) 100%)",
+          borderRadius: "14px",
+        }}
+      >
+        {children}
+      </div>
+    </div>
+  )
+}
+
+/** Emotional summary — dynamic text with health impact descriptions */
+function EmotionalSummary({
+  outOfRangeCount,
+  totalCount,
+  abnormalIndicators,
+}: {
+  outOfRangeCount: number
+  totalCount: number
+  abnormalIndicators: AnalysisIndicator[]
+}) {
+  const hasProblems = outOfRangeCount > 0
+  const normalCount = totalCount - outOfRangeCount
+
+  if (hasProblems) {
+    // Build dynamic description with health impacts
+    const shown = abnormalIndicators.slice(0, 3)
+    const remaining = abnormalIndicators.length - shown.length
+
+    const descriptions = shown.map((ind) => {
+      const impact = getHealthImpact(ind.name)
+      const direction = getDirectionText(ind.status)
+      if (impact) {
+        return `${ind.name} ${direction} нормы — это может влиять на ${impact}`
+      }
+      return `${ind.name} ${direction} нормы. Требует внимания`
+    })
+
+    let summaryText = descriptions.join(". ") + "."
+    if (remaining > 0) {
+      summaryText += ` И ещё ${remaining}.`
+    }
+    summaryText += " Подробный разбор и план действий — в полном отчёте."
+
+    return (
+      <motion.div
+        initial={{ opacity: 0, y: 16 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
+        style={{
+          background: "rgba(255,82,62,0.04)",
+          borderLeft: "4px solid #FF523E",
+          borderRadius: "12px",
+        }}
+        className="p-4 sm:p-5"
+      >
+        <div className="flex items-start gap-4">
+          <div
+            className="shrink-0 flex items-center justify-center rounded-full"
+            style={{ width: 44, height: 44, background: "rgba(255,82,62,0.10)" }}
+          >
+            <AlertTriangle className="h-5 w-5" style={{ color: "#FF523E" }} />
+          </div>
+          <div className="flex-1 min-w-0">
+            <h3 className="text-base font-bold text-card-foreground leading-snug">
+              {outOfRangeCount === 1 ? "Обнаружено отклонение" : "Обнаружены отклонения"}
+            </h3>
+            <p className="mt-1 text-sm text-muted-foreground leading-relaxed">
+              {summaryText}
+            </p>
+            <div className="mt-3 flex flex-wrap items-center gap-2">
+              {normalCount > 0 && (
+                <span
+                  className="inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold"
+                  style={{ background: "rgba(34,197,94,0.10)", color: "#16a34a" }}
+                >
+                  <CheckCircle2 className="h-3 w-3" />
+                  {normalCount} в норме
+                </span>
+              )}
+              <span
+                className="inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold"
+                style={{ background: "rgba(255,82,62,0.10)", color: "#dc2626" }}
+              >
+                <AlertTriangle className="h-3 w-3" />
+                {outOfRangeCount} вне нормы
+              </span>
+            </div>
+          </div>
+        </div>
+      </motion.div>
+    )
+  }
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 16 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
+      style={{
+        background: "rgba(34,197,94,0.05)",
+        borderLeft: "4px solid #22c55e",
+        borderRadius: "12px",
+      }}
+      className="p-4 sm:p-5"
+    >
+      <div className="flex items-start gap-4">
+        <div
+          className="shrink-0 flex items-center justify-center rounded-full"
+          style={{ width: 44, height: 44, background: "rgba(34,197,94,0.10)" }}
+        >
+          <CheckCircle2 className="h-5 w-5" style={{ color: "#22c55e" }} />
+        </div>
+        <div className="flex-1 min-w-0">
+          <h3 className="text-base font-bold text-card-foreground leading-snug">
+            Все показатели в норме
+          </h3>
+          <p className="mt-1 text-sm text-muted-foreground leading-relaxed">
+            Все {totalCount} показателей в пределах референсных значений.
+            В полном отчёте — персональные рекомендации по их поддержанию.
+          </p>
+        </div>
+      </div>
+    </motion.div>
+  )
+}
+
+/** Doctor questions teaser — personalized first question */
+function DoctorQuestionTeaser({ firstAbnormalName }: { firstAbnormalName?: string }) {
+  const q1 = firstAbnormalName
+    ? `Нужно ли мне принимать добавки ${firstAbnormalName} и в какой дозировке?`
+    : "Как часто мне нужно пересдавать эти анализы?"
+  const blurredQuestions = [
+    "Насколько серьёзно моё отклонение и требует ли оно лечения?",
+    "Через какое время стоит пересдать анализы для контроля?",
+  ]
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.4, delay: 0.15, ease: [0.16, 1, 0.3, 1] }}
+    >
+      <GradientCard glowColor="rgba(0,180,188,0.10)">
+        <div className="p-5 sm:p-6">
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex items-center gap-2.5">
+              <div
+                className="flex items-center justify-center rounded-lg"
+                style={{ width: 36, height: 36, background: "rgba(0,180,188,0.10)" }}
+              >
+                <Stethoscope className="h-4 w-4 text-primary" />
+              </div>
+              <div>
+                <h3 className="text-sm font-semibold text-card-foreground leading-snug">
+                  Вопросы для вашего врача
+                </h3>
+                <p className="text-xs text-muted-foreground mt-0.5">На основе ваших результатов</p>
+              </div>
+            </div>
+            <span
+              className="shrink-0 rounded-full px-2.5 py-1 text-xs font-semibold"
+              style={{ background: "rgba(0,180,188,0.10)", color: "var(--primary)" }}
+            >
+              3 вопроса
+            </span>
+          </div>
+
+          <div
+            className="mt-4 rounded-lg p-3.5"
+            style={{ background: "rgba(0,180,188,0.05)", border: "1px solid rgba(0,180,188,0.12)" }}
+          >
+            <div className="flex items-start gap-2.5">
+              <span
+                className="shrink-0 mt-0.5 flex h-5 w-5 items-center justify-center rounded-full text-[10px] font-bold"
+                style={{ background: "var(--primary)", color: "#fff" }}
+              >
+                1
+              </span>
+              <p className="text-sm text-card-foreground leading-relaxed">{q1}</p>
+            </div>
+          </div>
+
+          <div className="mt-2 space-y-2 select-none" style={{ filter: "blur(4px)", opacity: 0.45, pointerEvents: "none" }}>
+            {blurredQuestions.map((q, i) => (
+              <div key={i} className="rounded-lg p-3.5" style={{ background: "var(--muted)", border: "1px solid var(--border)" }}>
+                <div className="flex items-start gap-2.5">
+                  <span className="shrink-0 mt-0.5 flex h-5 w-5 items-center justify-center rounded-full text-[10px] font-bold bg-muted-foreground/30" style={{ color: "var(--card)" }}>
+                    {i + 2}
+                  </span>
+                  <p className="text-sm text-card-foreground leading-relaxed">{q}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <div className="mt-4 flex items-center gap-1.5 text-xs font-medium text-primary">
+            <Lock className="h-3.5 w-3.5" />
+            <span>Все вопросы — в полном отчёте</span>
+            <ChevronRight className="h-3.5 w-3.5" />
+          </div>
+        </div>
+      </GradientCard>
+    </motion.div>
+  )
+}
+
+/** Locked NORMAL card — value + range, blurred interpretation, NO mini-CTA */
+function LockedNormalCard({ indicator }: { indicator: AnalysisIndicator }) {
+  const position = getRangePosition(indicator.value, indicator.referenceMin, indicator.referenceMax)
+  const normalZone = getNormalZone(indicator.referenceMin, indicator.referenceMax)
+
+  return (
+    <div className="rounded-xl p-5 transition-shadow hover:shadow-sm" style={{ background: "var(--card)", border: "1px solid var(--border)" }}>
+      <div className="flex items-start justify-between gap-3">
+        <div className="flex-1 min-w-0">
+          <p className="text-xs font-medium text-muted-foreground truncate">{indicator.shortName}</p>
+          <h3 className="mt-0.5 text-sm font-semibold leading-snug text-card-foreground">{indicator.name}</h3>
+        </div>
+        <span className="shrink-0 inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold" style={{ background: "rgba(34,197,94,0.12)", color: "#16a34a" }}>
+          <CheckCircle2 className="h-3 w-3" />
+          Норма
+        </span>
+      </div>
+      <div className="mt-3 flex items-baseline gap-1.5">
+        <span className="text-2xl font-bold" style={{ color: "#16a34a" }}>{indicator.textValue ?? indicator.value}</span>
+        <span className="text-sm text-muted-foreground">{indicator.unit}</span>
+      </div>
+      {indicator.hasRange !== false && !indicator.textValue && (
+        <div className="mt-3">
+          <div className="relative h-2.5 w-full overflow-hidden rounded-full bg-muted">
+            <div className="absolute top-0 h-full rounded-full" style={{ left: `${normalZone.left}%`, width: `${normalZone.width}%`, background: "rgba(34,197,94,0.20)" }} />
+            <div className="absolute top-0 h-full w-1.5 rounded-full" style={{ left: `${position}%`, transform: "translateX(-50%)", background: "#22c55e" }} />
+          </div>
+          <div className="mt-1 flex justify-between text-[10px] text-muted-foreground">
+            <span>{indicator.referenceMin} {indicator.unit}</span>
+            <span style={{ color: "#22c55e" }}>норма</span>
+            <span>{indicator.referenceMax} {indicator.unit}</span>
+          </div>
+        </div>
+      )}
+      {/* Blurred interpretation — realistic text, small lock icon, NO CTA link */}
+      <div className="relative mt-3">
+        <div className="select-none" style={{ filter: "blur(4px)", pointerEvents: "none", userSelect: "none" }}>
+          <p className="text-sm text-muted-foreground leading-relaxed line-clamp-2">
+            {indicator.explanation || "Показатель находится в пределах нормы. Рекомендации по поддержанию оптимального уровня и питанию."}
+          </p>
+        </div>
+        <div className="absolute inset-0" style={{ background: "linear-gradient(transparent 30%, rgba(255,255,255,0.85))" }}>
+          <div className="absolute bottom-1 right-2">
+            <Lock className="h-3 w-3 text-muted-foreground/40" />
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+/** Locked ABNORMAL card — left red border, pulsing marker, mini-CTA button */
+function LockedAbnormalCard({ indicator }: { indicator: AnalysisIndicator }) {
+  const statusConfig = {
+    low:      { label: "Ниже нормы", badgeBg: "rgba(255,82,62,0.12)", badgeColor: "#dc2626", barColor: "#FF523E", valueColor: "#dc2626", Icon: ArrowDown },
+    high:     { label: "Выше нормы", badgeBg: "rgba(255,82,62,0.12)", badgeColor: "#dc2626", barColor: "#FF523E", valueColor: "#dc2626", Icon: AlertTriangle },
+    critical: { label: "Критически", badgeBg: "rgba(239,68,68,0.15)", badgeColor: "#dc2626", barColor: "#ef4444", valueColor: "#dc2626", Icon: AlertOctagon },
+    normal:   { label: "Норма", badgeBg: "rgba(34,197,94,0.12)", badgeColor: "#16a34a", barColor: "#22c55e", valueColor: "#16a34a", Icon: CheckCircle2 },
+  }
+  const cfg = statusConfig[indicator.status]
+  const Icon = cfg.Icon
+  const position = getRangePosition(indicator.value, indicator.referenceMin, indicator.referenceMax)
+  const normalZone = getNormalZone(indicator.referenceMin, indicator.referenceMax)
+
+  return (
+    <div
+      className="rounded-xl p-5 transition-shadow hover:shadow-sm"
+      style={{
+        background: "rgba(255,82,62,0.04)",
+        border: "1px solid rgba(255,82,62,0.20)",
+        borderLeft: "4px solid #FF523E",
+      }}
+    >
+      <style>{`
+        @keyframes pulse-marker {
+          0% { box-shadow: 0 0 0 0 rgba(255,82,62,0.4); }
+          70% { box-shadow: 0 0 0 8px rgba(255,82,62,0); }
+          100% { box-shadow: 0 0 0 0 rgba(255,82,62,0); }
+        }
+      `}</style>
+
+      <div className="flex items-start justify-between gap-3">
+        <div className="flex-1 min-w-0">
+          <p className="text-xs font-medium text-muted-foreground truncate">{indicator.shortName}</p>
+          <h3 className="mt-0.5 text-sm font-semibold leading-snug" style={{ color: "#dc2626" }}>{indicator.name}</h3>
+        </div>
+        <span className="shrink-0 inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold" style={{ background: cfg.badgeBg, color: cfg.badgeColor }}>
+          <Icon className="h-3 w-3" />
+          {cfg.label}
+        </span>
+      </div>
+
+      <div className="mt-3 flex items-baseline gap-1.5">
+        <span className="text-2xl font-bold" style={{ color: cfg.valueColor }}>{indicator.textValue ?? indicator.value}</span>
+        <span className="text-sm text-muted-foreground">{indicator.unit}</span>
+      </div>
+
+      {/* Enhanced range bar with danger zones + pulsing marker */}
+      {indicator.hasRange !== false && !indicator.textValue && (
+        <div className="mt-3">
+          <div className="relative h-3 w-full overflow-hidden rounded-full bg-muted">
+            {/* Danger zone below normal */}
+            <div
+              className="absolute top-0 h-full rounded-l-full"
+              style={{
+                left: 0,
+                width: `${normalZone.left}%`,
+                background: "linear-gradient(to right, rgba(239,68,68,0.3), rgba(255,165,0,0.2))",
+              }}
+            />
+            {/* Normal zone */}
+            <div
+              className="absolute top-0 h-full"
+              style={{ left: `${normalZone.left}%`, width: `${normalZone.width}%`, background: "rgba(34,197,94,0.25)" }}
+            />
+            {/* Danger zone above normal */}
+            <div
+              className="absolute top-0 h-full rounded-r-full"
+              style={{
+                left: `${normalZone.left + normalZone.width}%`,
+                width: `${100 - normalZone.left - normalZone.width}%`,
+                background: "linear-gradient(to right, rgba(255,165,0,0.2), rgba(239,68,68,0.3))",
+              }}
+            />
+            {/* Pulsing marker */}
+            <div
+              className="absolute top-1/2 rounded-full"
+              style={{
+                left: `${position}%`,
+                transform: "translate(-50%, -50%)",
+                width: 13,
+                height: 13,
+                background: cfg.barColor,
+                animation: "pulse-marker 2s infinite",
+              }}
+            />
+          </div>
+          <div className="mt-1 flex justify-between text-[10px] text-muted-foreground">
+            <span>{indicator.referenceMin} {indicator.unit}</span>
+            <span style={{ color: "#22c55e" }}>норма</span>
+            <span>{indicator.referenceMax} {indicator.unit}</span>
+          </div>
+        </div>
+      )}
+
+      {/* Blurred interpretation + mini-CTA button */}
+      <div className="relative mt-3">
+        <div className="select-none" style={{ filter: "blur(4px)", pointerEvents: "none", userSelect: "none" }}>
+          <p className="text-sm text-muted-foreground leading-relaxed line-clamp-3">
+            {indicator.explanation || "Подробная интерпретация показателя с рекомендациями по питанию, образу жизни и необходимым обследованиям."}
+          </p>
+        </div>
+        <div className="absolute inset-0 flex items-center justify-center" style={{ background: "linear-gradient(transparent 30%, rgba(255,255,255,0.85))" }}>
+          <button
+            onClick={() => {
+              document.getElementById("paywall-email")?.scrollIntoView({ behavior: "smooth", block: "center" })
+              document.getElementById("paywall-email")?.focus()
+            }}
+            className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold text-white transition-opacity hover:opacity-90"
+            style={{ background: "#FF523E" }}
+          >
+            Узнать, что делать
+            <ChevronRight className="h-3.5 w-3.5" />
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+/** Inline paywall — personalized copy */
+function InlinePaywall({
+  email, setEmail, promoVisible, setPromoVisible, promoCode, setPromoCode,
+  loading, emailValid, abnormalIndicators, totalCount, onPay, onPromo,
+}: {
+  email: string
+  setEmail: (v: string) => void
+  promoVisible: boolean
+  setPromoVisible: (v: boolean) => void
+  promoCode: string
+  setPromoCode: (v: string) => void
+  loading: boolean
+  emailValid: boolean
+  abnormalIndicators: AnalysisIndicator[]
+  totalCount: number
+  onPay: (email: string) => Promise<void>
+  onPromo: (email: string, promoCode: string) => Promise<void>
+}) {
+  const hasAbnormal = abnormalIndicators.length > 0
+  const first = abnormalIndicators[0]
+
+  // Dynamic headline
+  const headline = hasAbnormal ? "Получить полный разбор" : "Получить персональные рекомендации"
+
+  // Dynamic subtitle
+  let subtitle: React.ReactNode
+  if (abnormalIndicators.length === 1) {
+    subtitle = <>Мы объясним, почему <span className="font-medium text-destructive">{first.name}</span> вне нормы и что с этим делать.</>
+  } else if (abnormalIndicators.length >= 2) {
+    const names = abnormalIndicators.slice(0, 3).map(i => i.name)
+    const extra = abnormalIndicators.length - 3
+    const joined = names.join(", ") + (extra > 0 ? ` и ещё ${extra}` : "")
+    subtitle = <>Мы объясним отклонения в <span className="font-medium text-destructive">{joined}</span> и дадим план действий.</>
+  } else {
+    subtitle = "Подробный разбор каждого показателя и рекомендации по поддержанию здоровья."
+  }
+
+  // Personalized bullets
+  const bullet1 = hasAbnormal && first
+    ? `Почему ваш ${first.name} на уровне ${first.textValue ?? first.value} при норме от ${first.referenceMin} — и план коррекции`
+    : `Детальная расшифровка каждого из ${totalCount} показателей`
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 24 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.45, delay: 0.2, ease: [0.16, 1, 0.3, 1] }}
+      id="paywall-block"
+    >
+      <GradientCard glowColor="rgba(0,180,188,0.16)">
+        <div className="p-6 sm:p-7">
+          <div className="text-center">
+            <h3 className="text-xl font-bold text-card-foreground">{headline}</h3>
+            <p className="mt-2 text-sm text-muted-foreground leading-relaxed">{subtitle}</p>
+          </div>
+
+          <div className="mt-5 flex items-center justify-center">
+            <div
+              className="flex items-baseline gap-1.5 rounded-xl px-5 py-2.5"
+              style={{ background: "rgba(0,180,188,0.07)", border: "1px solid rgba(0,180,188,0.14)" }}
+            >
+              <span className="text-3xl font-bold" style={{ color: "var(--primary)" }}>199 ₽</span>
+              <span className="text-sm text-muted-foreground">/ разовый платёж</span>
+            </div>
+          </div>
+
+          <div className="mt-5 grid grid-cols-1 gap-2 sm:grid-cols-3 sm:gap-3">
+            {[
+              { icon: Check, label: bullet1 },
+              { icon: Stethoscope, label: "3 вопроса для врача на основе ваших результатов" },
+              { icon: Mail, label: "PDF-отчёт на email" },
+            ].map(({ icon: BulletIcon, label }) => (
+              <div key={label} className="flex items-center gap-2 rounded-lg px-3 py-2.5" style={{ background: "var(--muted)" }}>
+                <div className="shrink-0 flex h-6 w-6 items-center justify-center rounded-full" style={{ background: "rgba(0,180,188,0.12)" }}>
+                  <BulletIcon className="h-3.5 w-3.5 text-primary" />
+                </div>
+                <span className="text-xs font-medium text-card-foreground leading-snug">{label}</span>
+              </div>
+            ))}
+          </div>
+
+          <div className="mt-6 border-t border-border" />
+
+          <div className="mt-5">
+            <label htmlFor="paywall-email" className="text-sm font-medium text-card-foreground">Email для отправки PDF-отчёта</label>
+            <div className="relative mt-2">
+              <Mail className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <input
+                id="paywall-email"
+                type="email"
+                placeholder="example@mail.ru"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className="w-full rounded-xl border-2 border-border bg-background py-3 pl-11 pr-4 text-sm text-foreground outline-none transition-colors placeholder:text-muted-foreground focus:border-primary"
+              />
+            </div>
+          </div>
+
+          {!promoVisible ? (
+            <button onClick={() => setPromoVisible(true)} className="mt-3 text-xs text-muted-foreground underline decoration-dotted underline-offset-4 transition-colors hover:text-primary">
+              Есть промокод?
+            </button>
+          ) : (
+            <div className="mt-3">
+              <div className="relative">
+                <Tag className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                <input type="text" placeholder="Введите промокод" value={promoCode} onChange={(e) => setPromoCode(e.target.value.toUpperCase())}
+                  className="w-full rounded-xl border-2 border-border bg-background py-2.5 pl-11 pr-4 text-sm text-foreground outline-none transition-colors placeholder:text-muted-foreground focus:border-primary" />
+              </div>
+              {promoCode && (
+                <button onClick={() => emailValid && promoCode && onPromo(email, promoCode)} disabled={!emailValid || !promoCode || loading}
+                  className="mt-2 w-full rounded-xl border-2 border-border py-2.5 text-sm font-medium text-foreground transition-colors hover:border-primary hover:text-primary disabled:cursor-not-allowed disabled:opacity-50">
+                  Применить промокод
+                </button>
+              )}
+            </div>
+          )}
+
+          <button
+            onClick={() => emailValid && onPay(email)}
+            disabled={!emailValid || loading}
+            className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl px-4 py-4 text-sm font-bold text-white transition-opacity hover:opacity-90 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
+            style={{ background: "linear-gradient(135deg, #00b4bc 0%, #00a0a8 100%)", boxShadow: "0 4px 16px rgba(0,180,188,0.35)" }}
+          >
+            {loading ? (
+              <>
+                <svg className="h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none">
+                  <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" className="opacity-25" />
+                  <path d="M12 2a10 10 0 0 1 10 10" stroke="currentColor" strokeWidth="3" strokeLinecap="round" />
+                </svg>
+                Переход к оплате...
+              </>
+            ) : (
+              <>
+                Оплатить 199 ₽
+                <ChevronRight className="h-4 w-4" />
+              </>
+            )}
+          </button>
+
+          <p className="mt-3 text-center text-[11px] leading-relaxed text-muted-foreground">
+            Нажимая кнопку, вы соглашаетесь с{" "}
+            <a href="/offer" className="underline hover:text-primary">офертой</a>{" "}и{" "}
+            <a href="/privacy" className="underline hover:text-primary">политикой конфиденциальности</a>
+          </p>
+        </div>
+      </GradientCard>
+    </motion.div>
+  )
+}
+
+/** Bottom CTA card + sticky mobile button */
+function BottomCTA({ totalCount, onPay, email, emailValid, loading }: {
+  totalCount: number
+  onPay: () => void
+  email: string
+  emailValid: boolean
+  loading: boolean
+}) {
+  const paywallRef = useRef<HTMLElement | null>(null)
+  const [showSticky, setShowSticky] = useState(false)
+
+  useEffect(() => {
+    const el = document.getElementById("paywall-block")
+    if (!el) return
+    paywallRef.current = el
+    const observer = new IntersectionObserver(
+      ([entry]) => setShowSticky(!entry.isIntersecting),
+      { threshold: 0.1 }
+    )
+    observer.observe(el)
+    return () => observer.disconnect()
+  }, [])
+
+  return (
+    <>
+      {/* Desktop bottom CTA card */}
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ duration: 0.4, delay: 0.35 }}
+        className="mt-8 rounded-xl p-5 text-center"
+        style={{ background: "rgba(0,180,188,0.05)", border: "1px solid rgba(0,180,188,0.15)" }}
+      >
+        <p className="text-sm font-medium text-card-foreground">
+          Получите полный разбор всех {totalCount} показателей
+        </p>
+        <button
+          onClick={() => {
+            document.getElementById("paywall-email")?.scrollIntoView({ behavior: "smooth", block: "center" })
+            document.getElementById("paywall-email")?.focus()
+          }}
+          className="mt-3 inline-flex items-center gap-1.5 rounded-xl px-6 py-3 text-sm font-bold text-white transition-opacity hover:opacity-90"
+          style={{ background: "linear-gradient(135deg, #00b4bc 0%, #00a0a8 100%)", boxShadow: "0 4px 16px rgba(0,180,188,0.35)" }}
+        >
+          Оплатить 199 ₽
+          <ChevronRight className="h-4 w-4" />
+        </button>
+      </motion.div>
+
+      {/* Sticky mobile CTA */}
+      {showSticky && (
+        <div
+          className="fixed bottom-0 left-0 right-0 z-50 border-t border-border p-3 sm:hidden"
+          style={{ background: "var(--background)", boxShadow: "0 -4px 16px rgba(0,0,0,0.08)" }}
+        >
+          <button
+            onClick={() => {
+              if (emailValid) {
+                onPay()
+              } else {
+                document.getElementById("paywall-email")?.scrollIntoView({ behavior: "smooth", block: "center" })
+                document.getElementById("paywall-email")?.focus()
+              }
+            }}
+            disabled={loading}
+            className="flex w-full items-center justify-center gap-2 rounded-xl px-4 py-3.5 text-sm font-bold text-white disabled:opacity-50"
+            style={{ background: "linear-gradient(135deg, #00b4bc 0%, #00a0a8 100%)" }}
+          >
+            Полный отчёт — 199 ₽
+            <ChevronRight className="h-4 w-4" />
+          </button>
+        </div>
+      )}
+    </>
+  )
+}
+
+// ─── Main component ──────────────────────────────────────────────────────────
+
 interface PaywallStepProps {
   orderId: string
+  preview: PreviewData | null
   onPay: (email: string) => Promise<void>
   onPromo: (email: string, promoCode: string) => Promise<void>
   loading: boolean
 }
 
-export function PaywallStep({ onPay, onPromo, loading }: PaywallStepProps) {
+export function PaywallStep({ onPay, onPromo, loading, preview }: PaywallStepProps) {
   const [email, setEmail] = useState("")
   const [promoVisible, setPromoVisible] = useState(false)
   const [promoCode, setPromoCode] = useState("")
 
-  const freeIndicator = mockIndicators[0]
-  const lockedIndicators = mockIndicators.slice(1)
+  const allIndicators = useMemo(() => {
+    if (preview?.indicators?.length) {
+      return preview.indicators.map(mapLightToAnalysis)
+    }
+    return mockIndicators
+  }, [preview])
+
+  const totalCount = preview?.meta?.total_count ?? allIndicators.length
+  const outOfRangeCount = preview?.meta?.out_of_range_count ?? 0
+
+  const { open, lockedNormal, lockedAbnormal } = useMemo(
+    () => selectOpenIndicators(allIndicators),
+    [allIndicators]
+  )
+
   const emailValid = isValidEmail(email)
+  const abnormalIndicators = allIndicators.filter((i) => i.status !== "normal")
 
   return (
-    <div className="mx-auto w-full max-w-3xl px-4 pb-16 pt-8">
-      <h2 className="text-center text-2xl font-bold text-foreground sm:text-3xl">
-        Результаты анализа
-      </h2>
-      <p className="mt-2 text-center text-sm text-muted-foreground">
-        Мы распознали {mockIndicators.length} показателей в вашем анализе
-      </p>
-
-      {/* Free indicator */}
-      <div className="mt-8">
-        <p className="mb-3 text-xs font-medium uppercase tracking-wider text-primary">
-          Бесплатный показатель
+    <div className="mx-auto w-full max-w-3xl px-4 pb-20 pt-8">
+      {/* ── Header ── */}
+      <motion.div
+        initial={{ opacity: 0, y: 12 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
+        className="text-center"
+      >
+        <h2 className="text-2xl font-bold text-foreground sm:text-3xl">Результаты анализа</h2>
+        <p className="mt-1.5 text-sm text-muted-foreground">
+          {totalCount} показателей
+          {outOfRangeCount > 0 && (
+            <>, <span className="font-medium" style={{ color: "#dc2626" }}>{outOfRangeCount} вне нормы</span></>
+          )}
         </p>
-        <IndicatorCard indicator={freeIndicator} />
+      </motion.div>
+
+      {/* ── 1. Emotional summary ── */}
+      <div className="mt-6">
+        <EmotionalSummary outOfRangeCount={outOfRangeCount} totalCount={totalCount} abnormalIndicators={abnormalIndicators} />
       </div>
 
-      {/* Locked indicators */}
-      <div className="relative mt-8">
-        <p className="mb-3 text-xs font-medium uppercase tracking-wider text-muted-foreground">
-          Ещё {lockedIndicators.length} показателей
-        </p>
-        <div className="grid gap-4 sm:grid-cols-2">
-          {lockedIndicators.map((ind) => (
-            <div key={ind.id} className="pointer-events-none select-none blur-[6px]">
-              <IndicatorCard indicator={ind} />
-            </div>
-          ))}
-        </div>
-
-        {/* Payment overlay */}
-        <div className="absolute inset-0 flex items-start justify-center pt-12">
-          <div className="w-full max-w-sm rounded-2xl border border-border bg-card p-6 shadow-2xl">
-            <div className="flex items-center justify-center gap-2">
-              <Lock className="h-5 w-5 text-primary" />
-              <h3 className="text-lg font-bold text-card-foreground">
-                Полный отчёт — 199 ₽
-              </h3>
-            </div>
-            <p className="mt-2 text-center text-sm text-muted-foreground">
-              Получите расшифровку всех {mockIndicators.length} показателей с
-              подробными пояснениями в PDF на email
-            </p>
-
-            {/* Email input */}
-            <div className="mt-5">
-              <label
-                htmlFor="paywall-email"
-                className="text-sm font-medium text-card-foreground"
-              >
-                Email для отчёта
-              </label>
-              <div className="relative mt-1.5">
-                <Mail className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                <input
-                  id="paywall-email"
-                  type="email"
-                  placeholder="example@mail.ru"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="w-full rounded-xl border-2 border-border bg-background py-3 pl-10 pr-4 text-sm text-foreground outline-none transition-colors placeholder:text-muted-foreground focus:border-primary"
-                />
-              </div>
-            </div>
-
-            {/* Promo code */}
-            {!promoVisible ? (
-              <button
-                onClick={() => setPromoVisible(true)}
-                className="mt-3 text-xs text-muted-foreground underline decoration-dotted underline-offset-4 transition-colors hover:text-primary"
-              >
-                Есть промокод?
-              </button>
-            ) : (
-              <div className="mt-3">
-                <div className="relative">
-                  <Tag className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                  <input
-                    type="text"
-                    placeholder="Введите промокод"
-                    value={promoCode}
-                    onChange={(e) => setPromoCode(e.target.value.toUpperCase())}
-                    className="w-full rounded-xl border-2 border-border bg-background py-2.5 pl-10 pr-4 text-sm text-foreground outline-none transition-colors placeholder:text-muted-foreground focus:border-primary"
-                  />
-                </div>
-                {promoCode && (
-                  <button
-                    onClick={() =>
-                      emailValid && promoCode && onPromo(email, promoCode)
-                    }
-                    disabled={!emailValid || !promoCode || loading}
-                    className="mt-2 w-full rounded-xl border-2 border-border py-2 text-sm font-medium text-foreground transition-colors hover:border-primary hover:text-primary disabled:cursor-not-allowed disabled:opacity-50"
-                  >
-                    Применить промокод
-                  </button>
-                )}
-              </div>
-            )}
-
-            {/* Pay button */}
-            <button
-              onClick={() => emailValid && onPay(email)}
-              disabled={!emailValid || loading}
-              className="mt-5 flex w-full items-center justify-center gap-2 rounded-xl bg-primary px-4 py-3.5 text-sm font-semibold text-primary-foreground transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              {loading ? (
-                <>
-                  <svg
-                    className="h-4 w-4 animate-spin"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                  >
-                    <circle
-                      cx="12"
-                      cy="12"
-                      r="10"
-                      stroke="currentColor"
-                      strokeWidth="3"
-                      className="opacity-25"
-                    />
-                    <path
-                      d="M12 2a10 10 0 0 1 10 10"
-                      stroke="currentColor"
-                      strokeWidth="3"
-                      strokeLinecap="round"
-                    />
-                  </svg>
-                  Переход к оплате...
-                </>
-              ) : (
-                "Оплатить 199 ₽"
-              )}
-            </button>
-
-            <p className="mt-3 text-center text-[11px] leading-relaxed text-muted-foreground">
-              Нажимая кнопку, вы соглашаетесь с{" "}
-              <a href="/offer" className="underline hover:text-primary">
-                офертой
-              </a>{" "}
-              и{" "}
-              <a href="/privacy" className="underline hover:text-primary">
-                политикой конфиденциальности
-              </a>
-            </p>
+      {/* ── 2. Open cards (up to 2 normal, expanded) ── */}
+      {open.length > 0 && (
+        <motion.div
+          initial={{ opacity: 0, y: 16 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4, delay: 0.08, ease: [0.16, 1, 0.3, 1] }}
+          className="mt-8"
+        >
+          <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-primary">Предварительные результаты</p>
+          <div className="grid gap-4">
+            {open.map((ind) => (
+              <IndicatorCard key={ind.id} indicator={ind} />
+            ))}
           </div>
-        </div>
+        </motion.div>
+      )}
+
+      {/* ── 3. Doctor questions teaser ── */}
+      <div className="mt-6">
+        <DoctorQuestionTeaser firstAbnormalName={abnormalIndicators[0]?.name} />
       </div>
+
+      {/* ── 4. Inline paywall ── */}
+      <div className="mt-6">
+        <InlinePaywall
+          email={email} setEmail={setEmail} promoVisible={promoVisible} setPromoVisible={setPromoVisible}
+          promoCode={promoCode} setPromoCode={setPromoCode} loading={loading} emailValid={emailValid}
+          abnormalIndicators={abnormalIndicators} totalCount={totalCount} onPay={onPay} onPromo={onPromo}
+        />
+      </div>
+
+      {/* ── 5. Locked normal cards ── */}
+      {lockedNormal.length > 0 && (
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.5, delay: 0.3 }} className="mt-10">
+          <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+            Остальные показатели — {lockedNormal.length}
+          </p>
+          <div className="grid gap-3">
+            {lockedNormal.map((ind) => (
+              <LockedNormalCard key={ind.id} indicator={ind} />
+            ))}
+          </div>
+        </motion.div>
+      )}
+
+      {/* ── 6. Problem indicators — LAST (tension buildup) ── */}
+      {lockedAbnormal.length > 0 && (
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.5, delay: 0.35 }} className="mt-8">
+          <p className="mb-3 text-xs font-semibold uppercase tracking-wider" style={{ color: "#dc2626" }}>
+            Требуют внимания — {lockedAbnormal.length}
+          </p>
+          <div className="grid gap-3">
+            {lockedAbnormal.map((ind) => (
+              <LockedAbnormalCard key={ind.id} indicator={ind} />
+            ))}
+          </div>
+        </motion.div>
+      )}
+
+      {/* ── 7. Bottom CTA + sticky mobile ── */}
+      <BottomCTA
+        totalCount={totalCount}
+        onPay={() => emailValid && onPay(email)}
+        email={email}
+        emailValid={emailValid}
+        loading={loading}
+      />
     </div>
   )
 }

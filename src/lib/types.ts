@@ -16,9 +16,31 @@ export interface AnalysisIndicator {
   name: string;
   shortName: string;
   value: number;
+  textValue?: string;
   unit: string;
   status: IndicatorStatus;
   referenceMin: number;
   referenceMax: number;
+  hasRange?: boolean;
   explanation: string;
+}
+
+export interface LightIndicator {
+  name: string;
+  short_name: string;
+  value: string;
+  unit: string;
+  reference_range: string;
+  status: "normal" | "above_normal" | "below_normal" | "critical_high" | "critical_low";
+  short_description: string;
+}
+
+export interface PreviewData {
+  meta: {
+    analysis_type_label: string;
+    lab_name: string | null;
+    total_count: number;
+    out_of_range_count: number;
+  };
+  indicators: LightIndicator[];
 }

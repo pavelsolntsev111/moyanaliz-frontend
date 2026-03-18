@@ -59,7 +59,12 @@ function getNormalZone(min: number, max: number) {
   return { left, width: right - left }
 }
 
-export function IndicatorCard({ indicator }: { indicator: AnalysisIndicator }) {
+interface IndicatorCardProps {
+  indicator: AnalysisIndicator
+  locked?: boolean
+}
+
+export function IndicatorCard({ indicator, locked }: IndicatorCardProps) {
   const config = statusConfig[indicator.status]
   const Icon = config.icon
   const position = getRangePosition(
@@ -93,42 +98,46 @@ export function IndicatorCard({ indicator }: { indicator: AnalysisIndicator }) {
 
       <div className="mt-3 flex items-baseline gap-1.5">
         <span className={`text-2xl font-bold ${config.valueColor}`}>
-          {indicator.value}
+          {indicator.textValue ?? indicator.value}
         </span>
         <span className="text-sm text-muted-foreground">{indicator.unit}</span>
       </div>
 
-      {/* Range bar */}
-      <div className="mt-3">
-        <div className="relative h-2.5 w-full overflow-hidden rounded-full bg-muted">
-          {/* Normal zone */}
-          <div
-            className="absolute top-0 h-full rounded-full bg-success/20"
-            style={{
-              left: `${normalZone.left}%`,
-              width: `${normalZone.width}%`,
-            }}
-          />
-          {/* Marker */}
-          <div
-            className={`absolute top-0 h-full w-1.5 rounded-full ${config.barColor}`}
-            style={{ left: `${position}%`, transform: "translateX(-50%)" }}
-          />
+      {/* Range bar — only when range is known and value is numeric */}
+      {indicator.hasRange !== false && !indicator.textValue && (
+        <div className="mt-3">
+          <div className="relative h-2.5 w-full overflow-hidden rounded-full bg-muted">
+            {/* Normal zone */}
+            <div
+              className="absolute top-0 h-full rounded-full bg-success/20"
+              style={{
+                left: `${normalZone.left}%`,
+                width: `${normalZone.width}%`,
+              }}
+            />
+            {/* Marker */}
+            <div
+              className={`absolute top-0 h-full w-1.5 rounded-full ${config.barColor}`}
+              style={{ left: `${position}%`, transform: "translateX(-50%)" }}
+            />
+          </div>
+          <div className="mt-1 flex justify-between text-[10px] text-muted-foreground">
+            <span>
+              {indicator.referenceMin} {indicator.unit}
+            </span>
+            <span className="text-success">норма</span>
+            <span>
+              {indicator.referenceMax} {indicator.unit}
+            </span>
+          </div>
         </div>
-        <div className="mt-1 flex justify-between text-[10px] text-muted-foreground">
-          <span>
-            {indicator.referenceMin} {indicator.unit}
-          </span>
-          <span className="text-success">норма</span>
-          <span>
-            {indicator.referenceMax} {indicator.unit}
-          </span>
-        </div>
-      </div>
+      )}
 
-      <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
-        {indicator.explanation}
-      </p>
+      {!locked && indicator.explanation && (
+        <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
+          {indicator.explanation}
+        </p>
+      )}
     </div>
   )
 }

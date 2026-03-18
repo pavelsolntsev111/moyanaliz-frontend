@@ -1,3 +1,5 @@
+import type { PreviewData } from "./types";
+
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
 async function request<T>(path: string, options?: RequestInit): Promise<T> {
@@ -16,6 +18,21 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
 
 export interface UploadResponse {
   order_id: string;
+  preview: PreviewData | null;
+}
+
+export interface DetectPatientResponse {
+  patient_sex: "male" | "female" | null;
+  patient_age: number | null;
+}
+
+export async function detectPatient(file: File): Promise<DetectPatientResponse> {
+  const formData = new FormData();
+  formData.append("file", file);
+  return request<DetectPatientResponse>("/api/v1/detect-patient", {
+    method: "POST",
+    body: formData,
+  });
 }
 
 export async function uploadFile(
@@ -34,7 +51,7 @@ export async function uploadFile(
 }
 
 export interface PaymentCreateResponse {
-  payment_url: string;
+  redirect_url: string;
 }
 
 export async function createPayment(
@@ -70,7 +87,56 @@ export interface OrderStatus {
   payment_status: string;
   processing_status: string;
   email_status: string;
+  email?: string | null;
   pdf_download_url: string | null;
+  claude_result_json?: {
+    meta: {
+      detected_analysis_types: string[];
+      analysis_type_labels: string[];
+      patient_sex: string;
+      patient_age: number;
+      lab_name: string | null;
+      analysis_date: string | null;
+      total_indicators_count: number;
+      out_of_range_count: number;
+      general_notes: string;
+      general_conclusion?: string;
+    };
+    reports: Array<{
+      analysis_type: string;
+      analysis_type_label: string;
+      summary: string;
+      indicators: Array<{
+        name: string;
+        value: string;
+        unit: string;
+        reference_range: string;
+        status: string;
+        status_label: string;
+        interpretation: string;
+        severity: string;
+        recommendations?: {
+          nutrition: string | null;
+          supplements: string | null;
+          recheck: string | null;
+          doctor: string | null;
+        };
+      }>;
+    }>;
+    stis_special_section?: {
+      is_present: boolean;
+      notice: string;
+      results: Array<{
+        test_name: string;
+        result: string;
+        result_type: string;
+        interpretation: string;
+      }>;
+      general_recommendation: string;
+    };
+    questions_for_doctor: Array<string | { question: string; context: string }>;
+    disclaimer: string;
+  };
 }
 
 export async function getOrderStatus(orderId: string): Promise<OrderStatus> {
