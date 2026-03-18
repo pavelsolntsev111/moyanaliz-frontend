@@ -13,6 +13,9 @@ import {
   ArrowDown,
   AlertOctagon,
   ChevronRight,
+  UtensilsCrossed,
+  ListChecks,
+  FileText,
 } from "lucide-react"
 import type { PreviewData, AnalysisIndicator, LightIndicator } from "@/lib/types"
 import { IndicatorCard } from "@/components/indicator-card"
@@ -624,11 +627,13 @@ function InlinePaywall({
             </div>
           </div>
 
-          <div className="mt-5 grid grid-cols-1 gap-2 sm:grid-cols-3 sm:gap-3">
+          <div className="mt-5 grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3 sm:gap-3">
             {[
-              { icon: Check, label: bullet1 },
-              { icon: Stethoscope, label: "3 вопроса для врача на основе ваших результатов" },
-              { icon: Mail, label: "PDF-отчёт на email" },
+              { icon: Check, label: `Расшифровка всех ${totalCount} показателей со связями между ними` },
+              { icon: UtensilsCrossed, label: "Персональные рекомендации по питанию" },
+              { icon: ListChecks, label: "Чек-лист: что делать дальше" },
+              { icon: Stethoscope, label: "Вопросы для врача на основе ваших результатов" },
+              { icon: FileText, label: "PDF-отчёт на email" },
             ].map(({ icon: BulletIcon, label }) => (
               <div key={label} className="flex items-center gap-2 rounded-lg px-3 py-2.5" style={{ background: "var(--muted)" }}>
                 <div className="shrink-0 flex h-6 w-6 items-center justify-center rounded-full" style={{ background: "rgba(0,180,188,0.12)" }}>

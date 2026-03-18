@@ -10,12 +10,17 @@ import {
   Download,
   MessageCircleQuestion,
   ShieldAlert,
-  Mail,
   Apple,
   Pill,
   CalendarCheck,
   Stethoscope,
   FileText,
+  UtensilsCrossed,
+  CircleAlert,
+  Clock,
+  RotateCcw,
+  CircleMinus,
+  Plus,
 } from "lucide-react";
 
 interface Props {
@@ -355,7 +360,145 @@ function FullReport({ status }: { status: OrderStatus }) {
         </div>
       )}
 
-      {/* 5. Doctor questions */}
+      {/* 5. Nutrition recommendations */}
+      {data.nutrition && (
+        <div className="rounded-xl border border-border bg-card p-6">
+          <div className="flex items-center gap-2 mb-1">
+            <UtensilsCrossed className="h-5 w-5 text-emerald-500" />
+            <h2 className="text-lg font-bold text-card-foreground">Рекомендации по питанию</h2>
+          </div>
+          <p className="text-xs text-muted-foreground mb-5">
+            На основе ваших {totalCount} показателей{meta.patient_age ? ` и возраста` : ""}
+          </p>
+
+          {/* Products to add */}
+          {data.nutrition.products_to_add?.length > 0 && (
+            <div className="mb-5">
+              <h3 className="text-sm font-semibold text-emerald-600 mb-3 flex items-center gap-1.5">
+                <Plus className="h-3.5 w-3.5" />
+                Обратить внимание
+              </h3>
+              <div className="space-y-3">
+                {data.nutrition.products_to_add.map((item, i) => (
+                  <div key={i} className="flex items-start gap-3">
+                    <span className="mt-1 h-2 w-2 shrink-0 rounded-full bg-emerald-400" />
+                    <div>
+                      <span className="text-sm font-medium text-card-foreground">{item.product}</span>
+                      {item.frequency && (
+                        <span className="text-xs text-muted-foreground ml-1.5">({item.frequency})</span>
+                      )}
+                      <p className="text-xs text-muted-foreground mt-0.5">{item.reason}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Products to limit */}
+          {data.nutrition.products_to_limit?.length > 0 && (
+            <div className="mb-5">
+              <h3 className="text-sm font-semibold text-orange-600 mb-3 flex items-center gap-1.5">
+                <CircleMinus className="h-3.5 w-3.5" />
+                Стоит ограничить
+              </h3>
+              <div className="space-y-3">
+                {data.nutrition.products_to_limit.map((item, i) => (
+                  <div key={i} className="flex items-start gap-3">
+                    <span className="mt-1 h-2 w-2 shrink-0 rounded-full bg-orange-400" />
+                    <div>
+                      <span className="text-sm font-medium text-card-foreground">{item.product}</span>
+                      <p className="text-xs text-muted-foreground mt-0.5">{item.reason}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Supplements note */}
+          {data.nutrition.supplements_note && (
+            <div className="rounded-lg bg-blue-50 border border-blue-100 p-4 flex items-start gap-3">
+              <Pill className="h-4 w-4 shrink-0 mt-0.5 text-blue-500" />
+              <div>
+                <p className="text-sm text-blue-900">{data.nutrition.supplements_note}</p>
+                <p className="text-xs text-blue-600 mt-1 font-medium">Согласуйте дозировку с врачом</p>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* 6. Action plan */}
+      {data.action_plan && (
+        <div className="rounded-xl border border-border bg-card p-6">
+          <div className="flex items-center gap-2 mb-1">
+            <CheckCircle2 className="h-5 w-5 text-primary" />
+            <h2 className="text-lg font-bold text-card-foreground">Что делать дальше</h2>
+          </div>
+          <p className="text-xs text-muted-foreground mb-5">Ваш персональный план действий</p>
+
+          <div className="space-y-5">
+            {/* Urgent */}
+            {data.action_plan.urgent?.length > 0 && (
+              <div>
+                <h3 className="text-sm font-semibold text-orange-600 mb-2.5 flex items-center gap-1.5">
+                  <CircleAlert className="h-3.5 w-3.5" />
+                  Срочно
+                  <span className="text-xs font-normal text-muted-foreground">в ближайшие 1–2 недели</span>
+                </h3>
+                <ul className="space-y-2">
+                  {data.action_plan.urgent.map((item, i) => (
+                    <li key={i} className="flex items-start gap-2.5 text-sm text-card-foreground">
+                      <span className="mt-0.5 h-4 w-4 shrink-0 rounded border-2 border-orange-300" />
+                      {item}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
+            {/* Soon */}
+            {data.action_plan.soon?.length > 0 && (
+              <div>
+                <h3 className="text-sm font-semibold text-emerald-600 mb-2.5 flex items-center gap-1.5">
+                  <Clock className="h-3.5 w-3.5" />
+                  В ближайший месяц
+                </h3>
+                <ul className="space-y-2">
+                  {data.action_plan.soon.map((item, i) => (
+                    <li key={i} className="flex items-start gap-2.5 text-sm text-card-foreground">
+                      <span className="mt-0.5 h-4 w-4 shrink-0 rounded border-2 border-emerald-300" />
+                      {item}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
+            {/* Control */}
+            {data.action_plan.control?.length > 0 && (
+              <div>
+                <h3 className="text-sm font-semibold text-muted-foreground mb-2.5 flex items-center gap-1.5">
+                  <RotateCcw className="h-3.5 w-3.5" />
+                  Контроль
+                  <span className="text-xs font-normal">пересдача анализов</span>
+                </h3>
+                <ul className="space-y-2">
+                  {data.action_plan.control.map((item, i) => (
+                    <li key={i} className="flex items-start gap-2.5 text-sm text-card-foreground">
+                      <span className="mt-0.5 h-4 w-4 shrink-0 rounded border-2 border-muted-foreground/30" />
+                      {item}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* 7. Doctor questions */}
       {data.questions_for_doctor?.length > 0 && (
         <div className="rounded-xl border border-border bg-card p-6">
           <div className="flex items-center gap-2 mb-4">
@@ -397,7 +540,7 @@ function FullReport({ status }: { status: OrderStatus }) {
       <div className="rounded-xl border border-border bg-card p-6 text-center">
         <FileText className="h-8 w-8 text-muted-foreground mx-auto mb-3" />
         <p className="text-sm text-foreground font-medium">
-          Подробный разбор всех {totalCount} показателей — в PDF-отчёте
+          Полный отчёт со всеми показателями, дополнительными анализами и рекомендациями — в PDF
         </p>
         {status.pdf_download_url ? (
           <a

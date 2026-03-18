@@ -1,7 +1,6 @@
 "use client"
 
 import { useCallback, useRef, useState } from "react"
-import Image from "next/image"
 import {
   Upload,
   MessageCircle,
@@ -17,6 +16,9 @@ import {
   FileText,
   Lock,
   ArrowRight,
+  UtensilsCrossed,
+  ListChecks,
+  FlaskConical,
 } from "lucide-react"
 
 const benefits = [
@@ -40,7 +42,7 @@ const benefits = [
 const labs = [
   { name: "Инвитро", logo: "/labs/invitro.png" },
   { name: "Гемотест", logo: "/labs/gemotest.png" },
-  { name: "KDL", logo: "/labs/kdl.jpeg" },
+  { name: "KDL", logo: "/labs/kdl.png" },
 ]
 
 const faqItems = [
@@ -108,11 +110,6 @@ export function UploadStep({ onFileSelected }: UploadStepProps) {
     <div className="flex flex-col gap-16 pb-16">
       {/* Hero + Upload zone */}
       <section className="mx-auto w-full max-w-3xl px-4 pt-10 text-center">
-        <div className="inline-flex items-center gap-1.5 rounded-full bg-primary/10 px-3 py-1 text-xs font-medium text-primary mb-5">
-          <Clock className="h-3 w-3" />
-          Результат за 30 секунд
-        </div>
-
         <h1 className="text-balance text-3xl font-bold tracking-tight text-foreground sm:text-4xl lg:text-5xl">
           Узнайте, что означают{" "}
           <span className="text-primary">ваши анализы</span>
@@ -183,8 +180,12 @@ export function UploadStep({ onFileSelected }: UploadStepProps) {
           />
         </div>
 
-        {/* Compact social proof */}
+        {/* Compact social proof + speed badge */}
         <div className="mt-4 flex flex-wrap items-center justify-center gap-x-4 gap-y-1 text-xs text-muted-foreground/70">
+          <span className="inline-flex items-center gap-1">
+            <Clock className="h-3 w-3 text-primary/60" />
+            Результат за 30 секунд
+          </span>
           <span className="inline-flex items-center gap-1">
             <CheckCircle2 className="h-3 w-3 text-primary/60" />
             10 000+ расшифровок
@@ -204,19 +205,14 @@ export function UploadStep({ onFileSelected }: UploadStepProps) {
           <p className="text-sm font-medium text-muted-foreground">
             Распознаём анализы из любой лаборатории
           </p>
-          <div className="mt-5 flex items-center justify-center gap-10">
+          <div className="mt-5 flex items-center justify-center gap-12 sm:gap-16">
             {labs.map((lab) => (
-              <div
+              <img
                 key={lab.name}
-                className="relative h-10 w-32 grayscale opacity-70 transition-all hover:grayscale-0 hover:opacity-100 sm:h-12 sm:w-40"
-              >
-                <Image
-                  src={lab.logo}
-                  alt={lab.name}
-                  fill
-                  className="object-contain mix-blend-multiply"
-                />
-              </div>
+                src={lab.logo}
+                alt={lab.name}
+                className="h-8 w-auto grayscale opacity-50 transition-all hover:grayscale-0 hover:opacity-100 sm:h-10"
+              />
             ))}
           </div>
         </div>
@@ -225,14 +221,18 @@ export function UploadStep({ onFileSelected }: UploadStepProps) {
       {/* Result preview */}
       <section className="mx-auto w-full max-w-3xl px-4">
         <h2 className="text-center text-xl font-bold text-foreground sm:text-2xl">
-          Вот что вы получите
+          Как будет выглядеть расшифровка
         </h2>
-        <p className="mt-2 text-center text-sm text-muted-foreground">
-          Бесплатный предварительный отчёт по всем показателям
-        </p>
 
-        <div className="mt-6 grid gap-4 sm:grid-cols-2">
-          {/* Preview card 1: Indicator */}
+        {/* Badge */}
+        <div className="mt-5 flex justify-center">
+          <span className="rounded-full bg-muted px-3 py-1 text-[10px] font-medium text-muted-foreground">
+            Пример отчёта
+          </span>
+        </div>
+
+        <div className="mt-4 grid gap-4 sm:grid-cols-2">
+          {/* Preview card 1: Albumin - normal */}
           <div className="rounded-xl border border-border bg-card p-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
@@ -246,76 +246,76 @@ export function UploadStep({ onFileSelected }: UploadStepProps) {
             <div className="mt-3 flex items-baseline gap-1.5">
               <span className="text-lg font-bold text-foreground">50</span>
               <span className="text-xs text-muted-foreground">г/л</span>
+              <span className="text-[10px] text-muted-foreground ml-auto">норма: 35–52</span>
             </div>
-            {/* Range bar mock */}
             <div className="mt-2 h-2 w-full rounded-full bg-muted overflow-hidden">
-              <div className="h-full w-[85%] rounded-full bg-gradient-to-r from-emerald-300 to-emerald-500" />
+              <div className="h-full w-[88%] rounded-full bg-gradient-to-r from-emerald-300 to-emerald-500" />
             </div>
             <div className="mt-3 text-xs leading-relaxed text-muted-foreground">
-              Основной белок крови, поддерживает транспорт веществ. Ваш уровень в пределах нормы.
+              Основной белок крови, поддерживает онкотическое давление и транспорт веществ. Ваш уровень в пределах нормы. Поддерживается белковой пищей: мясо, рыба, яйца.
             </div>
           </div>
 
-          {/* Preview card 2: Abnormal indicator (blurred) */}
-          <div className="relative rounded-xl border border-border bg-card p-4 overflow-hidden">
+          {/* Preview card 2: Vitamin D - abnormal */}
+          <div className="rounded-xl border border-border bg-card p-4" style={{ borderLeft: "4px solid #FF523E" }}>
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <div className="h-2 w-2 rounded-full bg-orange-500" />
                 <span className="text-sm font-medium text-orange-600">Витамин D</span>
               </div>
               <span className="rounded-full bg-orange-50 px-2 py-0.5 text-[10px] font-medium text-orange-600">
-                Внимание
+                Ниже нормы
               </span>
             </div>
             <div className="mt-3 flex items-baseline gap-1.5">
               <span className="text-lg font-bold text-foreground">18</span>
               <span className="text-xs text-muted-foreground">нг/мл</span>
+              <span className="text-[10px] text-muted-foreground ml-auto">норма: 30–100</span>
             </div>
-            {/* Range bar mock - abnormal */}
             <div className="mt-2 h-2 w-full rounded-full bg-muted overflow-hidden">
               <div className="h-full w-[18%] rounded-full bg-gradient-to-r from-red-400 to-orange-400" />
             </div>
-            {/* Blurred interpretation */}
-            <div className="relative mt-3">
-              <div className="text-xs leading-relaxed text-muted-foreground" style={{ filter: "blur(4px)", userSelect: "none" }}>
-                Витамин D ниже нормы — это влияет на иммунитет, настроение и здоровье костей. Рекомендуется…
-              </div>
-              <div className="absolute inset-0 flex items-center justify-center">
-                <span className="inline-flex items-center gap-1 rounded-full bg-background/90 px-2.5 py-1 text-[10px] font-medium text-muted-foreground shadow-sm border border-border">
-                  <Lock className="h-2.5 w-2.5" />
-                  В полном отчёте
-                </span>
-              </div>
+            <div className="mt-3 text-xs leading-relaxed text-muted-foreground">
+              Влияет на иммунитет, настроение и здоровье костей. Кальций пока в норме, но при сниженном витамине D его усвоение может ухудшиться. Рекомендуется: жирная рыба, яичные желтки, прогулки на солнце. Пересдать через 3 месяца.
             </div>
           </div>
 
-          {/* Preview card 3: Doctor questions */}
-          <div className="rounded-xl border border-border bg-card p-4 sm:col-span-2">
-            <div className="flex items-center gap-2 mb-3">
-              <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary/10">
-                <Stethoscope className="h-3.5 w-3.5 text-primary" />
-              </div>
-              <span className="text-sm font-medium text-foreground">Вопросы для врача</span>
-            </div>
-            <div className="space-y-2">
-              <div className="flex items-start gap-2 rounded-lg bg-muted/50 px-3 py-2">
-                <span className="mt-0.5 text-primary text-xs">1.</span>
-                <span className="text-xs text-muted-foreground">Нужно ли мне дополнительно сдать анализ на витамин B12?</span>
-              </div>
-              <div className="relative">
-                <div className="flex items-start gap-2 rounded-lg bg-muted/50 px-3 py-2" style={{ filter: "blur(4px)", userSelect: "none" }}>
-                  <span className="mt-0.5 text-primary text-xs">2.</span>
-                  <span className="text-xs text-muted-foreground">Стоит ли мне принимать добавки витамина D и в какой дозировке?</span>
-                </div>
-              </div>
-              <div className="relative">
-                <div className="flex items-start gap-2 rounded-lg bg-muted/50 px-3 py-2" style={{ filter: "blur(4px)", userSelect: "none" }}>
-                  <span className="mt-0.5 text-primary text-xs">3.</span>
-                  <span className="text-xs text-muted-foreground">Какие дополнительные исследования вы бы порекомендовали?</span>
-                </div>
-              </div>
-            </div>
+          {/* + all other indicators */}
+          <div className="rounded-xl border border-border bg-card px-4 py-3 sm:col-span-2 text-center text-sm text-muted-foreground">
+            + все остальные ваши показатели из анализа
           </div>
+        </div>
+
+        {/* Teaser blocks — show report scope */}
+        <div className="mt-4 flex flex-col gap-2.5">
+          {[
+            { icon: UtensilsCrossed, text: "Рекомендации по питанию с учётом всех ваших показателей и возраста" },
+            { icon: ListChecks, text: "Персональный чек-лист «Что делать дальше»" },
+            { icon: FlaskConical, text: "Рекомендации, какие анализы ещё сдать" },
+            { icon: Stethoscope, text: "Вопросы, которые надо обсудить с врачом" },
+          ].map(({ icon: Icon, text }) => (
+            <div
+              key={text}
+              className="flex items-center gap-3 rounded-xl bg-muted/60 px-4 py-3.5"
+            >
+              <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-primary/10">
+                <Icon className="h-3 w-3 text-primary" />
+              </div>
+              <span className="text-sm font-medium text-foreground leading-snug">{text}</span>
+            </div>
+          ))}
+        </div>
+
+        {/* Mini CTA */}
+        <div className="mt-6 text-center">
+          <button
+            type="button"
+            onClick={() => inputRef.current?.click()}
+            className="inline-flex items-center gap-2 rounded-xl bg-primary px-6 py-3 text-sm font-semibold text-primary-foreground shadow-sm transition-all hover:opacity-90 hover:shadow-md active:scale-[0.98]"
+          >
+            <Upload className="h-4 w-4" />
+            Загрузить свои анализы — бесплатно
+          </button>
         </div>
       </section>
 

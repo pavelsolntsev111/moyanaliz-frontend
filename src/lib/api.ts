@@ -123,6 +123,17 @@ export interface OrderStatus {
         };
       }>;
     }>;
+    nutrition?: {
+      products_to_add: Array<{ product: string; reason: string; frequency?: string }>;
+      products_to_limit: Array<{ product: string; reason: string }>;
+      supplements_note: string | null;
+    };
+    action_plan?: {
+      urgent: string[];
+      soon: string[];
+      control: string[];
+    };
+    additional_tests?: Array<{ test: string; reason: string }>;
     stis_special_section?: {
       is_present: boolean;
       notice: string;
