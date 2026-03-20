@@ -1,6 +1,6 @@
 import type { PreviewData } from "./types";
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "https://api.moyanaliz.ru";
 
 async function request<T>(path: string, options?: RequestInit): Promise<T> {
   const res = await fetch(`${API_URL}${path}`, {
