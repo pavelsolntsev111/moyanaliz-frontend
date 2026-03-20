@@ -32,7 +32,10 @@ export interface LightIndicator {
   unit: string;
   reference_range: string;
   status: "normal" | "above_normal" | "below_normal" | "critical_high" | "critical_low";
-  short_description: string;
+  short_description?: string;
+  what_is?: string;
+  sources?: string;
+  recommendation?: string;
 }
 
 export interface PreviewData {

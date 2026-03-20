@@ -3,72 +3,173 @@
 import { useCallback, useRef, useState } from "react"
 import {
   Upload,
-  MessageCircle,
-  Stethoscope,
+  Shield,
+  FileText,
   Clock,
-  ShieldCheck,
   ChevronDown,
-  Users,
+  CheckCircle2,
+  AlertTriangle,
+  Apple,
+  ClipboardList,
+  TestTubes,
+  MessageSquare,
   BarChart3,
   Star,
-  CheckCircle2,
-  Search,
-  FileText,
+  Users,
+  Target,
   Lock,
-  ArrowRight,
-  UtensilsCrossed,
-  ListChecks,
-  FlaskConical,
+  FileDown,
 } from "lucide-react"
 
-const benefits = [
-  {
-    icon: MessageCircle,
-    title: "Понятным языком",
-    text: "Каждый показатель объяснён просто и с рекомендациями — никакого медицинского жаргона",
-  },
-  {
-    icon: Stethoscope,
-    title: "Что спросить у врача",
-    text: "Получите список вопросов для врача на основе именно ваших результатов",
-  },
-  {
-    icon: Clock,
-    title: "Готово за 30 секунд",
-    text: "Загрузите фото анализа — и сразу получите разбор",
-  },
+/* ─── Inline range bar ─── */
+function DemoRangeBar({
+  value,
+  min,
+  max,
+  unit,
+  color,
+}: {
+  value: number
+  min: number
+  max: number
+  unit: string
+  color: string
+}) {
+  const range = max - min
+  const padding = range * 0.3
+  const totalMin = min - padding
+  const totalMax = max + padding
+  const totalRange = totalMax - totalMin
+  const pos = Math.max(2, Math.min(98, ((value - totalMin) / totalRange) * 100))
+  const normLeft = ((min - totalMin) / totalRange) * 100
+  const normWidth = ((max - totalMin) / totalRange) * 100 - normLeft
+
+  return (
+    <div className="mt-3">
+      <div className="relative h-2.5 w-full overflow-hidden rounded-full bg-muted">
+        <div
+          className="absolute top-0 h-full rounded-full bg-success/20"
+          style={{ left: `${normLeft}%`, width: `${normWidth}%` }}
+        />
+        <div
+          className={`absolute top-0 h-full w-1.5 rounded-full ${color}`}
+          style={{ left: `${pos}%`, transform: "translateX(-50%)" }}
+        />
+      </div>
+      <div className="mt-1 flex justify-between text-[10px] text-muted-foreground">
+        <span>
+          {min} {unit}
+        </span>
+        <span className="text-success">норма</span>
+        <span>
+          {max} {unit}
+        </span>
+      </div>
+    </div>
+  )
+}
+
+/* ─── Analysis types chips ─── */
+const analysisTypes = [
+  "Общий анализ крови",
+  "Биохимия",
+  "Витамины",
+  "Гормоны щитовидной железы",
+  "Железо и ферритин",
+  "Глюкоза и HbA1c",
+  "Анализ мочи",
+  "Копрограмма",
+  "ИППП",
+  "Аллергология",
+  "Свёртываемость",
 ]
 
-const labs = [
-  { name: "Инвитро", logo: "/labs/invitro.png" },
-  { name: "Гемотест", logo: "/labs/gemotest.png" },
-  { name: "KDL", logo: "/labs/kdl.png" },
+const moreAnalysisTypes = [
+  "Липидный профиль",
+  "Печёночные пробы",
+  "Почечные пробы",
+  "Электролиты",
+  "Общий белок и фракции",
+  "С-реактивный белок",
+  "Ревматоидный фактор",
+  "Гомоцистеин",
+  "Фолиевая кислота",
+  "Витамин B12",
+  "Кальций и фосфор",
+  "Магний",
+  "Цинк и селен",
+  "Пролактин",
+  "Тестостерон",
+  "Эстрадиол",
+  "Прогестерон",
+  "Кортизол",
+  "Инсулин",
+  "Мочевая кислота",
+  "Гликированный гемоглобин",
+  "Ферритин",
+  "Трансферрин",
+  "Фибриноген",
+  "D-димер",
+  "Антитела к ТПО",
+  "Иммуноглобулины",
+  "Группа крови и резус-фактор",
 ]
 
+/* ─── FAQ data ─── */
 const faqItems = [
   {
-    q: "Какие анализы можно загрузить?",
-    a: "Общий анализ крови (ОАК), биохимический анализ крови, общий анализ мочи и другие стандартные лабораторные исследования. Подходят результаты из любой лаборатории.",
+    q: "Как работает расшифровка анализов?",
+    a: "Вы загружаете PDF или фото анализа, наш ИИ извлекает все показатели, сравнивает с референсными значениями и даёт понятные объяснения на простом языке с рекомендациями по питанию и образу жизни.",
   },
   {
-    q: "В каком формате загружать файл?",
-    a: "Поддерживаются фотографии (JPG, PNG) и PDF-файлы. Убедитесь, что текст на изображении читаем — без бликов и размытия.",
+    q: "Какие анализы можно расшифровать?",
+    a: "Общий и биохимический анализ крови, гормоны щитовидной железы, витамины, анализ мочи, копрограмму, ИППП, ВИЧ/сифилис/гепатит и многие другие лабораторные исследования.",
   },
   {
-    q: "Насколько точна расшифровка?",
-    a: "Мы используем модель Claude от Anthropic — одну из лучших в мире по работе с медицинскими данными. Точность интерпретации сопоставима с рекомендациями терапевта.",
+    q: "Это заменяет консультацию врача?",
+    a: "Нет. Сервис носит информационный характер и помогает лучше понять результаты анализов. Для постановки диагноза и назначения лечения обязательно обратитесь к врачу.",
   },
   {
-    q: "Это заменяет визит к врачу?",
-    a: "Нет. Сервис помогает понять результаты анализов, но не является медицинской консультацией. При отклонениях рекомендуем обратиться к специалисту.",
+    q: "Как быстро я получу результат?",
+    a: "Предварительный результат появляется сразу после загрузки — за 30 секунд. Полный отчёт с детальными рекомендациями формируется в течение 1-2 минут после оплаты.",
   },
   {
     q: "Мои данные в безопасности?",
-    a: "Да. Загруженные файлы обрабатываются и удаляются. Мы не храним медицинские данные и не передаём их третьим лицам.",
+    a: "Да. Файлы передаются по зашифрованному каналу, хранятся в защищённом облачном хранилище и не передаются третьим лицам. Мы соблюдаем закон о персональных данных.",
+  },
+]
+
+/* ─── Teaser data (5 items) ─── */
+const teaserItems = [
+  {
+    icon: BarChart3,
+    title: "Расшифровка всех показателей из анализа",
+    desc: "Каждый показатель объяснён простым языком — что означает, почему важен, в какую сторону отклоняется",
+    borderColor: "border-l-teal-500",
   },
   {
-    q: "Можно ли получить возврат?",
-    a: "Если сервис не смог распознать анализ, мы вернём деньги в полном объёме. Напишите на support@moyanaliz.ru.",
+    icon: Apple,
+    title: "Рекомендации по питанию",
+    desc: "Конкретные продукты и нутриенты для каждого отклонения от нормы",
+    borderColor: "border-l-emerald-500",
+  },
+  {
+    icon: ClipboardList,
+    title: 'Персональный чек-лист "Что делать дальше"',
+    desc: "Пошаговый план действий по нормализации показателей — от питания до образа жизни",
+    borderColor: "border-l-blue-500",
+  },
+  {
+    icon: TestTubes,
+    title: "Рекомендации, какие анализы ещё сдать",
+    desc: "Какие исследования дополнительно пройти для уточнения полной картины здоровья",
+    borderColor: "border-l-amber-500",
+  },
+  {
+    icon: MessageSquare,
+    title: "Вопросы для врача",
+    desc: "Готовый список вопросов, чтобы визит к специалисту был максимально продуктивным",
+    borderColor: "border-l-purple-500",
   },
 ]
 
@@ -107,306 +208,393 @@ export function UploadStep({ onFileSelected }: UploadStepProps) {
   )
 
   return (
-    <div className="flex flex-col gap-16 pb-16">
-      {/* Hero + Upload zone */}
-      <section className="mx-auto w-full max-w-3xl px-4 pt-10 text-center">
-        <h1 className="text-balance text-3xl font-bold tracking-tight text-foreground sm:text-4xl lg:text-5xl">
-          Узнайте, что означают{" "}
-          <span className="text-primary">ваши анализы</span>
-        </h1>
-        <p className="mx-auto mt-4 max-w-xl text-pretty text-base leading-relaxed text-muted-foreground sm:text-lg">
-          Загрузите фото или PDF из любой лаборатории — мы найдём отклонения,
-          объясним каждый показатель и подскажем, что спросить у врача
-        </p>
+    <div className="flex flex-col">
+      {/* ─── Hero with gradient background ─── */}
+      <section
+        className="relative overflow-hidden"
+        style={{
+          background:
+            "radial-gradient(ellipse 70% 50% at 60% 30%, rgba(0,180,188,0.08) 0%, transparent 70%), radial-gradient(ellipse 50% 40% at 30% 60%, rgba(0,180,188,0.05) 0%, transparent 60%)",
+        }}
+      >
+        <div className="mx-auto grid max-w-6xl gap-10 px-4 py-8 md:grid-cols-2 md:items-center md:py-10">
+          {/* Left */}
+          <div className="relative z-10 animate-fade-up">
+            <h1 className="text-3xl font-extrabold leading-tight tracking-tight text-foreground sm:text-4xl lg:text-5xl">
+              Узнайте, что означают{" "}
+              <span className="text-primary">ваши анализы</span>
+            </h1>
+            <p className="mt-4 max-w-lg text-base leading-relaxed text-muted-foreground sm:text-lg">
+              Загрузите результаты из любой лаборатории — получите понятную
+              расшифровку с рекомендациями по питанию и образу жизни.
+            </p>
 
-        {/* Drop zone */}
-        <div
-          onDragOver={(e) => {
-            e.preventDefault()
-            setDragActive(true)
-          }}
-          onDragLeave={() => setDragActive(false)}
-          onDrop={handleDrop}
-          className={`mt-8 rounded-2xl border-2 border-dashed p-6 transition-all sm:p-8 ${
-            dragActive
-              ? "border-primary bg-primary/5"
-              : "border-border bg-card hover:border-primary/50"
-          }`}
-        >
-          {/* Mini value props inside drop zone */}
-          <div className="flex flex-wrap items-center justify-center gap-x-5 gap-y-2 text-xs text-muted-foreground mb-5">
-            <span className="inline-flex items-center gap-1">
-              <BarChart3 className="h-3.5 w-3.5 text-primary" />
-              Разбор каждого показателя
-            </span>
-            <span className="inline-flex items-center gap-1">
-              <Search className="h-3.5 w-3.5 text-primary" />
-              Поиск отклонений
-            </span>
-            <span className="inline-flex items-center gap-1">
-              <MessageCircle className="h-3.5 w-3.5 text-primary" />
-              Вопросы для врача
-            </span>
+            {/* Analysis types chips */}
+            <div className="mt-6 flex flex-wrap gap-2">
+              {analysisTypes.map((type) => (
+                <span
+                  key={type}
+                  className="flex-1 inline-flex items-center justify-center whitespace-nowrap rounded-lg border border-border bg-card px-3 py-1.5 text-xs font-medium text-foreground"
+                >
+                  {type}
+                </span>
+              ))}
+              {/* "и другие" chip with hover popup */}
+              <span className="group relative flex-1 inline-flex items-center justify-center whitespace-nowrap rounded-lg border border-border bg-card px-3 py-1.5 text-xs font-medium text-muted-foreground cursor-default">
+                а также другие анализы
+                <div className="pointer-events-none absolute bottom-full left-0 z-[9999] mb-2 w-[420px] origin-bottom-left scale-95 rounded-xl border border-border bg-card p-4 opacity-0 shadow-xl transition-all duration-200 group-hover:pointer-events-auto group-hover:scale-100 group-hover:opacity-100">
+                  <p className="mb-2.5 text-xs font-semibold text-foreground">
+                    Также распознаём:
+                  </p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {moreAnalysisTypes.map((type) => (
+                      <span
+                        key={type}
+                        className="rounded-md bg-muted px-2 py-1 text-[11px] text-muted-foreground"
+                      >
+                        {type}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              </span>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => inputRef.current?.click()}
+              className="cta-glow mt-7 inline-flex items-center gap-2 rounded-full bg-primary px-7 py-3.5 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90"
+            >
+              <Upload className="h-4 w-4" />
+              Загрузить анализ
+            </button>
           </div>
 
-          {/* CTA button */}
-          <button
-            type="button"
-            onClick={() => inputRef.current?.click()}
-            className="inline-flex items-center gap-2 rounded-xl bg-primary px-8 py-3.5 text-base font-semibold text-primary-foreground shadow-sm transition-all hover:opacity-90 hover:shadow-md active:scale-[0.98]"
-          >
-            <Upload className="h-5 w-5" />
-            Загрузить анализы — бесплатно
-          </button>
+          {/* Right — Upload card (soft shadow) */}
+          <div className="animate-fade-up delay-200">
+            <div
+              onDragOver={(e) => {
+                e.preventDefault()
+                setDragActive(true)
+              }}
+              onDragLeave={() => setDragActive(false)}
+              onDrop={handleDrop}
+              className={`rounded-2xl bg-card p-6 shadow-lg shadow-black/[0.04] transition-all hover:shadow-xl hover:shadow-black/[0.06] ${
+                dragActive ? "ring-2 ring-primary ring-offset-2" : ""
+              }`}
+            >
+              <div className="flex flex-col items-center rounded-xl border-2 border-dashed border-border px-6 py-10 text-center transition-colors hover:border-primary/40">
+                <div className="flex h-14 w-14 items-center justify-center rounded-full bg-primary/10">
+                  <Upload className="h-6 w-6 text-primary" />
+                </div>
+                <p className="mt-4 text-sm font-semibold text-foreground">
+                  Перетащите файл сюда
+                </p>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  PDF, JPEG, PNG, WebP, HEIC — до 20 МБ
+                </p>
+                <button
+                  type="button"
+                  onClick={() => inputRef.current?.click()}
+                  className="mt-4 inline-flex items-center gap-2 rounded-full bg-primary px-5 py-2.5 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90"
+                >
+                  <FileText className="h-4 w-4" />
+                  Выбрать файл
+                </button>
+                <div className="mt-3 flex items-center justify-center gap-1.5 text-xs text-muted-foreground">
+                  <Lock className="h-3 w-3" />
+                  <span>Данные зашифрованы и защищены</span>
+                </div>
+              </div>
 
-          <p className="mt-3 text-xs text-muted-foreground/70">
-            JPG, PNG или PDF до 10 МБ
-          </p>
-
-          {/* Hidden drag-and-drop area hint for desktop */}
-          <p className="mt-1 hidden text-xs text-muted-foreground/50 sm:block">
-            или перетащите файл в эту область
-          </p>
-
-          <input
-            ref={inputRef}
-            type="file"
-            accept="image/jpeg,image/png,image/webp,application/pdf"
-            className="sr-only"
-            onChange={(e) => {
-              const file = e.target.files?.[0]
-              if (file) handleFile(file)
-            }}
-          />
+            </div>
+          </div>
         </div>
 
-        {/* Compact social proof + speed badge */}
-        <div className="mt-4 flex flex-wrap items-center justify-center gap-x-4 gap-y-1 text-xs text-muted-foreground/70">
-          <span className="inline-flex items-center gap-1">
-            <Clock className="h-3 w-3 text-primary/60" />
-            Результат за 30 секунд
-          </span>
-          <span className="inline-flex items-center gap-1">
-            <CheckCircle2 className="h-3 w-3 text-primary/60" />
-            10 000+ расшифровок
-          </span>
-          <span className="inline-flex items-center gap-1">
-            <CheckCircle2 className="h-3 w-3 text-primary/60" />
-            99% точность
-          </span>
-          <span className="inline-flex items-center gap-1">
-            <CheckCircle2 className="h-3 w-3 text-primary/60" />
-            Оценка 4.8
-          </span>
-        </div>
+        <input
+          ref={inputRef}
+          type="file"
+          accept="image/jpeg,image/png,image/webp,application/pdf"
+          className="sr-only"
+          onChange={(e) => {
+            const file = e.target.files?.[0]
+            if (file) handleFile(file)
+          }}
+        />
+      </section>
 
-        {/* Labs */}
-        <div className="mt-10">
-          <p className="text-sm font-medium text-muted-foreground">
-            Распознаём анализы из любой лаборатории
-          </p>
-          <div className="mt-5 flex items-center justify-center gap-12 sm:gap-16">
-            {labs.map((lab) => (
-              <img
-                key={lab.name}
-                src={lab.logo}
-                alt={lab.name}
-                className="h-8 w-auto grayscale opacity-50 transition-all hover:grayscale-0 hover:opacity-100 sm:h-10"
-              />
+      {/* ─── Lab logos marquee ─── */}
+      <section className="overflow-hidden bg-muted/20 pb-4 pt-2">
+        <p className="mb-3 text-center text-xs font-medium uppercase tracking-wider text-muted-foreground/60">
+          Распознаём анализы из любой лаборатории
+        </p>
+        <div className="relative">
+          <div className="pointer-events-none absolute inset-y-0 left-0 z-10 w-24 bg-gradient-to-r from-muted/20 to-transparent" />
+          <div className="pointer-events-none absolute inset-y-0 right-0 z-10 w-24 bg-gradient-to-l from-muted/20 to-transparent" />
+          <div className="animate-marquee flex w-max items-center gap-16">
+            {[...Array(2)].map((_, dup) => (
+              <div key={dup} className="flex items-center gap-16">
+                <img src="/labs/invitro.png" alt="Инвитро" className="h-7 w-auto object-contain opacity-50 grayscale" />
+                <img src="/labs/gemotest.png" alt="Гемотест" className="h-7 w-auto object-contain opacity-50 grayscale" />
+                <img src="/labs/kdl.png" alt="KDL" className="h-7 w-auto object-contain opacity-50 grayscale" />
+                <img src="/labs/helix.png" alt="Helix" className="h-14 w-auto object-contain opacity-50 grayscale" />
+                <img src="/labs/citilab.png" alt="Ситилаб" className="h-7 w-auto object-contain opacity-50 grayscale" />
+                <img src="/labs/cl.png" alt="CL" className="h-7 w-auto object-contain opacity-50 grayscale" />
+                <img src="/labs/dnkom.png" alt="ДНКОМ" className="h-7 w-auto object-contain opacity-50 grayscale" />
+                <img src="/labs/dialab.png" alt="Диалаб" className="h-7 w-auto object-contain opacity-50 grayscale" />
+              </div>
             ))}
           </div>
         </div>
       </section>
 
-      {/* Result preview */}
-      <section className="mx-auto w-full max-w-3xl px-4">
-        <h2 className="text-center text-xl font-bold text-foreground sm:text-2xl">
-          Как будет выглядеть расшифровка
-        </h2>
-
-        {/* Badge */}
-        <div className="mt-5 flex justify-center">
-          <span className="rounded-full bg-muted px-3 py-1 text-[10px] font-medium text-muted-foreground">
-            Пример отчёта
-          </span>
-        </div>
-
-        <div className="mt-4 grid gap-4 sm:grid-cols-2">
-          {/* Preview card 1: Albumin - normal */}
-          <div className="rounded-xl border border-border bg-card p-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <div className="h-2 w-2 rounded-full bg-emerald-500" />
-                <span className="text-sm font-medium text-foreground">Альбумин</span>
+      {/* ─── Preview Cards ─── */}
+      <section className="border-t border-border bg-muted/30 py-14">
+        <div className="mx-auto max-w-6xl px-4">
+          <h2 className="animate-fade-up text-center text-2xl font-bold text-foreground">
+            Пример расшифровки
+          </h2>
+          <div className="mt-8 grid gap-5 sm:grid-cols-2">
+            {/* Albumin — normal */}
+            <div className="animate-fade-up delay-200 rounded-xl bg-card p-6 shadow-lg shadow-black/[0.04] transition-shadow hover:shadow-lg hover:shadow-emerald-500/[0.08]">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <p className="text-xs font-medium text-muted-foreground">ALB</p>
+                  <h3 className="mt-0.5 text-sm font-semibold text-card-foreground">
+                    Альбумин
+                  </h3>
+                </div>
+                <span className="inline-flex items-center gap-1 rounded-full bg-success px-2.5 py-1 text-xs font-semibold text-success-foreground">
+                  <CheckCircle2 className="h-3 w-3" />
+                  Норма
+                </span>
               </div>
-              <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-medium text-emerald-600">
-                Норма
-              </span>
+              <div className="mt-3 flex items-baseline gap-1.5">
+                <span className="text-2xl font-bold text-success">50</span>
+                <span className="text-sm text-muted-foreground">г/л</span>
+              </div>
+              <DemoRangeBar value={50} min={35} max={52} unit="г/л" color="bg-success" />
+              <div className="mt-3 space-y-2 text-sm leading-relaxed text-muted-foreground">
+                <p>
+                  <span className="font-medium text-foreground">Что это:</span>{" "}
+                  Альбумин — основной белок крови, вырабатывается печенью. Отвечает за поддержание давления в сосудах и транспорт веществ.
+                </p>
+                <p>
+                  <span className="font-medium text-foreground">Источники:</span>{" "}
+                  Содержится в яйцах, молочных продуктах, мясе, рыбе. Синтез поддерживается полноценным питанием и здоровой печенью.
+                </p>
+                <p>
+                  <span className="font-medium text-foreground">Ваш результат:</span>{" "}
+                  50 г/л — в пределах нормы. Организм хорошо синтезирует белок. Продолжайте сбалансированное питание.
+                </p>
+              </div>
             </div>
-            <div className="mt-3 flex items-baseline gap-1.5">
-              <span className="text-lg font-bold text-foreground">50</span>
-              <span className="text-xs text-muted-foreground">г/л</span>
-              <span className="text-[10px] text-muted-foreground ml-auto">норма: 35–52</span>
-            </div>
-            <div className="mt-2 h-2 w-full rounded-full bg-muted overflow-hidden">
-              <div className="h-full w-[88%] rounded-full bg-gradient-to-r from-emerald-300 to-emerald-500" />
-            </div>
-            <div className="mt-3 text-xs leading-relaxed text-muted-foreground">
-              Основной белок крови, поддерживает онкотическое давление и транспорт веществ. Ваш уровень в пределах нормы. Поддерживается белковой пищей: мясо, рыба, яйца.
+            {/* Vitamin D — below normal */}
+            <div className="animate-fade-up delay-300 rounded-xl bg-card p-6 shadow-lg shadow-black/[0.04] transition-shadow hover:shadow-lg hover:shadow-orange-500/[0.08]">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <p className="text-xs font-medium text-muted-foreground">
+                    25-OH Vitamin D
+                  </p>
+                  <h3 className="mt-0.5 text-sm font-semibold text-card-foreground">
+                    Витамин D
+                  </h3>
+                </div>
+                <span className="inline-flex items-center gap-1 rounded-full bg-warning px-2.5 py-1 text-xs font-semibold text-warning-foreground">
+                  <AlertTriangle className="h-3 w-3" />
+                  Ниже нормы
+                </span>
+              </div>
+              <div className="mt-3 flex items-baseline gap-1.5">
+                <span className="text-2xl font-bold text-warning">18</span>
+                <span className="text-sm text-muted-foreground">нг/мл</span>
+              </div>
+              <DemoRangeBar value={18} min={30} max={100} unit="нг/мл" color="bg-warning" />
+              <div className="mt-3 space-y-2 text-sm leading-relaxed text-muted-foreground">
+                <p>
+                  <span className="font-medium text-foreground">Что это:</span>{" "}
+                  Витамин D — жирорастворимый витамин, ключевой для усвоения кальция, иммунитета и здоровья костей.
+                </p>
+                <p>
+                  <span className="font-medium text-foreground">Источники:</span>{" "}
+                  Жирная рыба (лосось, скумбрия), яичные желтки, обогащённые продукты. Вырабатывается кожей при воздействии солнечного света.
+                </p>
+                <p>
+                  <span className="font-medium text-foreground">Ваш результат:</span>{" "}
+                  18 нг/мл — ниже нормы. Рекомендуется увеличить время на солнце, добавить в рацион жирную рыбу и обсудить приём добавок с врачом.
+                </p>
+              </div>
             </div>
           </div>
+        </div>
+      </section>
 
-          {/* Preview card 2: Vitamin D - abnormal */}
-          <div className="rounded-xl border border-border bg-card p-4" style={{ borderLeft: "4px solid #FF523E" }}>
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <div className="h-2 w-2 rounded-full bg-orange-500" />
-                <span className="text-sm font-medium text-orange-600">Витамин D</span>
+      {/* ─── Teaser blocks ─── */}
+      <section className="py-14">
+        <div className="mx-auto max-w-6xl px-4">
+          <h2 className="animate-fade-up text-center text-2xl font-bold text-foreground">
+            Что входит в полный отчёт
+          </h2>
+          <div className="mt-8 space-y-4">
+            {teaserItems.map((item, i) => (
+              <div
+                key={item.title}
+                className={`animate-fade-up delay-${(i + 1) * 100} rounded-xl bg-card p-5 shadow-lg shadow-black/[0.04] border-l-4 ${item.borderColor}`}
+              >
+                <div className="flex items-start gap-4">
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10">
+                    <item.icon className="h-5 w-5 text-primary" />
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-semibold text-foreground">
+                      {item.title}
+                    </h3>
+                    <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
+                      {item.desc}
+                    </p>
+                  </div>
+                </div>
               </div>
-              <span className="rounded-full bg-orange-50 px-2 py-0.5 text-[10px] font-medium text-orange-600">
-                Ниже нормы
-              </span>
-            </div>
-            <div className="mt-3 flex items-baseline gap-1.5">
-              <span className="text-lg font-bold text-foreground">18</span>
-              <span className="text-xs text-muted-foreground">нг/мл</span>
-              <span className="text-[10px] text-muted-foreground ml-auto">норма: 30–100</span>
-            </div>
-            <div className="mt-2 h-2 w-full rounded-full bg-muted overflow-hidden">
-              <div className="h-full w-[18%] rounded-full bg-gradient-to-r from-red-400 to-orange-400" />
-            </div>
-            <div className="mt-3 text-xs leading-relaxed text-muted-foreground">
-              Влияет на иммунитет, настроение и здоровье костей. Кальций пока в норме, но при сниженном витамине D его усвоение может ухудшиться. Рекомендуется: жирная рыба, яичные желтки, прогулки на солнце. Пересдать через 3 месяца.
-            </div>
-          </div>
-
-          {/* + all other indicators */}
-          <div className="rounded-xl border border-border bg-card px-4 py-3 sm:col-span-2 text-center text-sm text-muted-foreground">
-            + все остальные ваши показатели из анализа
+            ))}
           </div>
         </div>
+      </section>
 
-        {/* Teaser blocks — show report scope */}
-        <div className="mt-4 flex flex-col gap-2.5">
-          {[
-            { icon: UtensilsCrossed, text: "Рекомендации по питанию с учётом всех ваших показателей и возраста" },
-            { icon: ListChecks, text: "Персональный чек-лист «Что делать дальше»" },
-            { icon: FlaskConical, text: "Рекомендации, какие анализы ещё сдать" },
-            { icon: Stethoscope, text: "Вопросы, которые надо обсудить с врачом" },
-          ].map(({ icon: Icon, text }) => (
-            <div
-              key={text}
-              className="flex items-center gap-3 rounded-xl bg-muted/60 px-4 py-3.5"
-            >
-              <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-primary/10">
-                <Icon className="h-3 w-3 text-primary" />
+      {/* ─── Benefits ─── */}
+      <section className="border-t border-border py-14">
+        <div className="mx-auto max-w-3xl px-4">
+          <h2 className="animate-fade-up text-center text-2xl font-bold text-foreground">
+            Почему выбирают нас
+          </h2>
+          <div className="mt-8 space-y-4">
+            {[
+              {
+                icon: Clock,
+                title: "Результат за 30 секунд",
+                desc: "Моментальная расшифровка сразу после загрузки файла — не нужно ждать",
+              },
+              {
+                icon: FileText,
+                title: "Понятный язык",
+                desc: "Без медицинского жаргона — простые объяснения для каждого показателя",
+              },
+              {
+                icon: FileDown,
+                title: "PDF-отчёт на email",
+                desc: "Полный отчёт в формате PDF отправляется на вашу электронную почту",
+              },
+            ].map((item) => (
+              <div
+                key={item.title}
+                className="flex items-center gap-4 rounded-xl bg-card px-6 py-5 shadow-lg shadow-black/[0.04]"
+              >
+                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-primary/10">
+                  <item.icon className="h-5 w-5 text-primary" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-semibold text-foreground">
+                    {item.title}
+                  </h3>
+                  <p className="mt-0.5 text-sm text-muted-foreground">
+                    {item.desc}
+                  </p>
+                </div>
               </div>
-              <span className="text-sm font-medium text-foreground leading-snug">{text}</span>
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
+      </section>
 
-        {/* Mini CTA */}
-        <div className="mt-6 text-center">
+      {/* ─── Stats ─── */}
+      <section className="border-t border-border bg-muted/30 py-14">
+        <div className="mx-auto max-w-4xl px-4">
+          <div className="grid gap-5 sm:grid-cols-3">
+            {[
+              {
+                icon: Users,
+                value: "10 000+",
+                label: "расшифровок выполнено",
+              },
+              { icon: Target, value: "99%", label: "точность анализа" },
+              { icon: Star, value: "4.8", label: "средняя оценка пользователей" },
+            ].map((s) => (
+              <div
+                key={s.label}
+                className="flex flex-col items-center rounded-xl bg-card px-6 py-8 text-center shadow-lg shadow-primary/[0.06]"
+              >
+                <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/10">
+                  <s.icon className="h-6 w-6 text-primary" />
+                </div>
+                <p className="mt-4 text-3xl font-extrabold text-foreground">
+                  {s.value}
+                </p>
+                <p className="mt-1 text-sm text-muted-foreground">{s.label}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ─── FAQ ─── */}
+      <section className="py-14">
+        <div className="mx-auto max-w-3xl px-4">
+          <h2 className="animate-fade-up text-center text-2xl font-bold text-foreground">
+            Частые вопросы
+          </h2>
+          <div className="mt-8 space-y-3">
+            {faqItems.map((item, i) => (
+              <div
+                key={i}
+                className="overflow-hidden rounded-xl bg-card shadow-lg shadow-black/[0.04]"
+              >
+                <button
+                  onClick={() => setOpenFaq(openFaq === i ? null : i)}
+                  className="flex w-full items-center justify-between px-5 py-4 text-left"
+                >
+                  <span className="text-sm font-semibold text-foreground">
+                    {item.q}
+                  </span>
+                  <ChevronDown
+                    className={`h-4 w-4 shrink-0 text-muted-foreground transition-transform ${
+                      openFaq === i ? "rotate-180" : ""
+                    }`}
+                  />
+                </button>
+                {openFaq === i && (
+                  <div className="border-t border-border/50 px-5 py-4">
+                    <p className="text-sm leading-relaxed text-muted-foreground">
+                      {item.a}
+                    </p>
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ─── Bottom CTA ─── */}
+      <section className="border-t border-border bg-muted/30 py-14">
+        <div className="mx-auto max-w-2xl px-4 text-center">
+          <h2 className="animate-fade-up text-2xl font-bold text-foreground">
+            Готовы расшифровать свои анализы?
+          </h2>
+          <p className="animate-fade-up delay-100 mt-3 text-sm text-muted-foreground">
+            Загрузите результаты — первые показатели бесплатно. Полный отчёт
+            всего 199 рублей.
+          </p>
           <button
             type="button"
             onClick={() => inputRef.current?.click()}
-            className="inline-flex items-center gap-2 rounded-xl bg-primary px-6 py-3 text-sm font-semibold text-primary-foreground shadow-sm transition-all hover:opacity-90 hover:shadow-md active:scale-[0.98]"
+            className="cta-glow animate-fade-up delay-200 mt-6 inline-flex items-center gap-2 rounded-full bg-primary px-8 py-3.5 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90"
           >
             <Upload className="h-4 w-4" />
-            Загрузить свои анализы — бесплатно
+            Загрузить анализ
           </button>
-        </div>
-      </section>
-
-      {/* Benefits */}
-      <section className="mx-auto w-full max-w-5xl px-4">
-        <div className="grid gap-6 sm:grid-cols-3">
-          {benefits.map((b) => (
-            <div
-              key={b.title}
-              className="flex flex-col items-center gap-3 rounded-xl border border-border bg-card p-6 text-center"
-            >
-              <div className="flex h-11 w-11 items-center justify-center rounded-lg bg-primary/10">
-                <b.icon className="h-5 w-5 text-primary" />
-              </div>
-              <h3 className="text-sm font-semibold text-foreground">{b.title}</h3>
-              <p className="text-sm leading-relaxed text-muted-foreground">
-                {b.text}
-              </p>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      {/* Trust block */}
-      <section className="mx-auto w-full max-w-4xl px-4">
-        <div className="rounded-2xl bg-primary/[0.04] border border-primary/10 p-8">
-          <div className="grid gap-8 sm:grid-cols-3 text-center">
-            <div className="flex flex-col items-center gap-2">
-              <Users className="h-6 w-6 text-primary" />
-              <p className="text-2xl font-bold text-foreground">Более 10 тыс</p>
-              <p className="text-sm text-muted-foreground">Расшифровок выполнено</p>
-            </div>
-            <div className="flex flex-col items-center gap-2">
-              <BarChart3 className="h-6 w-6 text-primary" />
-              <p className="text-2xl font-bold text-foreground">99%+</p>
-              <p className="text-sm text-muted-foreground">Точность распознавания</p>
-            </div>
-            <div className="flex flex-col items-center gap-2">
-              <Star className="h-6 w-6 text-primary" />
-              <p className="text-2xl font-bold text-foreground">4.8</p>
-              <p className="text-sm text-muted-foreground">Средняя оценка пользователей</p>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Disclaimer */}
-      <section className="mx-auto w-full max-w-3xl px-4">
-        <div className="flex items-start gap-3 rounded-xl border border-border bg-card p-4">
-          <ShieldCheck className="mt-0.5 h-5 w-5 shrink-0 text-primary" />
-          <p className="text-xs leading-relaxed text-muted-foreground">
-            Сервис не является медицинской организацией и не ставит диагнозы.
-            Результаты расшифровки носят информационный характер. При
-            отклонениях показателей обратитесь к лечащему врачу.
+          <p className="animate-fade-up delay-300 mt-4 flex items-center justify-center gap-1.5 text-xs text-muted-foreground">
+            <Shield className="h-3.5 w-3.5" />
+            Безопасно и конфиденциально
           </p>
-        </div>
-      </section>
-
-      {/* FAQ */}
-      <section className="mx-auto w-full max-w-3xl px-4">
-        <h2 className="text-center text-xl font-bold text-foreground sm:text-2xl">
-          Частые вопросы
-        </h2>
-        <div className="mt-6 flex flex-col gap-2">
-          {faqItems.map((item, i) => (
-            <div
-              key={i}
-              className="rounded-xl border border-border bg-card"
-            >
-              <button
-                onClick={() => setOpenFaq(openFaq === i ? null : i)}
-                className="flex w-full items-center justify-between px-5 py-4 text-left"
-              >
-                <span className="text-sm font-medium text-foreground pr-4">
-                  {item.q}
-                </span>
-                <ChevronDown
-                  className={`h-4 w-4 shrink-0 text-muted-foreground transition-transform ${
-                    openFaq === i ? "rotate-180" : ""
-                  }`}
-                />
-              </button>
-              {openFaq === i && (
-                <div className="px-5 pb-4">
-                  <p className="text-sm leading-relaxed text-muted-foreground">
-                    {item.a}
-                  </p>
-                </div>
-              )}
-            </div>
-          ))}
         </div>
       </section>
     </div>

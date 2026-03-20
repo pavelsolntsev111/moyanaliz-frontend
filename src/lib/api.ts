@@ -113,7 +113,10 @@ export interface OrderStatus {
         reference_range: string;
         status: string;
         status_label: string;
-        interpretation: string;
+        interpretation?: string;
+        what_is?: string;
+        sources?: string;
+        recommendation?: string;
         severity: string;
         recommendations?: {
           nutrition: string | null;

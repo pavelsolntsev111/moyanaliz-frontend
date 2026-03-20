@@ -43,22 +43,36 @@ const GREEN = '#22c55e';
 const YELLOW = '#eab308';
 const RED = '#ef4444';
 
+interface PreviewData {
+  meta?: {
+    total_count?: number;
+    out_of_range_count?: number;
+  } | null;
+  indicators?: Array<{
+    status: string;
+  }>;
+}
+
 interface AnalysisScannerProps {
   isReady: MutableRefObject<boolean>;
   onComplete: () => void;
+  preview?: PreviewData | null;
 }
 
-export function AnalysisScanner({ isReady, onComplete }: AnalysisScannerProps) {
+export function AnalysisScanner({ isReady, onComplete, preview }: AnalysisScannerProps) {
   const [currentIdx, setCurrentIdx] = useState(0);
   const [flash, setFlash] = useState<'green' | 'yellow' | 'red' | null>(null);
   const [normalCount, setNormalCount] = useState(0);
   const [abnormalCount, setAbnormalCount] = useState(0);
+  const [revealed, setRevealed] = useState(false);
   const [checked, setChecked] = useState(0);
   const [fakeProgress, setFakeProgress] = useState(0);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const fakeProgressRef = useRef<NodeJS.Timeout | null>(null);
   const readyCheckRef = useRef<NodeJS.Timeout | null>(null);
   const stepRef = useRef(0);
+  const previewRef = useRef(preview);
+  previewRef.current = preview;
 
   const indicators = useRef<Indicator[]>(FAKE_INDICATORS).current;
 
@@ -66,17 +80,11 @@ export function AnalysisScanner({ isReady, onComplete }: AnalysisScannerProps) {
     stepRef.current += 1;
     const step = stepRef.current;
     const next = step % indicators.length;
-    const firstPass = step < indicators.length;
     const ind = indicators[next];
 
     setCurrentIdx(next);
     setFlash(ind.flash);
-
-    if (firstPass) {
-      if (ind.flash === 'green') setNormalCount(n => n + 1);
-      else setAbnormalCount(a => a + 1);
-      setChecked(step + 1);
-    }
+    setChecked(Math.min(step + 1, indicators.length));
 
     setTimeout(() => setFlash(null), 700);
   }, [indicators]);
@@ -85,8 +93,6 @@ export function AnalysisScanner({ isReady, onComplete }: AnalysisScannerProps) {
     // Init first indicator
     const first = indicators[0];
     setFlash(first.flash);
-    if (first.flash === 'green') setNormalCount(1);
-    else setAbnormalCount(1);
     setChecked(1);
     setTimeout(() => setFlash(null), 700);
 
@@ -103,10 +109,19 @@ export function AnalysisScanner({ isReady, onComplete }: AnalysisScannerProps) {
     // Check isReady
     readyCheckRef.current = setInterval(() => {
       if (isReady.current) {
+        if (readyCheckRef.current) clearInterval(readyCheckRef.current);
+        // Reveal real counts from preview
+        const p = previewRef.current;
+        if (p?.indicators?.length) {
+          const realNormal = p.indicators.filter(i => i.status === "normal").length;
+          const realAbnormal = p.indicators.length - realNormal;
+          setNormalCount(realNormal);
+          setAbnormalCount(realAbnormal);
+        }
+        setRevealed(true);
         // Jump to 100% and complete
         setFakeProgress(100);
         setTimeout(onComplete, 600);
-        if (readyCheckRef.current) clearInterval(readyCheckRef.current);
       }
     }, 200);
 
@@ -258,28 +273,7 @@ export function AnalysisScanner({ isReady, onComplete }: AnalysisScannerProps) {
                 >
                   {ind.shortName}
                 </span>
-                <AnimatePresence mode="wait">
-                  {flash && badgeColor && badgeLabel && (
-                    <motion.span
-                      key={`badge-${checked}`}
-                      initial={{ opacity: 0, scale: 0.8, x: 8 }}
-                      animate={{ opacity: 1, scale: 1, x: 0 }}
-                      exit={{ opacity: 0, scale: 0.8 }}
-                      transition={{ duration: 0.2 }}
-                      style={{
-                        fontSize: 11,
-                        fontWeight: 700,
-                        letterSpacing: '0.04em',
-                        color: badgeColor,
-                        border: `1px solid ${badgeColor}`,
-                        padding: '3px 8px',
-                        borderRadius: 4,
-                      }}
-                    >
-                      {badgeLabel}
-                    </motion.span>
-                  )}
-                </AnimatePresence>
+                {/* Badge removed — just indicator cycling */}
               </div>
 
               <div style={{ overflow: 'hidden', flex: 1 }}>
@@ -349,61 +343,6 @@ export function AnalysisScanner({ isReady, onComplete }: AnalysisScannerProps) {
             </div>
           </div>
 
-          {/* Counters */}
-          <p style={{ fontSize: 10, fontWeight: 700, color: 'var(--muted-foreground)', letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 8 }}>
-            Результаты проверки
-          </p>
-          <div className="flex gap-3">
-            <div
-              style={{
-                flex: 1,
-                borderRadius: 6,
-                border: `1px solid ${GREEN}`,
-                padding: '12px 14px',
-                display: 'flex',
-                alignItems: 'baseline',
-                gap: 5,
-              }}
-            >
-              <motion.span
-                key={normalCount}
-                initial={{ scale: 1.3 }}
-                animate={{ scale: 1 }}
-                transition={{ duration: 0.3, ease: 'easeOut' }}
-                style={{ fontSize: 16, fontWeight: 700, lineHeight: 1, fontFamily: 'monospace', color: GREEN }}
-              >
-                {normalCount}
-              </motion.span>
-              <span style={{ fontSize: 13, color: GREEN, fontWeight: 600 }}>
-                в норме
-              </span>
-            </div>
-
-            <div
-              style={{
-                flex: 1,
-                borderRadius: 6,
-                border: `1px solid ${RED}`,
-                padding: '12px 14px',
-                display: 'flex',
-                alignItems: 'baseline',
-                gap: 5,
-              }}
-            >
-              <motion.span
-                key={abnormalCount}
-                initial={{ scale: 1.3 }}
-                animate={{ scale: 1 }}
-                transition={{ duration: 0.3, ease: 'easeOut' }}
-                style={{ fontSize: 16, fontWeight: 700, lineHeight: 1, fontFamily: 'monospace', color: RED }}
-              >
-                {abnormalCount}
-              </motion.span>
-              <span style={{ fontSize: 13, color: RED, fontWeight: 600 }}>
-                вне нормы
-              </span>
-            </div>
-          </div>
         </div>
       </div>
     </div>

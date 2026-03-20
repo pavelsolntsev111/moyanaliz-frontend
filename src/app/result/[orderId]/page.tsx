@@ -45,16 +45,18 @@ export default function ResultPage({ params }: Props) {
 
   useEffect(() => {
     let active = true;
+    let pdfRetries = 0;
     const run = async () => {
       const s = await poll();
       if (!active) return;
-      if (
-        s &&
-        s.processing_status !== "completed" &&
-        s.processing_status !== "error" &&
-        s.payment_status !== "failed"
-      ) {
-        setTimeout(run, 3000);
+      if (s) {
+        const terminal = s.processing_status === "completed" || s.processing_status === "error" || s.payment_status === "failed";
+        if (!terminal) {
+          setTimeout(run, 3000);
+        } else if (s.processing_status === "completed" && !s.pdf_download_url && pdfRetries < 6) {
+          pdfRetries++;
+          setTimeout(run, 5000);
+        }
       }
     };
     run();
@@ -153,6 +155,9 @@ function StatusScreen({ status }: { status: OrderStatus }) {
         <p className="text-sm text-muted-foreground mt-2">
           Обычно это занимает 30–60 секунд
         </p>
+        <p className="text-xs text-muted-foreground mt-1">
+          Не закрывайте окно браузера
+        </p>
         <div className="mt-6 w-64 mx-auto h-2 bg-muted rounded-full overflow-hidden">
           <div className="h-full bg-primary rounded-full animate-pulse w-2/3" />
         </div>
@@ -198,23 +203,38 @@ function StatusScreen({ status }: { status: OrderStatus }) {
         <ShieldAlert className="w-8 h-8 text-destructive" />
       </div>
       <h1 className="text-xl font-semibold text-foreground">
-        Произошла ошибка
+        Произошла ошибка при анализе
       </h1>
       <p className="text-sm text-muted-foreground mt-2">
-        Напишите нам на{" "}
+        Не волнуйтесь — попробуйте загрузить анализ ещё раз.
+        <br />
+        Если проблема повторится, напишите нам на{" "}
         <a
           href="mailto:support@moyanaliz.ru"
           className="text-primary underline"
         >
           support@moyanaliz.ru
-        </a>{" "}
-        и мы решим проблему
+        </a>
       </p>
+      <a
+        href="/"
+        className="mt-6 inline-flex items-center gap-2 py-3 px-8 rounded-xl bg-primary text-primary-foreground font-semibold hover:opacity-90 transition"
+      >
+        Загрузить анализ заново
+      </a>
     </div>
   );
 }
 
 /* ─── Full Report (redesigned) ─── */
+
+/** Genitive plural for "показатель": "1 показателя", "2 показателей", "5 показателей" */
+function pluralIndicatorsGen(n: number): string {
+  const mod10 = n % 10;
+  const mod100 = n % 100;
+  if (mod10 === 1 && mod100 !== 11) return `${n} показателя`;
+  return `${n} показателей`;
+}
 
 function FullReport({ status }: { status: OrderStatus }) {
   const data = status.claude_result_json!;
@@ -368,7 +388,10 @@ function FullReport({ status }: { status: OrderStatus }) {
             <h2 className="text-lg font-bold text-card-foreground">Рекомендации по питанию</h2>
           </div>
           <p className="text-xs text-muted-foreground mb-5">
-            На основе ваших {totalCount} показателей{meta.patient_age ? ` и возраста` : ""}
+            {totalCount === 1
+              ? `На основе вашего показателя`
+              : `На основе ваших ${pluralIndicatorsGen(totalCount)}`}
+            {meta.patient_age ? ` и возраста (${meta.patient_age})` : ""}
           </p>
 
           {/* Products to add */}
@@ -640,9 +663,23 @@ function AbnormalCard({
         )}
 
         {/* Interpretation */}
-        <p className="text-sm leading-relaxed text-muted-foreground">
-          {ind.interpretation}
-        </p>
+        {ind.what_is || ind.sources || ind.recommendation ? (
+          <div className="space-y-2 text-sm leading-relaxed text-muted-foreground">
+            {ind.what_is && (
+              <p><span className="font-medium text-foreground">Что это:</span> {ind.what_is}</p>
+            )}
+            {ind.sources && (
+              <p><span className="font-medium text-foreground">Источники:</span> {ind.sources}</p>
+            )}
+            {ind.recommendation && (
+              <p><span className="font-medium text-foreground">Ваш результат:</span> {ind.recommendation}</p>
+            )}
+          </div>
+        ) : ind.interpretation ? (
+          <p className="text-sm leading-relaxed text-muted-foreground">
+            {ind.interpretation}
+          </p>
+        ) : null}
 
         {/* Recommendations */}
         {recs && (recs.nutrition || recs.supplements || recs.recheck || recs.doctor) && (

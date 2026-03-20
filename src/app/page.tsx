@@ -130,6 +130,7 @@ export default function HomePage() {
           <AnalyzingStep
             onComplete={handleAnalyzingComplete}
             isReady={uploadDone}
+            preview={preview}
           />
         )}
 

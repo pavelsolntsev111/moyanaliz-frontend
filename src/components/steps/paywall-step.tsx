@@ -16,6 +16,11 @@ import {
   UtensilsCrossed,
   ListChecks,
   FileText,
+  Apple,
+  ClipboardList,
+  TestTubes,
+  MessageSquare,
+  BarChart3,
 } from "lucide-react"
 import type { PreviewData, AnalysisIndicator, LightIndicator } from "@/lib/types"
 import { IndicatorCard } from "@/components/indicator-card"
@@ -70,6 +75,15 @@ function getDirectionText(status: AnalysisIndicator["status"]): string {
   return "вне"
 }
 
+/** Russian pluralization for "показатель" */
+function pluralIndicators(n: number): string {
+  const mod10 = n % 10
+  const mod100 = n % 100
+  if (mod10 === 1 && mod100 !== 11) return `${n} показатель`
+  if (mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14)) return `${n} показателя`
+  return `${n} показателей`
+}
+
 function mapLightToAnalysis(ind: LightIndicator, index: number): AnalysisIndicator {
   const numValue = parseFloat(ind.value.replace(",", "."))
   const isNumeric = !isNaN(numValue) && ind.value.trim() !== ""
@@ -111,7 +125,9 @@ function mapLightToAnalysis(ind: LightIndicator, index: number): AnalysisIndicat
     referenceMin: refMin,
     referenceMax: refMax,
     hasRange,
-    explanation: ind.short_description,
+    explanation: ind.what_is && ind.sources && ind.recommendation
+      ? `${ind.what_is}\n\n${ind.sources}\n\n${ind.recommendation}`
+      : ind.short_description || "",
   }
 }
 
@@ -130,10 +146,15 @@ function selectOpenIndicators(indicators: AnalysisIndicator[]): {
     return devA - devB
   })
 
-  if (normal.length >= 2) {
-    return { open: normal.slice(0, 2), lockedNormal: normal.slice(2), lockedAbnormal: sortedAbnormal }
-  } else if (normal.length === 1) {
-    return { open: [normal[0]], lockedNormal: [], lockedAbnormal: sortedAbnormal }
+  const total = indicators.length
+
+  if (total === 1) {
+    // Single indicator — always show as locked (blurred comments)
+    return { open: [], lockedNormal: normal, lockedAbnormal: sortedAbnormal }
+  }
+
+  if (normal.length >= 1) {
+    return { open: normal.slice(0, 1), lockedNormal: normal.slice(1), lockedAbnormal: sortedAbnormal }
   } else {
     return { open: [], lockedNormal: [], lockedAbnormal: sortedAbnormal }
   }
@@ -302,8 +323,10 @@ function EmotionalSummary({
             Все показатели в норме
           </h3>
           <p className="mt-1 text-sm text-muted-foreground leading-relaxed">
-            Все {totalCount} показателей в пределах референсных значений.
-            В полном отчёте — персональные рекомендации по их поддержанию.
+            {totalCount === 1
+              ? "Показатель в пределах референсных значений."
+              : `Все ${pluralIndicators(totalCount)} в пределах референсных значений.`}
+            {" "}В полном отчёте — персональные рекомендации по {totalCount === 1 ? "его" : "их"} поддержанию.
           </p>
         </div>
       </div>
@@ -311,22 +334,18 @@ function EmotionalSummary({
   )
 }
 
-/** Doctor questions teaser — personalized first question */
+/** Doctor questions teaser — ALL blurred */
 function DoctorQuestionTeaser({ firstAbnormalName }: { firstAbnormalName?: string }) {
-  const q1 = firstAbnormalName
-    ? `Нужно ли мне принимать добавки ${firstAbnormalName} и в какой дозировке?`
-    : "Как часто мне нужно пересдавать эти анализы?"
-  const blurredQuestions = [
+  const questions = [
+    firstAbnormalName
+      ? `Нужно ли мне принимать добавки ${firstAbnormalName} и в какой дозировке?`
+      : "Как часто мне нужно пересдавать эти анализы?",
     "Насколько серьёзно моё отклонение и требует ли оно лечения?",
     "Через какое время стоит пересдать анализы для контроля?",
   ]
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.4, delay: 0.15, ease: [0.16, 1, 0.3, 1] }}
-    >
+    <div>
       <GradientCard glowColor="rgba(0,180,188,0.10)">
         <div className="p-5 sm:p-6">
           <div className="flex items-center justify-between gap-3">
@@ -352,27 +371,15 @@ function DoctorQuestionTeaser({ firstAbnormalName }: { firstAbnormalName?: strin
             </span>
           </div>
 
-          <div
-            className="mt-4 rounded-lg p-3.5"
-            style={{ background: "rgba(0,180,188,0.05)", border: "1px solid rgba(0,180,188,0.12)" }}
-          >
-            <div className="flex items-start gap-2.5">
-              <span
-                className="shrink-0 mt-0.5 flex h-5 w-5 items-center justify-center rounded-full text-[10px] font-bold"
-                style={{ background: "var(--primary)", color: "#fff" }}
-              >
-                1
-              </span>
-              <p className="text-sm text-card-foreground leading-relaxed">{q1}</p>
-            </div>
-          </div>
-
-          <div className="mt-2 space-y-2 select-none" style={{ filter: "blur(4px)", opacity: 0.45, pointerEvents: "none" }}>
-            {blurredQuestions.map((q, i) => (
-              <div key={i} className="rounded-lg p-3.5" style={{ background: "var(--muted)", border: "1px solid var(--border)" }}>
+          <div className="mt-4 space-y-2 select-none" style={{ filter: "blur(4px)", opacity: 0.5, pointerEvents: "none" }}>
+            {questions.map((q, i) => (
+              <div key={i} className="rounded-lg p-3.5" style={{ background: i === 0 ? "rgba(0,180,188,0.05)" : "var(--muted)", border: `1px solid ${i === 0 ? "rgba(0,180,188,0.12)" : "var(--border)"}` }}>
                 <div className="flex items-start gap-2.5">
-                  <span className="shrink-0 mt-0.5 flex h-5 w-5 items-center justify-center rounded-full text-[10px] font-bold bg-muted-foreground/30" style={{ color: "var(--card)" }}>
-                    {i + 2}
+                  <span
+                    className="shrink-0 mt-0.5 flex h-5 w-5 items-center justify-center rounded-full text-[10px] font-bold"
+                    style={i === 0 ? { background: "var(--primary)", color: "#fff" } : { background: "rgba(0,0,0,0.1)", color: "var(--card)" }}
+                  >
+                    {i + 1}
                   </span>
                   <p className="text-sm text-card-foreground leading-relaxed">{q}</p>
                 </div>
@@ -387,7 +394,35 @@ function DoctorQuestionTeaser({ firstAbnormalName }: { firstAbnormalName?: strin
           </div>
         </div>
       </GradientCard>
-    </motion.div>
+    </div>
+  )
+}
+
+/** Clean (non-blurred) report section teasers */
+function ReportSectionTeasers() {
+  const sections = [
+    { icon: FileText, title: "Детальные комментарии по всем показателям" },
+    { icon: UtensilsCrossed, title: "Рекомендации по питанию" },
+    { icon: ListChecks, title: "Персональный чек-лист «Что делать дальше»" },
+    { icon: TestTubes, title: "Рекомендации, какие анализы ещё сдать" },
+    { icon: Stethoscope, title: "Вопросы для врача" },
+  ]
+
+  return (
+    <div className="space-y-2">
+      <h3 className="text-lg font-bold text-card-foreground text-center">В полном отчёте</h3>
+      <div className="grid gap-2">
+        {sections.map(({ icon: SIcon, title }) => (
+          <div key={title} className="flex items-center gap-3 rounded-xl px-4 py-3" style={{ background: "var(--card)", border: "1px solid var(--border)" }}>
+            <div className="shrink-0 flex h-8 w-8 items-center justify-center rounded-lg" style={{ background: "rgba(0,180,188,0.10)" }}>
+              <SIcon className="h-4 w-4 text-primary" />
+            </div>
+            <span className="text-sm font-medium text-card-foreground">{title}</span>
+            <Lock className="ml-auto h-3.5 w-3.5 text-muted-foreground/40" />
+          </div>
+        ))}
+      </div>
+    </div>
   )
 }
 
@@ -425,17 +460,25 @@ function LockedNormalCard({ indicator }: { indicator: AnalysisIndicator }) {
           </div>
         </div>
       )}
-      {/* Blurred interpretation — realistic text, small lock icon, NO CTA link */}
+      {/* Blurred interpretation + CTA button */}
       <div className="relative mt-3">
         <div className="select-none" style={{ filter: "blur(4px)", pointerEvents: "none", userSelect: "none" }}>
-          <p className="text-sm text-muted-foreground leading-relaxed line-clamp-2">
+          <p className="text-sm text-muted-foreground leading-relaxed line-clamp-3">
             {indicator.explanation || "Показатель находится в пределах нормы. Рекомендации по поддержанию оптимального уровня и питанию."}
           </p>
         </div>
-        <div className="absolute inset-0" style={{ background: "linear-gradient(transparent 30%, rgba(255,255,255,0.85))" }}>
-          <div className="absolute bottom-1 right-2">
-            <Lock className="h-3 w-3 text-muted-foreground/40" />
-          </div>
+        <div className="absolute inset-0 flex items-center justify-center" style={{ background: "linear-gradient(transparent 30%, rgba(255,255,255,0.85))" }}>
+          <button
+            onClick={() => {
+              document.getElementById("paywall-block")?.scrollIntoView({ behavior: "smooth", block: "center" })
+              document.getElementById("paywall-email")?.focus()
+            }}
+            className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold text-white transition-opacity hover:opacity-90"
+            style={{ background: "#16a34a" }}
+          >
+            Узнать детали
+            <ChevronRight className="h-3.5 w-3.5" />
+          </button>
         </div>
       </div>
     </div>
@@ -583,7 +626,7 @@ function InlinePaywall({
   const first = abnormalIndicators[0]
 
   // Dynamic headline
-  const headline = hasAbnormal ? "Получить полный разбор" : "Получить персональные рекомендации"
+  const headline = "Получить полный отчёт"
 
   // Dynamic subtitle
   let subtitle: React.ReactNode
@@ -601,7 +644,7 @@ function InlinePaywall({
   // Personalized bullets
   const bullet1 = hasAbnormal && first
     ? `Почему ваш ${first.name} на уровне ${first.textValue ?? first.value} при норме от ${first.referenceMin} — и план коррекции`
-    : `Детальная расшифровка каждого из ${totalCount} показателей`
+    : `Детальная расшифровка ${totalCount === 1 ? "показателя" : `каждого из ${pluralIndicators(totalCount)}`}`
 
   return (
     <motion.div
@@ -613,38 +656,9 @@ function InlinePaywall({
       <GradientCard glowColor="rgba(0,180,188,0.16)">
         <div className="p-6 sm:p-7">
           <div className="text-center">
-            <h3 className="text-xl font-bold text-card-foreground">{headline}</h3>
+            <h3 className="text-xl font-bold text-card-foreground">{headline} — <span style={{ color: "var(--primary)" }}>199 ₽</span></h3>
             <p className="mt-2 text-sm text-muted-foreground leading-relaxed">{subtitle}</p>
           </div>
-
-          <div className="mt-5 flex items-center justify-center">
-            <div
-              className="flex items-baseline gap-1.5 rounded-xl px-5 py-2.5"
-              style={{ background: "rgba(0,180,188,0.07)", border: "1px solid rgba(0,180,188,0.14)" }}
-            >
-              <span className="text-3xl font-bold" style={{ color: "var(--primary)" }}>199 ₽</span>
-              <span className="text-sm text-muted-foreground">/ разовый платёж</span>
-            </div>
-          </div>
-
-          <div className="mt-5 grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3 sm:gap-3">
-            {[
-              { icon: Check, label: `Расшифровка всех ${totalCount} показателей со связями между ними` },
-              { icon: UtensilsCrossed, label: "Персональные рекомендации по питанию" },
-              { icon: ListChecks, label: "Чек-лист: что делать дальше" },
-              { icon: Stethoscope, label: "Вопросы для врача на основе ваших результатов" },
-              { icon: FileText, label: "PDF-отчёт на email" },
-            ].map(({ icon: BulletIcon, label }) => (
-              <div key={label} className="flex items-center gap-2 rounded-lg px-3 py-2.5" style={{ background: "var(--muted)" }}>
-                <div className="shrink-0 flex h-6 w-6 items-center justify-center rounded-full" style={{ background: "rgba(0,180,188,0.12)" }}>
-                  <BulletIcon className="h-3.5 w-3.5 text-primary" />
-                </div>
-                <span className="text-xs font-medium text-card-foreground leading-snug">{label}</span>
-              </div>
-            ))}
-          </div>
-
-          <div className="mt-6 border-t border-border" />
 
           <div className="mt-5">
             <label htmlFor="paywall-email" className="text-sm font-medium text-card-foreground">Email для отправки PDF-отчёта</label>
@@ -703,7 +717,16 @@ function InlinePaywall({
             )}
           </button>
 
-          <p className="mt-3 text-center text-[11px] leading-relaxed text-muted-foreground">
+          {/* YooMoney badge */}
+          <div className="mt-4 flex items-center justify-center gap-2 text-muted-foreground">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <rect width="24" height="24" rx="6" fill="#8B3FFD"/>
+              <path d="M13.5 7H11.2C9.43 7 8 8.43 8 10.2C8 11.97 9.43 13.4 11.2 13.4H12V17H13.5V7ZM12 12H11.2C10.21 12 9.5 11.19 9.5 10.2C9.5 9.21 10.31 8.5 11.2 8.5H12V12Z" fill="white"/>
+            </svg>
+            <span className="text-xs font-medium">Безопасная оплата через ЮMoney</span>
+          </div>
+
+          <p className="mt-2 text-center text-[11px] leading-relaxed text-muted-foreground">
             Нажимая кнопку, вы соглашаетесь с{" "}
             <a href="/offer" className="underline hover:text-primary">офертой</a>{" "}и{" "}
             <a href="/privacy" className="underline hover:text-primary">политикой конфиденциальности</a>
@@ -739,30 +762,6 @@ function BottomCTA({ totalCount, onPay, email, emailValid, loading }: {
 
   return (
     <>
-      {/* Desktop bottom CTA card */}
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ duration: 0.4, delay: 0.35 }}
-        className="mt-8 rounded-xl p-5 text-center"
-        style={{ background: "rgba(0,180,188,0.05)", border: "1px solid rgba(0,180,188,0.15)" }}
-      >
-        <p className="text-sm font-medium text-card-foreground">
-          Получите полный разбор всех {totalCount} показателей
-        </p>
-        <button
-          onClick={() => {
-            document.getElementById("paywall-email")?.scrollIntoView({ behavior: "smooth", block: "center" })
-            document.getElementById("paywall-email")?.focus()
-          }}
-          className="mt-3 inline-flex items-center gap-1.5 rounded-xl px-6 py-3 text-sm font-bold text-white transition-opacity hover:opacity-90"
-          style={{ background: "linear-gradient(135deg, #00b4bc 0%, #00a0a8 100%)", boxShadow: "0 4px 16px rgba(0,180,188,0.35)" }}
-        >
-          Оплатить 199 ₽
-          <ChevronRight className="h-4 w-4" />
-        </button>
-      </motion.div>
-
       {/* Sticky mobile CTA */}
       {showSticky && (
         <div
@@ -814,7 +813,11 @@ export function PaywallStep({ onPay, onPromo, loading, preview }: PaywallStepPro
   }, [preview])
 
   const totalCount = preview?.meta?.total_count ?? allIndicators.length
-  const outOfRangeCount = preview?.meta?.out_of_range_count ?? 0
+  const abnormalIndicators = useMemo(() => allIndicators.filter((i) => i.status !== "normal"), [allIndicators])
+  // Use actual abnormal count from mapped indicators (backend meta may be stale/wrong)
+  const outOfRangeCount = abnormalIndicators.length > 0
+    ? abnormalIndicators.length
+    : (preview?.meta?.out_of_range_count ?? 0)
 
   const { open, lockedNormal, lockedAbnormal } = useMemo(
     () => selectOpenIndicators(allIndicators),
@@ -822,7 +825,8 @@ export function PaywallStep({ onPay, onPromo, loading, preview }: PaywallStepPro
   )
 
   const emailValid = isValidEmail(email)
-  const abnormalIndicators = allIndicators.filter((i) => i.status !== "normal")
+
+  const hasLockedContent = lockedAbnormal.length > 0 || lockedNormal.length > 0
 
   return (
     <div className="mx-auto w-full max-w-3xl px-4 pb-20 pt-8">
@@ -834,12 +838,11 @@ export function PaywallStep({ onPay, onPromo, loading, preview }: PaywallStepPro
         className="text-center"
       >
         <h2 className="text-2xl font-bold text-foreground sm:text-3xl">Результаты анализа</h2>
-        <p className="mt-1.5 text-sm text-muted-foreground">
-          {totalCount} показателей
-          {outOfRangeCount > 0 && (
-            <>, <span className="font-medium" style={{ color: "#dc2626" }}>{outOfRangeCount} вне нормы</span></>
-          )}
-        </p>
+        {outOfRangeCount > 0 && (
+          <p className="mt-1.5 text-sm text-muted-foreground">
+            <span className="font-medium" style={{ color: "#dc2626" }}>{outOfRangeCount} из {totalCount} вне нормы</span>
+          </p>
+        )}
       </motion.div>
 
       {/* ── 1. Emotional summary ── */}
@@ -847,7 +850,7 @@ export function PaywallStep({ onPay, onPromo, loading, preview }: PaywallStepPro
         <EmotionalSummary outOfRangeCount={outOfRangeCount} totalCount={totalCount} abnormalIndicators={abnormalIndicators} />
       </div>
 
-      {/* ── 2. Open cards (up to 2 normal, expanded) ── */}
+      {/* ── 2. Open cards (1 normal, expanded) ── */}
       {open.length > 0 && (
         <motion.div
           initial={{ opacity: 0, y: 16 }}
@@ -864,13 +867,42 @@ export function PaywallStep({ onPay, onPromo, loading, preview }: PaywallStepPro
         </motion.div>
       )}
 
-      {/* ── 3. Doctor questions teaser ── */}
-      <div className="mt-6">
-        <DoctorQuestionTeaser firstAbnormalName={abnormalIndicators[0]?.name} />
+      {/* ── 3. Locked indicator cards (max 3, abnormal first) ── */}
+      {(lockedAbnormal.length > 0 || lockedNormal.length > 0) && (() => {
+        const allLocked = [...lockedAbnormal, ...lockedNormal]
+        const isSingle = totalCount === 1
+        const shown = allLocked.slice(0, 3)
+        const remaining = allLocked.length - shown.length
+        return (
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.5, delay: 0.15 }} className="mt-8">
+            {!isSingle && (
+              <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                Остальные показатели — {allLocked.length}
+              </p>
+            )}
+            <div className="grid gap-3">
+              {shown.map((ind) =>
+                ind.status !== "normal"
+                  ? <LockedAbnormalCard key={ind.id} indicator={ind} />
+                  : <LockedNormalCard key={ind.id} indicator={ind} />
+              )}
+            </div>
+            {remaining > 0 && (
+              <p className="mt-3 text-center text-sm text-muted-foreground">
+                …а также ещё {pluralIndicators(remaining)}
+              </p>
+            )}
+          </motion.div>
+        )
+      })()}
+
+      {/* ── 4. Report section teasers (clean, not blurred) ── */}
+      <div className="mt-8">
+        <ReportSectionTeasers />
       </div>
 
-      {/* ── 4. Inline paywall ── */}
-      <div className="mt-6">
+      {/* ── 4. Inline Paywall ── */}
+      <div className="mt-8">
         <InlinePaywall
           email={email} setEmail={setEmail} promoVisible={promoVisible} setPromoVisible={setPromoVisible}
           promoCode={promoCode} setPromoCode={setPromoCode} loading={loading} emailValid={emailValid}
@@ -878,35 +910,7 @@ export function PaywallStep({ onPay, onPromo, loading, preview }: PaywallStepPro
         />
       </div>
 
-      {/* ── 5. Locked normal cards ── */}
-      {lockedNormal.length > 0 && (
-        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.5, delay: 0.3 }} className="mt-10">
-          <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-            Остальные показатели — {lockedNormal.length}
-          </p>
-          <div className="grid gap-3">
-            {lockedNormal.map((ind) => (
-              <LockedNormalCard key={ind.id} indicator={ind} />
-            ))}
-          </div>
-        </motion.div>
-      )}
-
-      {/* ── 6. Problem indicators — LAST (tension buildup) ── */}
-      {lockedAbnormal.length > 0 && (
-        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.5, delay: 0.35 }} className="mt-8">
-          <p className="mb-3 text-xs font-semibold uppercase tracking-wider" style={{ color: "#dc2626" }}>
-            Требуют внимания — {lockedAbnormal.length}
-          </p>
-          <div className="grid gap-3">
-            {lockedAbnormal.map((ind) => (
-              <LockedAbnormalCard key={ind.id} indicator={ind} />
-            ))}
-          </div>
-        </motion.div>
-      )}
-
-      {/* ── 7. Bottom CTA + sticky mobile ── */}
+      {/* ── 4. Bottom CTA + sticky mobile ── */}
       <BottomCTA
         totalCount={totalCount}
         onPay={() => emailValid && onPay(email)}
