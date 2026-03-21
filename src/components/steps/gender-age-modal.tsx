@@ -80,6 +80,18 @@ export function GenderAgeModal({
           <X className="h-5 w-5" />
         </button>
 
+        {/* Progress indicator */}
+        <div className="mb-4 flex items-center gap-2">
+          <div className="flex items-center gap-1.5">
+            <div className="h-2 w-2 rounded-full bg-primary" />
+            <div className="h-1 w-8 rounded-full bg-primary" />
+            <div className="h-2 w-2 rounded-full bg-primary/30" />
+            <div className="h-1 w-8 rounded-full bg-muted" />
+            <div className="h-2 w-2 rounded-full bg-primary/30" />
+          </div>
+          <span className="text-xs text-muted-foreground">Шаг 2 из 3</span>
+        </div>
+
         <h2 className="text-lg font-bold text-card-foreground">
           Уточните данные
         </h2>
@@ -89,7 +101,14 @@ export function GenderAgeModal({
 
         <div className="mt-3 flex items-center gap-2 rounded-lg bg-muted px-3 py-2">
           <div className="h-2 w-2 rounded-full bg-primary" />
-          <p className="truncate text-xs text-muted-foreground">{fileName}</p>
+          <p className="truncate text-xs text-muted-foreground flex-1">{fileName}</p>
+          <button
+            type="button"
+            onClick={onClose}
+            className="shrink-0 text-xs text-primary hover:underline"
+          >
+            ← Изменить
+          </button>
         </div>
 
         {/* Loading state */}
@@ -129,7 +148,7 @@ export function GenderAgeModal({
                     }}
                     className={`rounded-xl border-2 px-4 py-3 text-sm font-medium transition-all ${
                       gender === option.value
-                        ? "border-primary bg-primary/5 text-primary"
+                        ? "border-primary bg-primary text-primary-foreground"
                         : "border-border bg-card text-card-foreground hover:border-primary/40"
                     }`}
                   >

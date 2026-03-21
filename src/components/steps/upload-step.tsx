@@ -515,7 +515,7 @@ export function UploadStep({ onFileSelected }: UploadStepProps) {
                 value: "10 000+",
                 label: "расшифровок выполнено",
               },
-              { icon: Target, value: "99%", label: "точность анализа" },
+              { icon: Target, value: "РФ", label: "Расшифровка по клиническим рекомендациям" },
               { icon: Star, value: "4.8", label: "средняя оценка пользователей" },
             ].map((s) => (
               <div
