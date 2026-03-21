@@ -8,9 +8,28 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL("https://moyanaliz.ru"),
   title: "Мой Анализ — расшифровка лабораторных анализов",
   description:
     "Загрузите фото или PDF лабораторного анализа и получите понятную расшифровку с пояснениями от ИИ. Быстро, точно, конфиденциально.",
+  alternates: {
+    canonical: "/",
+  },
+  openGraph: {
+    title: "Мой Анализ — расшифровка лабораторных анализов",
+    description:
+      "Загрузите результаты из любой лаборатории — получите понятную расшифровку с рекомендациями по питанию и образу жизни.",
+    url: "https://moyanaliz.ru",
+    siteName: "Мой Анализ",
+    locale: "ru_RU",
+    type: "website",
+  },
+  twitter: {
+    card: "summary",
+    title: "Мой Анализ — расшифровка лабораторных анализов",
+    description:
+      "Загрузите результаты из любой лаборатории — получите понятную расшифровку с рекомендациями по питанию и образу жизни.",
+  },
   icons: {
     icon: [
       { url: "/icon-light-32x32.png", media: "(prefers-color-scheme: light)" },
@@ -25,6 +44,23 @@ export const viewport: Viewport = {
   themeColor: "#00b4bc",
 };
 
+const jsonLd = {
+  "@context": "https://schema.org",
+  "@type": "WebApplication",
+  name: "Мой Анализ",
+  url: "https://moyanaliz.ru",
+  description:
+    "Сервис расшифровки лабораторных анализов с помощью ИИ. Загрузите PDF или фото — получите понятный отчёт с рекомендациями.",
+  applicationCategory: "HealthApplication",
+  operatingSystem: "Web",
+  offers: {
+    "@type": "Offer",
+    price: "199",
+    priceCurrency: "RUB",
+  },
+  inLanguage: "ru",
+};
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -32,6 +68,12 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="ru">
+      <head>
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+        />
+      </head>
       <body className={`${inter.variable} antialiased`}>{children}</body>
     </html>
   );
