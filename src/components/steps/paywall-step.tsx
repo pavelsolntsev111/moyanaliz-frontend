@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useMemo, useEffect, useRef } from "react"
+import { ymGoal } from "@/lib/ym"
 import { motion } from "framer-motion"
 import {
   Lock,
@@ -696,7 +697,7 @@ function InlinePaywall({
           )}
 
           <button
-            onClick={() => emailValid && onPay(email)}
+            onClick={() => { if (emailValid) { ymGoal("click_get_report"); onPay(email); } }}
             disabled={!emailValid || loading}
             className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl px-4 py-4 text-sm font-bold text-white transition-opacity hover:opacity-90 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
             style={{ background: "linear-gradient(135deg, #00b4bc 0%, #00a0a8 100%)", boxShadow: "0 4px 16px rgba(0,180,188,0.35)" }}

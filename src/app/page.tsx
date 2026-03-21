@@ -1,7 +1,8 @@
 "use client";
 
-import { useState, useCallback, useRef } from "react";
+import { useState, useCallback, useRef, useEffect } from "react";
 import type { AppStep, Gender, PreviewData } from "@/lib/types";
+import { ymGoal } from "@/lib/ym";
 import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
 import { UploadStep } from "@/components/steps/upload-step";
@@ -15,6 +16,9 @@ import { useRouter } from "next/navigation";
 export default function HomePage() {
   const router = useRouter();
   const [step, setStep] = useState<AppStep>("upload");
+
+  // 1. Сайт загружен
+  useEffect(() => { ymGoal("page_loaded"); }, []);
   const [file, setFile] = useState<File | null>(null);
   const [orderId, setOrderId] = useState<string>("");
   const [preview, setPreview] = useState<PreviewData | null>(null);
@@ -30,6 +34,7 @@ export default function HomePage() {
     setPatientSuggestion(null);
     setDetecting(true);
     setStep("modal");
+    ymGoal("file_selected");
     try {
       const suggestion = await detectPatient(f);
       setPatientSuggestion(suggestion);
@@ -43,6 +48,7 @@ export default function HomePage() {
   const handleModalSubmit = useCallback(
     async (gender: Gender, age: number) => {
       if (!file) return;
+      ymGoal("form_submitted"); // 4. Форма пол/возраст заполнена
       setStep("analyzing");
       uploadDone.current = false;
       try {
@@ -50,6 +56,7 @@ export default function HomePage() {
         setOrderId(res.order_id);
         setPreview(res.preview);
         uploadDone.current = true;
+        ymGoal("file_uploaded"); // 3. Файл загружен успешно
       } catch (e) {
         setError(e instanceof Error ? e.message : "Ошибка загрузки");
         setStep("upload");
@@ -65,13 +72,16 @@ export default function HomePage() {
 
   const handleAnalyzingComplete = useCallback(() => {
     setStep("paywall");
+    ymGoal("free_report_shown"); // 6. Бесплатный отчёт показан
   }, []);
 
   const handlePay = useCallback(
     async (email: string) => {
+      ymGoal("click_pay"); // 7. Нажата кнопка оплаты
       setPayLoading(true);
       try {
         const res = await createPayment(orderId, email);
+        ymGoal("payment_done"); // 8. Оплата завершена (редирект)
         if (res.redirect_url.startsWith("http")) {
           window.location.href = res.redirect_url;
         } else {

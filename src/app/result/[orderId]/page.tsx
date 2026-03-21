@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback, use } from "react";
 import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
+import { ymGoal } from "@/lib/ym";
 import { getOrderStatus, type OrderStatus } from "@/lib/api";
 import {
   CheckCircle2,
@@ -187,6 +188,7 @@ function StatusScreen({ status }: { status: OrderStatus }) {
           <a
             href={status.pdf_download_url}
             download
+            onClick={() => ymGoal("pdf_downloaded")}
             className="mt-6 inline-flex items-center gap-2 py-3 px-8 rounded-xl bg-primary text-primary-foreground font-semibold hover:opacity-90 transition"
           >
             <Download className="w-5 h-5" />
@@ -282,6 +284,7 @@ function FullReport({ status }: { status: OrderStatus }) {
           <a
             href={status.pdf_download_url}
             download
+            onClick={() => ymGoal("pdf_downloaded")}
             className="mt-4 inline-flex items-center gap-2 py-3 px-8 rounded-xl bg-primary text-primary-foreground font-semibold hover:opacity-90 transition shadow-sm"
           >
             <Download className="w-5 h-5" />
@@ -569,6 +572,7 @@ function FullReport({ status }: { status: OrderStatus }) {
           <a
             href={status.pdf_download_url}
             download
+            onClick={() => ymGoal("pdf_downloaded")}
             className="mt-4 inline-flex items-center gap-2 py-2.5 px-6 rounded-xl border border-primary text-primary text-sm font-semibold hover:bg-primary/5 transition"
           >
             <Download className="w-4 h-4" />

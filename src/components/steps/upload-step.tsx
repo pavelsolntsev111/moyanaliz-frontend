@@ -1,6 +1,7 @@
 "use client"
 
 import { useCallback, useRef, useState } from "react"
+import { ymGoal } from "@/lib/ym"
 import {
   Upload,
   Shield,
@@ -191,6 +192,7 @@ export function UploadStep({ onFileSelected }: UploadStepProps) {
         "application/pdf",
       ]
       if (allowed.includes(file.type)) {
+        ymGoal("click_upload"); // 2. Клик "Загрузить анализ"
         onFileSelected(file)
       }
     },
