@@ -239,351 +239,47 @@ function pluralIndicatorsGen(n: number): string {
 }
 
 function FullReport({ status }: { status: OrderStatus }) {
-  const data = status.claude_result_json!;
-  const meta = data.meta;
-
-  // Collect all abnormal indicators across all reports
-  const abnormalIndicators: Array<{
-    indicator: (typeof data.reports)[0]["indicators"][0];
-    reportLabel: string;
-  }> = [];
-
-  for (const report of data.reports) {
-    for (const ind of report.indicators) {
-      if (ind.status !== "normal") {
-        abnormalIndicators.push({ indicator: ind, reportLabel: report.analysis_type_label });
-      }
-    }
-  }
-
-  // Sort by severity: critical > severe > moderate > mild
-  const severityOrder: Record<string, number> = { severe: 0, critical_high: 0, critical_low: 0, moderate: 1, mild: 2, none: 3 };
-  abnormalIndicators.sort(
-    (a, b) => (severityOrder[a.indicator.severity] ?? 3) - (severityOrder[b.indicator.severity] ?? 3)
-  );
-
-  const totalCount = meta.total_indicators_count;
-  const problemCount = abnormalIndicators.length;
-
   return (
-    <div className="space-y-8">
-      {/* 1. Report ready header */}
-      <div className="text-center">
-        <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-emerald-50 flex items-center justify-center">
-          <CheckCircle2 className="w-8 h-8 text-emerald-500" />
-        </div>
-        <h1 className="text-2xl font-bold text-foreground">Ваш отчёт готов</h1>
-
-        {status.email && (
-          <p className="mt-2 text-sm text-muted-foreground">
-            {status.email_status === "sent" ? "Отправлен" : "Будет отправлен"} на {status.email}
-          </p>
-        )}
-
-        {status.pdf_download_url ? (
-          <a
-            href={status.pdf_download_url}
-            download
-            onClick={() => ymGoal("pdf_downloaded")}
-            className="mt-4 inline-flex items-center gap-2 py-3 px-8 rounded-xl bg-primary text-primary-foreground font-semibold hover:opacity-90 transition shadow-sm"
-          >
-            <Download className="w-5 h-5" />
-            Скачать PDF-отчёт
-          </a>
-        ) : (
-          <button
-            disabled
-            className="mt-4 inline-flex items-center gap-2 py-3 px-8 rounded-xl bg-primary text-primary-foreground font-semibold opacity-50 cursor-not-allowed"
-          >
-            <Download className="w-5 h-5" />
-            Скачать PDF-отчёт
-          </button>
-        )}
-
-        {status.email_status === "sent" && (
-          <p className="mt-2 text-xs text-muted-foreground/70">
-            Не пришло? Проверьте «Спам» или напишите на{" "}
-            <a href="mailto:support@moyanaliz.ru" className="text-primary underline">
-              support@moyanaliz.ru
-            </a>
-          </p>
-        )}
+    <div className="text-center py-8">
+      <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-emerald-50 flex items-center justify-center">
+        <CheckCircle2 className="w-8 h-8 text-emerald-500" />
       </div>
+      <h1 className="text-2xl font-bold text-foreground">Ваш отчёт готов</h1>
 
-      {/* 2. General conclusion */}
-      <div className="rounded-xl border border-primary/20 bg-primary/[0.04] p-6">
-        <h2 className="text-sm font-semibold text-primary uppercase tracking-wide mb-3">
-          Итог
-        </h2>
-        <p className="text-base leading-relaxed text-foreground">
-          {meta.general_conclusion || meta.general_notes || generateFallbackConclusion(totalCount, problemCount, abnormalIndicators)}
+      {status.email && (
+        <p className="mt-2 text-sm text-muted-foreground">
+          {status.email_status === "sent" ? "Отправлен" : "Будет отправлен"} на {status.email}
         </p>
-      </div>
-
-      {/* 3. Abnormal indicators — full detail */}
-      {abnormalIndicators.length > 0 && (
-        <div>
-          <div className="flex items-center gap-2 mb-4">
-            <AlertTriangle className="h-5 w-5 text-orange-500" />
-            <h2 className="text-lg font-bold text-foreground">
-              Требует внимания
-            </h2>
-            <span className="rounded-full bg-orange-50 px-2.5 py-0.5 text-xs font-medium text-orange-600">
-              {problemCount}
-            </span>
-          </div>
-          <div className="space-y-4">
-            {abnormalIndicators.map(({ indicator: ind }, i) => (
-              <AbnormalCard key={i} indicator={ind} />
-            ))}
-          </div>
-        </div>
       )}
 
-      {/* 4. STI section */}
-      {data.stis_special_section?.is_present && (
-        <div className="rounded-xl border border-border bg-card p-6">
-          <div className="flex items-center gap-2 mb-3">
-            <AlertTriangle className="h-5 w-5 text-amber-500" />
-            <h2 className="text-lg font-bold text-card-foreground">ИППП</h2>
-          </div>
-          {data.stis_special_section.notice && (
-            <p className="text-sm text-muted-foreground mb-4 italic">
-              {data.stis_special_section.notice}
-            </p>
-          )}
-          <div className="grid gap-3">
-            {data.stis_special_section.results.map((r, i) => (
-              <div key={i} className="rounded-lg border border-border p-4">
-                <div className="flex items-center justify-between gap-2">
-                  <span className="font-medium text-card-foreground text-sm">{r.test_name}</span>
-                  <span
-                    className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ${
-                      r.result_type === "negative"
-                        ? "bg-emerald-50 text-emerald-600"
-                        : r.result_type === "positive"
-                        ? "bg-destructive text-white"
-                        : "bg-amber-50 text-amber-600"
-                    }`}
-                  >
-                    {r.result}
-                  </span>
-                </div>
-                {r.interpretation && (
-                  <p className="mt-2 text-sm text-muted-foreground">{r.interpretation}</p>
-                )}
-              </div>
-            ))}
-          </div>
-          {data.stis_special_section.general_recommendation && (
-            <p className="mt-4 text-sm text-muted-foreground">
-              {data.stis_special_section.general_recommendation}
-            </p>
-          )}
-        </div>
+      {status.pdf_download_url ? (
+        <a
+          href={status.pdf_download_url}
+          download
+          onClick={() => ymGoal("pdf_downloaded")}
+          className="mt-6 inline-flex items-center gap-2 py-3 px-8 rounded-xl bg-primary text-primary-foreground font-semibold hover:opacity-90 transition shadow-sm"
+        >
+          <Download className="w-5 h-5" />
+          Скачать PDF-отчёт
+        </a>
+      ) : (
+        <button
+          disabled
+          className="mt-6 inline-flex items-center gap-2 py-3 px-8 rounded-xl bg-primary text-primary-foreground font-semibold opacity-50 cursor-not-allowed"
+        >
+          <Download className="w-5 h-5" />
+          Скачать PDF-отчёт
+        </button>
       )}
 
-      {/* 5. Nutrition recommendations */}
-      {data.nutrition && (
-        <div className="rounded-xl border border-border bg-card p-6">
-          <div className="flex items-center gap-2 mb-1">
-            <UtensilsCrossed className="h-5 w-5 text-emerald-500" />
-            <h2 className="text-lg font-bold text-card-foreground">Рекомендации по питанию</h2>
-          </div>
-          <p className="text-xs text-muted-foreground mb-5">
-            {totalCount === 1
-              ? `На основе вашего показателя`
-              : `На основе ваших ${pluralIndicatorsGen(totalCount)}`}
-            {meta.patient_age ? ` и возраста (${meta.patient_age})` : ""}
-          </p>
-
-          {/* Products to add */}
-          {data.nutrition.products_to_add?.length > 0 && (
-            <div className="mb-5">
-              <h3 className="text-sm font-semibold text-emerald-600 mb-3 flex items-center gap-1.5">
-                <Plus className="h-3.5 w-3.5" />
-                Обратить внимание
-              </h3>
-              <div className="space-y-3">
-                {data.nutrition.products_to_add.map((item, i) => (
-                  <div key={i} className="flex items-start gap-3">
-                    <span className="mt-1 h-2 w-2 shrink-0 rounded-full bg-emerald-400" />
-                    <div>
-                      <span className="text-sm font-medium text-card-foreground">{item.product}</span>
-                      {item.frequency && (
-                        <span className="text-xs text-muted-foreground ml-1.5">({item.frequency})</span>
-                      )}
-                      <p className="text-xs text-muted-foreground mt-0.5">{item.reason}</p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Products to limit */}
-          {data.nutrition.products_to_limit?.length > 0 && (
-            <div className="mb-5">
-              <h3 className="text-sm font-semibold text-orange-600 mb-3 flex items-center gap-1.5">
-                <CircleMinus className="h-3.5 w-3.5" />
-                Стоит ограничить
-              </h3>
-              <div className="space-y-3">
-                {data.nutrition.products_to_limit.map((item, i) => (
-                  <div key={i} className="flex items-start gap-3">
-                    <span className="mt-1 h-2 w-2 shrink-0 rounded-full bg-orange-400" />
-                    <div>
-                      <span className="text-sm font-medium text-card-foreground">{item.product}</span>
-                      <p className="text-xs text-muted-foreground mt-0.5">{item.reason}</p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Supplements note */}
-          {data.nutrition.supplements_note && (
-            <div className="rounded-lg bg-blue-50 border border-blue-100 p-4 flex items-start gap-3">
-              <Pill className="h-4 w-4 shrink-0 mt-0.5 text-blue-500" />
-              <div>
-                <p className="text-sm text-blue-900">{data.nutrition.supplements_note}</p>
-                <p className="text-xs text-blue-600 mt-1 font-medium">Согласуйте дозировку с врачом</p>
-              </div>
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* 6. Action plan */}
-      {data.action_plan && (
-        <div className="rounded-xl border border-border bg-card p-6">
-          <div className="flex items-center gap-2 mb-1">
-            <CheckCircle2 className="h-5 w-5 text-primary" />
-            <h2 className="text-lg font-bold text-card-foreground">Что делать дальше</h2>
-          </div>
-          <p className="text-xs text-muted-foreground mb-5">Ваш персональный план действий</p>
-
-          <div className="space-y-5">
-            {/* Urgent */}
-            {data.action_plan.urgent?.length > 0 && (
-              <div>
-                <h3 className="text-sm font-semibold text-orange-600 mb-2.5 flex items-center gap-1.5">
-                  <CircleAlert className="h-3.5 w-3.5" />
-                  Срочно
-                  <span className="text-xs font-normal text-muted-foreground">в ближайшие 1–2 недели</span>
-                </h3>
-                <ul className="space-y-2">
-                  {data.action_plan.urgent.map((item, i) => (
-                    <li key={i} className="flex items-start gap-2.5 text-sm text-card-foreground">
-                      <span className="mt-0.5 h-4 w-4 shrink-0 rounded border-2 border-orange-300" />
-                      {item}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            )}
-
-            {/* Soon */}
-            {data.action_plan.soon?.length > 0 && (
-              <div>
-                <h3 className="text-sm font-semibold text-emerald-600 mb-2.5 flex items-center gap-1.5">
-                  <Clock className="h-3.5 w-3.5" />
-                  В ближайший месяц
-                </h3>
-                <ul className="space-y-2">
-                  {data.action_plan.soon.map((item, i) => (
-                    <li key={i} className="flex items-start gap-2.5 text-sm text-card-foreground">
-                      <span className="mt-0.5 h-4 w-4 shrink-0 rounded border-2 border-emerald-300" />
-                      {item}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            )}
-
-            {/* Control */}
-            {data.action_plan.control?.length > 0 && (
-              <div>
-                <h3 className="text-sm font-semibold text-muted-foreground mb-2.5 flex items-center gap-1.5">
-                  <RotateCcw className="h-3.5 w-3.5" />
-                  Контроль
-                  <span className="text-xs font-normal">пересдача анализов</span>
-                </h3>
-                <ul className="space-y-2">
-                  {data.action_plan.control.map((item, i) => (
-                    <li key={i} className="flex items-start gap-2.5 text-sm text-card-foreground">
-                      <span className="mt-0.5 h-4 w-4 shrink-0 rounded border-2 border-muted-foreground/30" />
-                      {item}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
-
-      {/* 7. Doctor questions */}
-      {data.questions_for_doctor?.length > 0 && (
-        <div className="rounded-xl border border-border bg-card p-6">
-          <div className="flex items-center gap-2 mb-4">
-            <MessageCircleQuestion className="h-5 w-5 text-primary" />
-            <h2 className="text-lg font-bold text-card-foreground">Вопросы для врача</h2>
-          </div>
-          <ul className="space-y-4">
-            {data.questions_for_doctor.map((q, i) => {
-              const isObj = typeof q === "object" && q !== null;
-              const question = isObj ? q.question : q;
-              const context = isObj ? q.context : null;
-
-              return (
-                <li key={i} className="flex items-start gap-3">
-                  <span className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary/10 text-xs font-bold text-primary">
-                    {i + 1}
-                  </span>
-                  <div>
-                    <p className="text-sm font-medium text-card-foreground">{question}</p>
-                    {context && (
-                      <p className="mt-1 text-xs italic text-muted-foreground">{context}</p>
-                    )}
-                  </div>
-                </li>
-              );
-            })}
-          </ul>
-        </div>
-      )}
-
-      {/* 6. Disclaimer */}
-      {data.disclaimer && (
-        <div className="rounded-xl bg-muted/50 p-5 text-xs text-muted-foreground leading-relaxed">
-          {data.disclaimer}
-        </div>
-      )}
-
-      {/* 7. Bottom CTA — link to PDF */}
-      <div className="rounded-xl border border-border bg-card p-6 text-center">
-        <FileText className="h-8 w-8 text-muted-foreground mx-auto mb-3" />
-        <p className="text-sm text-foreground font-medium">
-          Полный отчёт со всеми показателями, дополнительными анализами и рекомендациями — в PDF
-        </p>
-        {status.pdf_download_url ? (
-          <a
-            href={status.pdf_download_url}
-            download
-            onClick={() => ymGoal("pdf_downloaded")}
-            className="mt-4 inline-flex items-center gap-2 py-2.5 px-6 rounded-xl border border-primary text-primary text-sm font-semibold hover:bg-primary/5 transition"
-          >
-            <Download className="w-4 h-4" />
-            Скачать PDF
+      {status.email_status === "sent" && (
+        <p className="mt-3 text-xs text-muted-foreground/70">
+          Не пришло? Проверьте «Спам» или напишите на{" "}
+          <a href="mailto:support@moyanaliz.ru" className="text-primary underline">
+            support@moyanaliz.ru
           </a>
-        ) : (
-          <p className="mt-3 text-xs text-muted-foreground">
-            PDF будет отправлен на ваш email
-          </p>
-        )}
-      </div>
+        </p>
+      )}
     </div>
   );
 }
