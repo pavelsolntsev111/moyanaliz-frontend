@@ -76,11 +76,11 @@ export default function HomePage() {
   }, []);
 
   const handlePay = useCallback(
-    async (email: string) => {
+    async (email: string, promoCode?: string) => {
       ymGoal("click_pay"); // 7. Нажата кнопка оплаты
       setPayLoading(true);
       try {
-        const res = await createPayment(orderId, email);
+        const res = await createPayment(orderId, email, promoCode);
         ymGoal("payment_done"); // 8. Оплата завершена (редирект)
         if (res.redirect_url.startsWith("http")) {
           window.location.href = res.redirect_url;

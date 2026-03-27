@@ -56,12 +56,15 @@ export interface PaymentCreateResponse {
 
 export async function createPayment(
   orderId: string,
-  email: string
+  email: string,
+  promoCode?: string
 ): Promise<PaymentCreateResponse> {
+  const body: Record<string, string> = { order_id: orderId, email };
+  if (promoCode) body.promo_code = promoCode;
   return request<PaymentCreateResponse>("/api/v1/payment/create", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ order_id: orderId, email }),
+    body: JSON.stringify(body),
   });
 }
 
@@ -79,6 +82,26 @@ export async function applyPromo(
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ order_id: orderId, email, promo_code: promoCode }),
+  });
+}
+
+export interface PromoValidateResponse {
+  valid: boolean;
+  free?: boolean;
+  discount_percent?: number;
+  discounted_price?: number;
+  original_price?: number;
+  uses_left?: number;
+  reason?: string;
+}
+
+export async function validatePromo(
+  promoCode: string
+): Promise<PromoValidateResponse> {
+  return request<PromoValidateResponse>("/api/v1/payment/validate-promo", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ promo_code: promoCode }),
   });
 }
 

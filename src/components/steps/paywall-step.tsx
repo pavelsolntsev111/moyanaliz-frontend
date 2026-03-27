@@ -26,6 +26,8 @@ import {
 import type { PreviewData, AnalysisIndicator, LightIndicator } from "@/lib/types"
 import { IndicatorCard } from "@/components/indicator-card"
 import { mockIndicators } from "@/lib/mock-data"
+import { validatePromo } from "@/lib/api"
+import type { PromoValidateResponse } from "@/lib/api"
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
@@ -620,16 +622,18 @@ function InlinePaywall({
   emailValid: boolean
   abnormalIndicators: AnalysisIndicator[]
   totalCount: number
-  onPay: (email: string) => Promise<void>
+  onPay: (email: string, promoCode?: string) => Promise<void>
   onPromo: (email: string, promoCode: string) => Promise<void>
 }) {
+  const [promoValidating, setPromoValidating] = useState(false)
+  const [promoResult, setPromoResult] = useState<PromoValidateResponse | null>(null)
+  const [promoError, setPromoError] = useState<string | null>(null)
+
   const hasAbnormal = abnormalIndicators.length > 0
   const first = abnormalIndicators[0]
 
-  // Dynamic headline
   const headline = "Получить полный отчёт"
 
-  // Dynamic subtitle
   let subtitle: React.ReactNode
   if (abnormalIndicators.length === 1) {
     subtitle = <>Мы объясним, почему <span className="font-medium text-destructive">{first.name}</span> вне нормы и что с этим делать.</>
@@ -642,10 +646,38 @@ function InlinePaywall({
     subtitle = "Подробный разбор каждого показателя и рекомендации по поддержанию здоровья."
   }
 
-  // Personalized bullets
-  const bullet1 = hasAbnormal && first
-    ? `Почему ваш ${first.name} на уровне ${first.textValue ?? first.value} при норме от ${first.referenceMin} — и план коррекции`
-    : `Детальная расшифровка ${totalCount === 1 ? "показателя" : `каждого из ${pluralIndicators(totalCount)}`}`
+  const displayPrice = promoResult?.valid && !promoResult.free && promoResult.discounted_price
+    ? promoResult.discounted_price
+    : 199
+  const hasDiscount = promoResult?.valid && !promoResult.free && promoResult.discounted_price
+
+  const handleValidatePromo = async () => {
+    if (!promoCode.trim()) return
+    setPromoValidating(true)
+    setPromoError(null)
+    setPromoResult(null)
+    try {
+      const result = await validatePromo(promoCode.trim())
+      if (result.valid && result.free) {
+        // Free promo (e.g. "111") — use existing flow
+        if (emailValid) {
+          onPromo(email, promoCode.trim())
+        } else {
+          setPromoError("Введите email для применения промокода")
+        }
+        setPromoValidating(false)
+        return
+      }
+      if (result.valid) {
+        setPromoResult(result)
+      } else {
+        setPromoError(result.reason || "Промокод недействителен")
+      }
+    } catch {
+      setPromoError("Ошибка проверки промокода")
+    }
+    setPromoValidating(false)
+  }
 
   return (
     <motion.div
@@ -657,7 +689,17 @@ function InlinePaywall({
       <GradientCard glowColor="rgba(0,180,188,0.16)">
         <div className="p-6 sm:p-7">
           <div className="text-center">
-            <h3 className="text-xl font-bold text-card-foreground">{headline} — <span style={{ color: "var(--primary)" }}>199 ₽</span></h3>
+            <h3 className="text-xl font-bold text-card-foreground">
+              {headline} —{" "}
+              {hasDiscount ? (
+                <>
+                  <span className="line-through text-muted-foreground text-base font-normal">199 ₽</span>{" "}
+                  <span style={{ color: "var(--primary)" }}>{displayPrice} ₽</span>
+                </>
+              ) : (
+                <span style={{ color: "var(--primary)" }}>199 ₽</span>
+              )}
+            </h3>
             <p className="mt-2 text-sm text-muted-foreground leading-relaxed">{subtitle}</p>
           </div>
 
@@ -682,22 +724,50 @@ function InlinePaywall({
             </button>
           ) : (
             <div className="mt-3">
-              <div className="relative">
-                <Tag className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                <input type="text" placeholder="Введите промокод" value={promoCode} onChange={(e) => setPromoCode(e.target.value.toUpperCase())}
-                  className="w-full rounded-xl border-2 border-border bg-background py-2.5 pl-11 pr-4 text-sm text-foreground outline-none transition-colors placeholder:text-muted-foreground focus:border-primary" />
-              </div>
-              {promoCode && (
-                <button onClick={() => emailValid && promoCode && onPromo(email, promoCode)} disabled={!emailValid || !promoCode || loading}
-                  className="mt-2 w-full rounded-xl border-2 border-border py-2.5 text-sm font-medium text-foreground transition-colors hover:border-primary hover:text-primary disabled:cursor-not-allowed disabled:opacity-50">
-                  Применить промокод
+              <div className="flex gap-2">
+                <div className="relative flex-1">
+                  <Tag className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                  <input
+                    type="text"
+                    placeholder="Введите промокод"
+                    value={promoCode}
+                    onChange={(e) => {
+                      setPromoCode(e.target.value)
+                      setPromoResult(null)
+                      setPromoError(null)
+                    }}
+                    className="w-full rounded-xl border-2 border-border bg-background py-2.5 pl-11 pr-4 text-sm text-foreground outline-none transition-colors placeholder:text-muted-foreground focus:border-primary"
+                  />
+                </div>
+                <button
+                  onClick={handleValidatePromo}
+                  disabled={!promoCode.trim() || promoValidating || loading}
+                  className="shrink-0 rounded-xl border-2 border-border px-4 py-2.5 text-sm font-medium text-foreground transition-colors hover:border-primary hover:text-primary disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  {promoValidating ? "..." : "Применить"}
                 </button>
+              </div>
+              {promoError && (
+                <p className="mt-2 text-xs text-destructive">{promoError}</p>
+              )}
+              {hasDiscount && promoResult && (
+                <div className="mt-2 flex items-center gap-2 rounded-lg px-3 py-2" style={{ background: "rgba(34,197,94,0.08)" }}>
+                  <Check className="h-4 w-4 shrink-0" style={{ color: "#16a34a" }} />
+                  <span className="text-xs text-card-foreground">
+                    Скидка {promoResult.discount_percent}% применена. Осталось использований: {promoResult.uses_left}
+                  </span>
+                </div>
               )}
             </div>
           )}
 
           <button
-            onClick={() => { if (emailValid) { ymGoal("click_get_report"); onPay(email); } }}
+            onClick={() => {
+              if (emailValid) {
+                ymGoal("click_get_report")
+                onPay(email, hasDiscount ? promoCode.trim() : undefined)
+              }
+            }}
             disabled={!emailValid || loading}
             className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl px-4 py-4 text-sm font-bold text-white transition-opacity hover:opacity-90 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
             style={{ background: "linear-gradient(135deg, #00b4bc 0%, #00a0a8 100%)", boxShadow: "0 4px 16px rgba(0,180,188,0.35)" }}
@@ -712,7 +782,7 @@ function InlinePaywall({
               </>
             ) : (
               <>
-                Оплатить 199 ₽
+                Оплатить {displayPrice} ₽
                 <ChevronRight className="h-4 w-4" />
               </>
             )}
@@ -796,7 +866,7 @@ function BottomCTA({ totalCount, onPay, email, emailValid, loading }: {
 interface PaywallStepProps {
   orderId: string
   preview: PreviewData | null
-  onPay: (email: string) => Promise<void>
+  onPay: (email: string, promoCode?: string) => Promise<void>
   onPromo: (email: string, promoCode: string) => Promise<void>
   loading: boolean
 }
