@@ -286,7 +286,7 @@ function FullReport({ status }: { status: OrderStatus }) {
         className="mt-8 mx-auto max-w-md rounded-xl p-5 text-center"
         style={{ background: "rgba(0,180,188,0.06)", border: "1px solid rgba(0,180,188,0.15)" }}
       >
-        <p className="text-sm font-semibold text-foreground">
+        <p className="text-lg font-bold text-foreground">
           Промокод –30% на следующие 3 анализа:
         </p>
         <p className="mt-1 text-lg font-bold text-primary">
