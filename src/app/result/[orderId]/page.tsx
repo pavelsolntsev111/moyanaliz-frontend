@@ -283,16 +283,17 @@ function FullReport({ status }: { status: OrderStatus }) {
 
       {/* Promo bonus block */}
       <div
-        className="mt-8 mx-auto max-w-md rounded-xl p-5 text-left"
+        className="mt-8 mx-auto max-w-md rounded-xl p-5 text-center"
         style={{ background: "rgba(0,180,188,0.06)", border: "1px solid rgba(0,180,188,0.15)" }}
       >
-        <p className="text-base font-semibold text-foreground">
-          🎁 Скидка 30% на следующие 3 расшифровки!
+        <p className="text-sm font-semibold text-foreground">
+          Промокод –30% на следующие 3 анализа:
         </p>
-        <p className="mt-2 text-sm text-muted-foreground leading-relaxed">
-          Просто введите ваш email в поле «Промокод» при следующей покупке на{" "}
-          <a href="/" className="text-primary underline">moyanaliz.ru</a>.
-          Действует 30 дней.
+        <p className="mt-1 text-lg font-bold text-primary">
+          {status.email}
+        </p>
+        <p className="mt-1 text-xs text-muted-foreground">
+          действителен 30 дней
         </p>
       </div>
     </div>
