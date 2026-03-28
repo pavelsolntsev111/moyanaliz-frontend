@@ -4,7 +4,7 @@ import { useEffect, useState, useCallback, use } from "react";
 import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
 import { ymGoal } from "@/lib/ym";
-import { getOrderStatus, type OrderStatus } from "@/lib/api";
+import { getOrderStatus, setOrderEmail, type OrderStatus } from "@/lib/api";
 import {
   CheckCircle2,
   AlertTriangle,
@@ -22,6 +22,7 @@ import {
   RotateCcw,
   CircleMinus,
   Plus,
+  Mail,
 } from "lucide-react";
 
 interface Props {
@@ -73,7 +74,7 @@ export default function ResultPage({ params }: Props) {
         <div className="mx-auto max-w-3xl px-4 py-16">
           {error && <ErrorScreen message={error} />}
           {!error && !status && <LoadingScreen />}
-          {!error && status && <StatusScreen status={status} />}
+          {!error && status && <StatusScreen status={status} orderId={orderId} />}
         </div>
       </main>
       <SiteFooter />
@@ -102,7 +103,86 @@ function ErrorScreen({ message }: { message: string }) {
   );
 }
 
-function StatusScreen({ status }: { status: OrderStatus }) {
+function ProcessingScreen({ orderId, hasEmail }: { orderId: string; hasEmail: boolean }) {
+  const [email, setEmail] = useState("");
+  const [submitted, setSubmitted] = useState(hasEmail);
+  const [submitting, setSubmitting] = useState(false);
+  const [emailError, setEmailError] = useState("");
+
+  const isValidEmail = (v: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v);
+
+  const handleSubmitEmail = async () => {
+    if (!isValidEmail(email)) {
+      setEmailError("Введите корректный email");
+      return;
+    }
+    setSubmitting(true);
+    setEmailError("");
+    try {
+      await setOrderEmail(orderId, email.trim());
+      setSubmitted(true);
+    } catch {
+      setEmailError("Не удалось сохранить email, попробуйте позже");
+    }
+    setSubmitting(false);
+  };
+
+  return (
+    <div className="text-center">
+      <Spinner />
+      <h1 className="text-xl font-semibold mt-6 text-foreground">
+        Анализируем ваши результаты...
+      </h1>
+      <p className="text-sm text-muted-foreground mt-2">
+        Обычно это занимает 30–60 секунд
+      </p>
+      <div className="mt-6 w-64 mx-auto h-2 bg-muted rounded-full overflow-hidden">
+        <div className="h-full bg-primary rounded-full animate-pulse w-2/3" />
+      </div>
+
+      {/* Email capture */}
+      <div className="mt-8 mx-auto max-w-sm rounded-xl border border-border bg-card p-5 text-left">
+        {submitted ? (
+          <div className="flex items-center gap-2.5 text-sm text-emerald-600">
+            <CheckCircle2 className="h-5 w-5 shrink-0" />
+            <span>Пришлём PDF на ваш email когда отчёт будет готов</span>
+          </div>
+        ) : (
+          <>
+            <div className="flex items-center gap-2 mb-3">
+              <Mail className="h-4 w-4 text-primary shrink-0" />
+              <p className="text-sm font-medium text-card-foreground">
+                Пришлём PDF когда будет готово
+              </p>
+            </div>
+            <div className="flex gap-2">
+              <input
+                type="email"
+                placeholder="example@mail.ru"
+                value={email}
+                onChange={(e) => { setEmail(e.target.value); setEmailError(""); }}
+                onKeyDown={(e) => { if (e.key === "Enter") handleSubmitEmail(); }}
+                className="flex-1 rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none transition-colors placeholder:text-muted-foreground focus:border-primary"
+              />
+              <button
+                onClick={handleSubmitEmail}
+                disabled={submitting}
+                className="shrink-0 rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground transition-opacity hover:opacity-90 disabled:opacity-50"
+              >
+                {submitting ? "..." : "Готово"}
+              </button>
+            </div>
+            {emailError && <p className="mt-2 text-xs text-destructive">{emailError}</p>}
+          </>
+        )}
+      </div>
+
+      <p className="mt-4 text-xs text-muted-foreground">Не закрывайте окно браузера</p>
+    </div>
+  );
+}
+
+function StatusScreen({ status, orderId }: { status: OrderStatus; orderId: string }) {
   if (
     status.payment_status === "awaiting" ||
     status.payment_status === "pending"
@@ -147,23 +227,7 @@ function StatusScreen({ status }: { status: OrderStatus }) {
     status.processing_status === "not_started" ||
     status.processing_status === "light_complete"
   ) {
-    return (
-      <div className="text-center">
-        <Spinner />
-        <h1 className="text-xl font-semibold mt-6 text-foreground">
-          Анализируем ваши результаты...
-        </h1>
-        <p className="text-sm text-muted-foreground mt-2">
-          Обычно это занимает 30–60 секунд
-        </p>
-        <p className="text-xs text-muted-foreground mt-1">
-          Не закрывайте окно браузера
-        </p>
-        <div className="mt-6 w-64 mx-auto h-2 bg-muted rounded-full overflow-hidden">
-          <div className="h-full bg-primary rounded-full animate-pulse w-2/3" />
-        </div>
-      </div>
-    );
+    return <ProcessingScreen orderId={orderId} hasEmail={!!status.email} />;
   }
 
   if (status.processing_status === "completed" && status.claude_result_json) {
