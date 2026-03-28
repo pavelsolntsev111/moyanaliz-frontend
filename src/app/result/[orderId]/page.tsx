@@ -103,7 +103,15 @@ function ErrorScreen({ message }: { message: string }) {
   );
 }
 
-function ProcessingScreen({ orderId, hasEmail }: { orderId: string; hasEmail: boolean }) {
+function EmailCaptureCard({
+  orderId,
+  hasEmail,
+  confirmText = "Пришлём PDF на ваш email когда отчёт будет готов",
+}: {
+  orderId: string;
+  hasEmail: boolean;
+  confirmText?: string;
+}) {
   const [email, setEmail] = useState("");
   const [submitted, setSubmitted] = useState(hasEmail);
   const [submitting, setSubmitting] = useState(false);
@@ -128,6 +136,46 @@ function ProcessingScreen({ orderId, hasEmail }: { orderId: string; hasEmail: bo
   };
 
   return (
+    <div className="mx-auto max-w-sm rounded-xl border border-border bg-card p-5 text-left">
+      {submitted ? (
+        <div className="flex items-center gap-2.5 text-sm text-emerald-600">
+          <CheckCircle2 className="h-5 w-5 shrink-0" />
+          <span>{confirmText}</span>
+        </div>
+      ) : (
+        <>
+          <div className="flex items-center gap-2 mb-3">
+            <Mail className="h-4 w-4 text-primary shrink-0" />
+            <p className="text-sm font-medium text-card-foreground">
+              Укажите email — пришлём PDF с отчётом
+            </p>
+          </div>
+          <div className="flex gap-2">
+            <input
+              type="email"
+              placeholder="example@mail.ru"
+              value={email}
+              onChange={(e) => { setEmail(e.target.value); setEmailError(""); }}
+              onKeyDown={(e) => { if (e.key === "Enter") handleSubmitEmail(); }}
+              className="flex-1 rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none transition-colors placeholder:text-muted-foreground focus:border-primary"
+            />
+            <button
+              onClick={handleSubmitEmail}
+              disabled={submitting}
+              className="shrink-0 rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground transition-opacity hover:opacity-90 disabled:opacity-50"
+            >
+              {submitting ? "..." : "Готово"}
+            </button>
+          </div>
+          {emailError && <p className="mt-2 text-xs text-destructive">{emailError}</p>}
+        </>
+      )}
+    </div>
+  );
+}
+
+function ProcessingScreen({ orderId, hasEmail }: { orderId: string; hasEmail: boolean }) {
+  return (
     <div className="text-center">
       <Spinner />
       <h1 className="text-xl font-semibold mt-6 text-foreground">
@@ -140,41 +188,8 @@ function ProcessingScreen({ orderId, hasEmail }: { orderId: string; hasEmail: bo
         <div className="h-full bg-primary rounded-full animate-pulse w-2/3" />
       </div>
 
-      {/* Email capture */}
-      <div className="mt-8 mx-auto max-w-sm rounded-xl border border-border bg-card p-5 text-left">
-        {submitted ? (
-          <div className="flex items-center gap-2.5 text-sm text-emerald-600">
-            <CheckCircle2 className="h-5 w-5 shrink-0" />
-            <span>Пришлём PDF на ваш email когда отчёт будет готов</span>
-          </div>
-        ) : (
-          <>
-            <div className="flex items-center gap-2 mb-3">
-              <Mail className="h-4 w-4 text-primary shrink-0" />
-              <p className="text-sm font-medium text-card-foreground">
-                Пришлём PDF когда будет готово
-              </p>
-            </div>
-            <div className="flex gap-2">
-              <input
-                type="email"
-                placeholder="example@mail.ru"
-                value={email}
-                onChange={(e) => { setEmail(e.target.value); setEmailError(""); }}
-                onKeyDown={(e) => { if (e.key === "Enter") handleSubmitEmail(); }}
-                className="flex-1 rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none transition-colors placeholder:text-muted-foreground focus:border-primary"
-              />
-              <button
-                onClick={handleSubmitEmail}
-                disabled={submitting}
-                className="shrink-0 rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground transition-opacity hover:opacity-90 disabled:opacity-50"
-              >
-                {submitting ? "..." : "Готово"}
-              </button>
-            </div>
-            {emailError && <p className="mt-2 text-xs text-destructive">{emailError}</p>}
-          </>
-        )}
+      <div className="mt-8">
+        <EmailCaptureCard orderId={orderId} hasEmail={hasEmail} />
       </div>
 
       <p className="mt-4 text-xs text-muted-foreground">Не закрывайте окно браузера</p>
@@ -256,8 +271,17 @@ function StatusScreen({ status, orderId }: { status: OrderStatus; orderId: strin
             className="mt-6 inline-flex items-center gap-2 py-3 px-8 rounded-xl bg-primary text-primary-foreground font-semibold hover:opacity-90 transition"
           >
             <Download className="w-5 h-5" />
-            Скачать PDF
+            Скачать PDF-отчёт
           </a>
+        )}
+        {!status.email && (
+          <div className="mt-6">
+            <EmailCaptureCard
+              orderId={orderId}
+              hasEmail={false}
+              confirmText="Отправим PDF на ваш email"
+            />
+          </div>
         )}
       </div>
     );

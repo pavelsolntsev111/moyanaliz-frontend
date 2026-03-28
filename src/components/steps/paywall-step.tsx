@@ -22,7 +22,6 @@ import {
   TestTubes,
   MessageSquare,
   BarChart3,
-  Clock,
 } from "lucide-react"
 import type { PreviewData, AnalysisIndicator, LightIndicator } from "@/lib/types"
 import { IndicatorCard } from "@/components/indicator-card"
@@ -693,7 +692,6 @@ function InlinePaywall({
                 <span style={{ color: "var(--primary)" }}>199 ₽</span>
               )}
             </h3>
-            <p className="mt-1 text-xs text-muted-foreground">Вместо консультации терапевта за 2000+ ₽</p>
             <p className="mt-2 text-sm text-muted-foreground leading-relaxed">{subtitle}</p>
           </div>
 
@@ -799,12 +797,6 @@ function InlinePaywall({
           </button>
           )}
 
-          {/* Urgency */}
-          <div className="mt-3 flex items-center justify-center gap-1.5 text-muted-foreground">
-            <Clock className="h-3.5 w-3.5" />
-            <span className="text-xs">Ваши результаты сохранены на 24 часа</span>
-          </div>
-
           {/* YooMoney badge */}
           <div className="mt-3 flex items-center justify-center gap-2 text-muted-foreground">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -863,16 +855,16 @@ function BottomCTA({ onPay, loading }: {
 
 const TESTIMONIALS = [
   {
-    name: "Мария, 34 года",
-    text: "Сдала биохимию, ничего не понимала. Загрузила — всё стало ясно за 2 минуты, особенно про ферритин.",
+    name: "Екатерина, 29 лет",
+    text: "Врач написала «обратите внимание на АЛТ» — и всё. Загрузила сюда, получила нормальное объяснение что это значит и что делать. Спасибо",
   },
   {
-    name: "Алексей, 51 год",
-    text: "Загрузил ОАК — получил объяснение каждого показателя и список вопросов для врача.",
+    name: "Дмитрий, 44 года",
+    text: "Честно думал очередная ерунда за деньги. Но 199р не жалко было попробовать. На приём к врачу пошёл уже подготовленным, вопросы сформулировал заранее.",
   },
   {
-    name: "Ольга, 28 лет",
-    text: "Наконец-то понятным языком про ТТГ и щитовидку. Стоит своих 199 рублей.",
+    name: "Анна, 31 год",
+    text: "Низкий витамин D уже второй раз, врач просто говорит «принимайте». Тут хотя бы объяснили почему так бывает. Отчёт пришёл на почту, удобно.",
   },
 ]
 
