@@ -53,7 +53,7 @@ export default function ResultPage({ params }: Props) {
       if (!active) return;
       if (s) {
         const terminal = s.processing_status === "completed" || s.processing_status === "error" || s.payment_status === "failed";
-        if (s.processing_status === "completed" && !goalFired.current) {
+        if ((s.payment_status === "paid" || s.processing_status === "completed") && !goalFired.current) {
           goalFired.current = true;
           ymGoal("payment_done");
         }
