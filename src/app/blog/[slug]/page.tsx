@@ -22,6 +22,15 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     title: `${article.title} — Мой Анализ`,
     description: article.description,
     keywords: article.keywords.join(", "),
+    alternates: {
+      canonical: `/blog/${slug}`,
+    },
+    openGraph: {
+      title: `${article.title} — Мой Анализ`,
+      description: article.description,
+      url: `https://moyanaliz.ru/blog/${slug}`,
+      type: "article",
+    },
   };
 }
 
