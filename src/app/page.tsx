@@ -29,20 +29,47 @@ export default function HomePage() {
 
   const [detecting, setDetecting] = useState(false);
 
+  // Store detected gender/age for displaying on scanner
+  const [detectedSex, setDetectedSex] = useState<Gender | null>(null);
+  const [detectedAge, setDetectedAge] = useState<number | null>(null);
+
   const handleFileSelected = useCallback(async (f: File) => {
     setFile(f);
     setPatientSuggestion(null);
+    setDetectedSex(null);
+    setDetectedAge(null);
     setDetecting(true);
-    setStep("modal");
     ymGoal("file_selected");
     try {
       const suggestion = await detectPatient(f);
       setPatientSuggestion(suggestion);
+      // If both sex and age detected — skip modal, go straight to analyzing
+      if (suggestion.patient_sex && suggestion.patient_age) {
+        const sex = suggestion.patient_sex as Gender;
+        const age = suggestion.patient_age;
+        setDetectedSex(sex);
+        setDetectedAge(age);
+        setDetecting(false);
+        ymGoal("form_submitted");
+        setStep("analyzing");
+        uploadDone.current = false;
+        try {
+          const res = await uploadFile(f, sex, age);
+          setOrderId(res.order_id);
+          setPreview(res.preview);
+          uploadDone.current = true;
+          ymGoal("file_uploaded");
+        } catch (e) {
+          setError(e instanceof Error ? e.message : "Ошибка загрузки");
+          setStep("upload");
+        }
+        return;
+      }
     } catch {
       // ignore — show form empty
-    } finally {
-      setDetecting(false);
     }
+    setDetecting(false);
+    setStep("modal");
   }, []);
 
   const handleModalSubmit = useCallback(
@@ -141,6 +168,8 @@ export default function HomePage() {
             onComplete={handleAnalyzingComplete}
             isReady={uploadDone}
             preview={preview}
+            detectedSex={detectedSex}
+            detectedAge={detectedAge}
           />
         )}
 

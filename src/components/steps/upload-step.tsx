@@ -221,7 +221,7 @@ export function UploadStep({ onFileSelected }: UploadStepProps) {
       >
         <div className="mx-auto grid max-w-6xl gap-10 px-4 py-8 md:grid-cols-2 md:items-center md:py-10">
           {/* Left */}
-          <div className="relative z-10 animate-fade-up">
+          <div className="relative z-10 min-w-0 animate-fade-up">
             <h1 className="text-3xl font-extrabold leading-tight tracking-tight text-foreground sm:text-4xl lg:text-5xl">
               Узнайте, что означают{" "}
               <span className="text-primary">ваши анализы</span>
@@ -229,6 +229,9 @@ export function UploadStep({ onFileSelected }: UploadStepProps) {
             <p className="mt-4 max-w-lg text-base leading-relaxed text-muted-foreground sm:text-lg">
               Загрузите результаты из любой лаборатории — получите понятную
               расшифровку с рекомендациями по питанию и образу жизни.
+            </p>
+            <p className="mt-2 text-sm text-muted-foreground">
+              Первые показатели — <span className="font-semibold text-foreground">бесплатно</span>. Полный отчёт — <span className="font-semibold text-primary">199 ₽</span>
             </p>
 
             {/* Analysis types chips */}
@@ -265,15 +268,40 @@ export function UploadStep({ onFileSelected }: UploadStepProps) {
             <button
               type="button"
               onClick={() => inputRef.current?.click()}
-              className="cta-glow mt-7 inline-flex items-center gap-2 rounded-full bg-primary px-7 py-3.5 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90"
+              className="cta-glow mt-7 inline-flex w-full md:w-auto items-center justify-center gap-2 rounded-full bg-primary px-7 py-4 md:py-3.5 text-base md:text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90"
             >
               <Upload className="h-4 w-4" />
               Загрузить анализ
             </button>
+
+            {/* Lab logos — mobile only (inside hero) */}
+            <div className="mt-6 overflow-hidden md:hidden">
+              <p className="mb-2 text-center text-xs font-medium uppercase tracking-wider text-muted-foreground/60">
+                Распознаём анализы из любой лаборатории
+              </p>
+              <div className="relative">
+                <div className="pointer-events-none absolute inset-y-0 left-0 z-10 w-16 bg-gradient-to-r from-transparent to-transparent" />
+                <div className="pointer-events-none absolute inset-y-0 right-0 z-10 w-16 bg-gradient-to-l from-transparent to-transparent" />
+                <div className="animate-marquee flex w-max items-center gap-12">
+                  {[...Array(2)].map((_, dup) => (
+                    <div key={dup} className="flex items-center gap-12">
+                      <img src="/labs/invitro.png" alt="Инвитро" className="h-6 w-auto object-contain opacity-50 grayscale" />
+                      <img src="/labs/gemotest.png" alt="Гемотест" className="h-6 w-auto object-contain opacity-50 grayscale" />
+                      <img src="/labs/kdl.png" alt="KDL" className="h-6 w-auto object-contain opacity-50 grayscale" />
+                      <img src="/labs/helix.png" alt="Helix" className="h-12 w-auto object-contain opacity-50 grayscale" />
+                      <img src="/labs/citilab.png" alt="Ситилаб" className="h-6 w-auto object-contain opacity-50 grayscale" />
+                      <img src="/labs/cl.png" alt="CL" className="h-6 w-auto object-contain opacity-50 grayscale" />
+                      <img src="/labs/dnkom.png" alt="ДНКОМ" className="h-6 w-auto object-contain opacity-50 grayscale" />
+                      <img src="/labs/dialab.png" alt="Диалаб" className="h-6 w-auto object-contain opacity-50 grayscale" />
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
           </div>
 
           {/* Right — Upload card (soft shadow) */}
-          <div className="animate-fade-up delay-200">
+          <div className="hidden md:block animate-fade-up delay-200">
             <div
               onDragOver={(e) => {
                 e.preventDefault()
@@ -325,8 +353,8 @@ export function UploadStep({ onFileSelected }: UploadStepProps) {
         />
       </section>
 
-      {/* ─── Lab logos marquee ─── */}
-      <section className="overflow-hidden bg-muted/20 pb-4 pt-2">
+      {/* ─── Lab logos marquee (desktop only) ─── */}
+      <section className="hidden md:block overflow-hidden bg-muted/20 pb-4 pt-2">
         <p className="mb-3 text-center text-xs font-medium uppercase tracking-wider text-muted-foreground/60">
           Распознаём анализы из любой лаборатории
         </p>
