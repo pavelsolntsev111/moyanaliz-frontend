@@ -32,7 +32,8 @@ export default function ResultPage({ params }: Props) {
   const { orderId } = use(params);
   const [status, setStatus] = useState<OrderStatus | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const goalFired = useRef(false);
+  const goalKey = `payment_done_${orderId}`;
+  const goalFired = useRef(typeof window !== "undefined" && localStorage.getItem(goalKey) === "1");
 
   const poll = useCallback(async () => {
     try {
@@ -55,6 +56,7 @@ export default function ResultPage({ params }: Props) {
         const terminal = s.processing_status === "completed" || s.processing_status === "error" || s.payment_status === "failed";
         if ((s.payment_status === "paid" || s.processing_status === "completed") && !goalFired.current) {
           goalFired.current = true;
+          localStorage.setItem(goalKey, "1");
           ymGoal("payment_done");
         }
         if (!terminal) {
