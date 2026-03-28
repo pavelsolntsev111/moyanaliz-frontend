@@ -96,7 +96,7 @@ export function GenderAgeModal({
           Уточните данные
         </h2>
         <p className="mt-1 text-sm text-muted-foreground">
-          Для корректной расшифровки укажите пол и возраст пациента
+          Нормы анализов зависят от пола и возраста — без этих данных расшифровка будет неточной
         </p>
 
         <div className="mt-3 flex items-center gap-2 rounded-lg bg-muted px-3 py-2">

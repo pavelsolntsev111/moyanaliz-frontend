@@ -22,6 +22,7 @@ import {
   TestTubes,
   MessageSquare,
   BarChart3,
+  Clock,
 } from "lucide-react"
 import type { PreviewData, AnalysisIndicator, LightIndicator } from "@/lib/types"
 import { IndicatorCard } from "@/components/indicator-card"
@@ -327,9 +328,9 @@ function EmotionalSummary({
           </h3>
           <p className="mt-1 text-sm text-muted-foreground leading-relaxed">
             {totalCount === 1
-              ? "Показатель в пределах референсных значений."
-              : `Все ${pluralIndicators(totalCount)} в пределах референсных значений.`}
-            {" "}В полном отчёте — персональные рекомендации по {totalCount === 1 ? "его" : "их"} поддержанию.
+              ? "Показатель в пределах референсных значений — отличная новость!"
+              : `Все ${pluralIndicators(totalCount)} в пределах референсных значений — отличная новость!`}
+            {" "}В полном отчёте: какие продукты и привычки помогут сохранить этот результат + персональный чек-лист профилактики.
           </p>
         </div>
       </div>
@@ -473,8 +474,13 @@ function LockedNormalCard({ indicator }: { indicator: AnalysisIndicator }) {
         <div className="absolute inset-0 flex items-center justify-center" style={{ background: "linear-gradient(transparent 30%, rgba(255,255,255,0.85))" }}>
           <button
             onClick={() => {
-              document.getElementById("paywall-block")?.scrollIntoView({ behavior: "smooth", block: "center" })
-              document.getElementById("paywall-email")?.focus()
+              document.getElementById("paywall-email")?.scrollIntoView({ behavior: "smooth", block: "center" })
+              setTimeout(() => {
+                const el = document.getElementById("paywall-email")
+                el?.focus()
+                el?.classList.add("animate-shake")
+                setTimeout(() => el?.classList.remove("animate-shake"), 600)
+              }, 500)
             }}
             className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold text-white transition-opacity hover:opacity-90"
             style={{ background: "#16a34a" }}
@@ -700,6 +706,7 @@ function InlinePaywall({
                 <span style={{ color: "var(--primary)" }}>199 ₽</span>
               )}
             </h3>
+            <p className="mt-1 text-xs text-muted-foreground">Вместо консультации терапевта за 2000+ ₽</p>
             <p className="mt-2 text-sm text-muted-foreground leading-relaxed">{subtitle}</p>
           </div>
 
@@ -788,8 +795,14 @@ function InlinePaywall({
             )}
           </button>
 
+          {/* Urgency */}
+          <div className="mt-3 flex items-center justify-center gap-1.5 text-muted-foreground">
+            <Clock className="h-3.5 w-3.5" />
+            <span className="text-xs">Ваши результаты сохранены на 24 часа</span>
+          </div>
+
           {/* YooMoney badge */}
-          <div className="mt-4 flex items-center justify-center gap-2 text-muted-foreground">
+          <div className="mt-3 flex items-center justify-center gap-2 text-muted-foreground">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
               <rect width="24" height="24" rx="6" fill="#8B3FFD"/>
               <path d="M13.5 7H11.2C9.43 7 8 8.43 8 10.2C8 11.97 9.43 13.4 11.2 13.4H12V17H13.5V7ZM12 12H11.2C10.21 12 9.5 11.19 9.5 10.2C9.5 9.21 10.31 8.5 11.2 8.5H12V12Z" fill="white"/>
@@ -816,19 +829,12 @@ function BottomCTA({ totalCount, onPay, email, emailValid, loading }: {
   emailValid: boolean
   loading: boolean
 }) {
-  const paywallRef = useRef<HTMLElement | null>(null)
   const [showSticky, setShowSticky] = useState(false)
 
   useEffect(() => {
-    const el = document.getElementById("paywall-block")
-    if (!el) return
-    paywallRef.current = el
-    const observer = new IntersectionObserver(
-      ([entry]) => setShowSticky(!entry.isIntersecting),
-      { threshold: 0.1 }
-    )
-    observer.observe(el)
-    return () => observer.disconnect()
+    // Show sticky CTA after 3 seconds for better mobile conversion
+    const timer = setTimeout(() => setShowSticky(true), 3000)
+    return () => clearTimeout(timer)
   }, [])
 
   return (
@@ -967,12 +973,7 @@ export function PaywallStep({ onPay, onPromo, loading, preview }: PaywallStepPro
         )
       })()}
 
-      {/* ── 4. Report section teasers (clean, not blurred) ── */}
-      <div className="mt-8">
-        <ReportSectionTeasers />
-      </div>
-
-      {/* ── 4. Inline Paywall ── */}
+      {/* ── 4. Inline Paywall (moved above teasers for better conversion) ── */}
       <div className="mt-8">
         <InlinePaywall
           email={email} setEmail={setEmail} promoVisible={promoVisible} setPromoVisible={setPromoVisible}
@@ -981,7 +982,12 @@ export function PaywallStep({ onPay, onPromo, loading, preview }: PaywallStepPro
         />
       </div>
 
-      {/* ── 4. Bottom CTA + sticky mobile ── */}
+      {/* ── 5. Report section teasers (clean, not blurred) ── */}
+      <div className="mt-8">
+        <ReportSectionTeasers />
+      </div>
+
+      {/* ── 6. Bottom CTA + sticky mobile ── */}
       <BottomCTA
         totalCount={totalCount}
         onPay={() => emailValid && onPay(email)}
