@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback, use } from "react";
+import { useEffect, useState, useCallback, useRef, use } from "react";
 import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
 import { ymGoal } from "@/lib/ym";
@@ -32,6 +32,7 @@ export default function ResultPage({ params }: Props) {
   const { orderId } = use(params);
   const [status, setStatus] = useState<OrderStatus | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const goalFired = useRef(false);
 
   const poll = useCallback(async () => {
     try {
@@ -52,6 +53,10 @@ export default function ResultPage({ params }: Props) {
       if (!active) return;
       if (s) {
         const terminal = s.processing_status === "completed" || s.processing_status === "error" || s.payment_status === "failed";
+        if (s.processing_status === "completed" && !goalFired.current) {
+          goalFired.current = true;
+          ymGoal("payment_done");
+        }
         if (!terminal) {
           setTimeout(run, 3000);
         } else if (s.processing_status === "completed" && !s.pdf_download_url && pdfRetries < 6) {

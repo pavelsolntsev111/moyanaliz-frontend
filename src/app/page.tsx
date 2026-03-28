@@ -81,7 +81,6 @@ export default function HomePage() {
       setPayLoading(true);
       try {
         const res = await createPayment(orderId, email, promoCode);
-        ymGoal("payment_done"); // 8. Оплата завершена (редирект)
         if (res.redirect_url.startsWith("http")) {
           window.location.href = res.redirect_url;
         } else {
