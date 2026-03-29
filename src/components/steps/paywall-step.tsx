@@ -5,8 +5,8 @@ import { ymGoal } from "@/lib/ym"
 import { motion } from "framer-motion"
 import {
   Lock,
-  Mail,
   Tag,
+  Mail,
   Check,
   AlertTriangle,
   CheckCircle2,
@@ -22,7 +22,6 @@ import {
   TestTubes,
   MessageSquare,
   BarChart3,
-  Clock,
 } from "lucide-react"
 import type { PreviewData, AnalysisIndicator, LightIndicator } from "@/lib/types"
 import { IndicatorCard } from "@/components/indicator-card"
@@ -474,13 +473,7 @@ function LockedNormalCard({ indicator }: { indicator: AnalysisIndicator }) {
         <div className="absolute inset-0 flex items-center justify-center" style={{ background: "linear-gradient(transparent 30%, rgba(255,255,255,0.85))" }}>
           <button
             onClick={() => {
-              document.getElementById("paywall-email")?.scrollIntoView({ behavior: "smooth", block: "center" })
-              setTimeout(() => {
-                const el = document.getElementById("paywall-email")
-                el?.focus()
-                el?.classList.add("animate-shake")
-                setTimeout(() => el?.classList.remove("animate-shake"), 600)
-              }, 500)
+              document.getElementById("paywall-block")?.scrollIntoView({ behavior: "smooth", block: "center" })
             }}
             className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold text-white transition-opacity hover:opacity-90"
             style={{ background: "#16a34a" }}
@@ -598,8 +591,7 @@ function LockedAbnormalCard({ indicator }: { indicator: AnalysisIndicator }) {
         <div className="absolute inset-0 flex items-center justify-center" style={{ background: "linear-gradient(transparent 30%, rgba(255,255,255,0.85))" }}>
           <button
             onClick={() => {
-              document.getElementById("paywall-email")?.scrollIntoView({ behavior: "smooth", block: "center" })
-              document.getElementById("paywall-email")?.focus()
+              document.getElementById("paywall-block")?.scrollIntoView({ behavior: "smooth", block: "center" })
             }}
             className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold text-white transition-opacity hover:opacity-90"
             style={{ background: "#FF523E" }}
@@ -615,25 +607,23 @@ function LockedAbnormalCard({ indicator }: { indicator: AnalysisIndicator }) {
 
 /** Inline paywall — personalized copy */
 function InlinePaywall({
-  email, setEmail, promoVisible, setPromoVisible, promoCode, setPromoCode,
-  loading, emailValid, abnormalIndicators, totalCount, onPay, onPromo,
+  promoVisible, setPromoVisible, promoCode, setPromoCode,
+  loading, abnormalIndicators, totalCount, onPay, onPromo,
 }: {
-  email: string
-  setEmail: (v: string) => void
   promoVisible: boolean
   setPromoVisible: (v: boolean) => void
   promoCode: string
   setPromoCode: (v: string) => void
   loading: boolean
-  emailValid: boolean
   abnormalIndicators: AnalysisIndicator[]
   totalCount: number
-  onPay: (email: string, promoCode?: string) => Promise<void>
+  onPay: (promoCode?: string) => Promise<void>
   onPromo: (email: string, promoCode: string) => Promise<void>
 }) {
   const [promoValidating, setPromoValidating] = useState(false)
   const [promoResult, setPromoResult] = useState<PromoValidateResponse | null>(null)
   const [promoError, setPromoError] = useState<string | null>(null)
+  const [freePromoEmail, setFreePromoEmail] = useState("")
 
   const hasAbnormal = abnormalIndicators.length > 0
   const first = abnormalIndicators[0]
@@ -665,12 +655,8 @@ function InlinePaywall({
     try {
       const result = await validatePromo(promoCode.trim())
       if (result.valid && result.free) {
-        // Free promo (e.g. "111") — use existing flow
-        if (emailValid) {
-          onPromo(email, promoCode.trim())
-        } else {
-          setPromoError("Введите email для применения промокода")
-        }
+        // Free promo (e.g. "111") — show email field to collect email
+        setPromoResult(result)
         setPromoValidating(false)
         return
       }
@@ -706,23 +692,7 @@ function InlinePaywall({
                 <span style={{ color: "var(--primary)" }}>199 ₽</span>
               )}
             </h3>
-            <p className="mt-1 text-xs text-muted-foreground">Вместо консультации терапевта за 2000+ ₽</p>
             <p className="mt-2 text-sm text-muted-foreground leading-relaxed">{subtitle}</p>
-          </div>
-
-          <div className="mt-5">
-            <label htmlFor="paywall-email" className="text-sm font-medium text-card-foreground">Email для отправки PDF-отчёта</label>
-            <div className="relative mt-2">
-              <Mail className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-              <input
-                id="paywall-email"
-                type="email"
-                placeholder="example@mail.ru"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className="w-full rounded-xl border-2 border-border bg-background py-3 pl-11 pr-4 text-sm text-foreground outline-none transition-colors placeholder:text-muted-foreground focus:border-primary"
-              />
-            </div>
           </div>
 
           {!promoVisible ? (
@@ -765,17 +735,48 @@ function InlinePaywall({
                   </span>
                 </div>
               )}
+              {promoResult?.free && (
+                <div className="mt-3">
+                  <div className="flex items-center gap-2 rounded-lg px-3 py-2 mb-2" style={{ background: "rgba(34,197,94,0.08)" }}>
+                    <Check className="h-4 w-4 shrink-0" style={{ color: "#16a34a" }} />
+                    <span className="text-xs text-card-foreground">Промокод активирован — отчёт бесплатно!</span>
+                  </div>
+                  <label className="text-xs font-medium text-card-foreground">Email для получения отчёта</label>
+                  <div className="relative mt-1">
+                    <Mail className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                    <input
+                      type="email"
+                      placeholder="example@mail.ru"
+                      value={freePromoEmail}
+                      onChange={(e) => setFreePromoEmail(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" && isValidEmail(freePromoEmail)) {
+                          onPromo(freePromoEmail.trim(), promoCode.trim())
+                        }
+                      }}
+                      className="w-full rounded-xl border-2 border-border bg-background py-2.5 pl-11 pr-4 text-sm text-foreground outline-none transition-colors placeholder:text-muted-foreground focus:border-primary"
+                    />
+                  </div>
+                  <button
+                    onClick={() => onPromo(freePromoEmail.trim(), promoCode.trim())}
+                    disabled={!isValidEmail(freePromoEmail) || loading}
+                    className="mt-2 w-full rounded-xl px-4 py-3 text-sm font-bold text-white transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
+                    style={{ background: "linear-gradient(135deg, #16a34a 0%, #15803d 100%)" }}
+                  >
+                    Получить бесплатный отчёт
+                  </button>
+                </div>
+              )}
             </div>
           )}
 
+          {!promoResult?.free && (
           <button
             onClick={() => {
-              if (emailValid) {
-                ymGoal("click_get_report")
-                onPay(email, hasDiscount ? promoCode.trim() : undefined)
-              }
+              ymGoal("click_get_report")
+              onPay(hasDiscount ? promoCode.trim() : undefined)
             }}
-            disabled={!emailValid || loading}
+            disabled={loading}
             className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl px-4 py-4 text-sm font-bold text-white transition-opacity hover:opacity-90 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
             style={{ background: "linear-gradient(135deg, #00b4bc 0%, #00a0a8 100%)", boxShadow: "0 4px 16px rgba(0,180,188,0.35)" }}
           >
@@ -789,17 +790,12 @@ function InlinePaywall({
               </>
             ) : (
               <>
-                Оплатить {displayPrice} ₽
+                Получить полный отчёт — {displayPrice} ₽
                 <ChevronRight className="h-4 w-4" />
               </>
             )}
           </button>
-
-          {/* Urgency */}
-          <div className="mt-3 flex items-center justify-center gap-1.5 text-muted-foreground">
-            <Clock className="h-3.5 w-3.5" />
-            <span className="text-xs">Ваши результаты сохранены на 24 часа</span>
-          </div>
+          )}
 
           {/* YooMoney badge */}
           <div className="mt-3 flex items-center justify-center gap-2 text-muted-foreground">
@@ -822,43 +818,31 @@ function InlinePaywall({
 }
 
 /** Bottom CTA card + sticky mobile button */
-function BottomCTA({ totalCount, onPay, email, emailValid, loading }: {
-  totalCount: number
+function BottomCTA({ onPay, loading }: {
   onPay: () => void
-  email: string
-  emailValid: boolean
   loading: boolean
 }) {
   const [showSticky, setShowSticky] = useState(false)
 
   useEffect(() => {
-    // Show sticky CTA after 3 seconds for better mobile conversion
     const timer = setTimeout(() => setShowSticky(true), 3000)
     return () => clearTimeout(timer)
   }, [])
 
   return (
     <>
-      {/* Sticky mobile CTA */}
       {showSticky && (
         <div
           className="fixed bottom-0 left-0 right-0 z-50 border-t border-border p-3 sm:hidden"
           style={{ background: "var(--background)", boxShadow: "0 -4px 16px rgba(0,0,0,0.08)" }}
         >
           <button
-            onClick={() => {
-              if (emailValid) {
-                onPay()
-              } else {
-                document.getElementById("paywall-email")?.scrollIntoView({ behavior: "smooth", block: "center" })
-                document.getElementById("paywall-email")?.focus()
-              }
-            }}
+            onClick={onPay}
             disabled={loading}
             className="flex w-full items-center justify-center gap-2 rounded-xl px-4 py-3.5 text-sm font-bold text-white disabled:opacity-50"
             style={{ background: "linear-gradient(135deg, #00b4bc 0%, #00a0a8 100%)" }}
           >
-            Полный отчёт — 199 ₽
+            Получить полный отчёт — 199 ₽
             <ChevronRight className="h-4 w-4" />
           </button>
         </div>
@@ -867,18 +851,68 @@ function BottomCTA({ totalCount, onPay, email, emailValid, loading }: {
   )
 }
 
+// ─── Testimonials ─────────────────────────────────────────────────────────────
+
+const TESTIMONIALS = [
+  {
+    name: "Екатерина, 29 лет, Нижний Новгород",
+    text: "«Врач написала «обратите внимание на АЛТ» — и всё. Удобный сервис для таких случаев»",
+  },
+  {
+    name: "Дмитрий, 44 года",
+    text: "«Спасибо, очень полезный сервис.»",
+  },
+  {
+    name: "Анна",
+    text: "«Низкий витамин D уже второй раз, врач говорит «принимайте». Тут хотя бы объяснили почему так бывает. Отчёт на почту - удобно.»",
+  },
+]
+
+function TestimonialsBlock() {
+  return (
+    <div className="mt-8">
+      <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Отзывы пользователей</p>
+      <div className="grid gap-3 sm:grid-cols-3">
+        {TESTIMONIALS.map((t) => (
+          <div
+            key={t.name}
+            className="rounded-xl border border-border bg-card p-4"
+          >
+            <div className="flex items-center gap-2.5 mb-2">
+              <div
+                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-xs font-bold text-white"
+                style={{ background: "linear-gradient(135deg, #00b4bc, #00a0a8)" }}
+              >
+                {t.name[0]}
+              </div>
+              <span className="text-xs font-semibold text-card-foreground">{t.name}</span>
+            </div>
+            <p className="text-xs text-muted-foreground leading-relaxed">«{t.text}»</p>
+            <div className="mt-2 flex gap-0.5">
+              {Array.from({ length: 5 }).map((_, i) => (
+                <svg key={i} className="h-3 w-3" viewBox="0 0 12 12" fill="#f59e0b">
+                  <path d="M6 1l1.3 2.6 2.9.4-2.1 2 .5 2.9L6 7.5 3.4 8.9l.5-2.9-2.1-2 2.9-.4z" />
+                </svg>
+              ))}
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
 // ─── Main component ──────────────────────────────────────────────────────────
 
 interface PaywallStepProps {
   orderId: string
   preview: PreviewData | null
-  onPay: (email: string, promoCode?: string) => Promise<void>
+  onPay: (promoCode?: string) => Promise<void>
   onPromo: (email: string, promoCode: string) => Promise<void>
   loading: boolean
 }
 
 export function PaywallStep({ onPay, onPromo, loading, preview }: PaywallStepProps) {
-  const [email, setEmail] = useState("")
   const [promoVisible, setPromoVisible] = useState(false)
   const [promoCode, setPromoCode] = useState("")
 
@@ -900,10 +934,6 @@ export function PaywallStep({ onPay, onPromo, loading, preview }: PaywallStepPro
     () => selectOpenIndicators(allIndicators),
     [allIndicators]
   )
-
-  const emailValid = isValidEmail(email)
-
-  const hasLockedContent = lockedAbnormal.length > 0 || lockedNormal.length > 0
 
   return (
     <div className="mx-auto w-full max-w-3xl px-4 pb-20 pt-8">
@@ -973,26 +1003,26 @@ export function PaywallStep({ onPay, onPromo, loading, preview }: PaywallStepPro
         )
       })()}
 
-      {/* ── 4. Inline Paywall (moved above teasers for better conversion) ── */}
+      {/* ── 4. Inline Paywall ── */}
       <div className="mt-8">
         <InlinePaywall
-          email={email} setEmail={setEmail} promoVisible={promoVisible} setPromoVisible={setPromoVisible}
-          promoCode={promoCode} setPromoCode={setPromoCode} loading={loading} emailValid={emailValid}
+          promoVisible={promoVisible} setPromoVisible={setPromoVisible}
+          promoCode={promoCode} setPromoCode={setPromoCode} loading={loading}
           abnormalIndicators={abnormalIndicators} totalCount={totalCount} onPay={onPay} onPromo={onPromo}
         />
       </div>
 
-      {/* ── 5. Report section teasers (clean, not blurred) ── */}
+      {/* ── 5. Testimonials ── */}
+      <TestimonialsBlock />
+
+      {/* ── 6. Report section teasers ── */}
       <div className="mt-8">
         <ReportSectionTeasers />
       </div>
 
-      {/* ── 6. Bottom CTA + sticky mobile ── */}
+      {/* ── 7. Bottom CTA + sticky mobile ── */}
       <BottomCTA
-        totalCount={totalCount}
-        onPay={() => emailValid && onPay(email)}
-        email={email}
-        emailValid={emailValid}
+        onPay={() => onPay()}
         loading={loading}
       />
     </div>

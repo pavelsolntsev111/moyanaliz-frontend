@@ -4,7 +4,7 @@ import { useEffect, useState, useCallback, useRef, use } from "react";
 import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
 import { ymGoal } from "@/lib/ym";
-import { getOrderStatus, type OrderStatus } from "@/lib/api";
+import { getOrderStatus, setOrderEmail, type OrderStatus } from "@/lib/api";
 import {
   CheckCircle2,
   AlertTriangle,
@@ -22,6 +22,7 @@ import {
   RotateCcw,
   CircleMinus,
   Plus,
+  Mail,
 } from "lucide-react";
 
 interface Props {
@@ -45,6 +46,18 @@ export default function ResultPage({ params }: Props) {
       return null;
     }
   }, [orderId]);
+
+  // payment_done metric with localStorage deduplication
+  useEffect(() => {
+    if (
+      status?.payment_status === "paid" &&
+      typeof window !== "undefined" &&
+      !localStorage.getItem(`payment_done_${orderId}`)
+    ) {
+      ymGoal("payment_done");
+      localStorage.setItem(`payment_done_${orderId}`, "1");
+    }
+  }, [status?.payment_status, orderId]);
 
   useEffect(() => {
     let active = true;
@@ -80,7 +93,7 @@ export default function ResultPage({ params }: Props) {
         <div className="mx-auto max-w-3xl px-4 py-16">
           {error && <ErrorScreen message={error} />}
           {!error && !status && <LoadingScreen />}
-          {!error && status && <StatusScreen status={status} />}
+          {!error && status && <StatusScreen status={status} orderId={orderId} />}
         </div>
       </main>
       <SiteFooter />
@@ -109,7 +122,107 @@ function ErrorScreen({ message }: { message: string }) {
   );
 }
 
-function StatusScreen({ status }: { status: OrderStatus }) {
+function EmailCaptureCard({
+  orderId,
+  hasEmail,
+  confirmText = "Пришлём PDF на ваш email когда отчёт будет готов",
+  onSubmitted,
+}: {
+  orderId: string;
+  hasEmail: boolean;
+  confirmText?: string;
+  onSubmitted?: () => void;
+}) {
+  const [email, setEmail] = useState("");
+  const [submitted, setSubmitted] = useState(hasEmail);
+  const [submitting, setSubmitting] = useState(false);
+  const [emailError, setEmailError] = useState("");
+
+  const isValidEmail = (v: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v);
+
+  const handleSubmitEmail = async () => {
+    if (!isValidEmail(email)) {
+      setEmailError("Введите корректный email");
+      return;
+    }
+    setSubmitting(true);
+    setEmailError("");
+    try {
+      await setOrderEmail(orderId, email.trim());
+      setSubmitted(true);
+      onSubmitted?.();
+    } catch {
+      setEmailError("Не удалось сохранить email, попробуйте позже");
+    }
+    setSubmitting(false);
+  };
+
+  return (
+    <div className="mx-auto max-w-sm rounded-xl border border-border bg-card p-5 text-left">
+      {submitted ? (
+        <div className="flex items-center gap-2.5 text-sm text-emerald-600">
+          <CheckCircle2 className="h-5 w-5 shrink-0" />
+          <span>{confirmText}</span>
+        </div>
+      ) : (
+        <>
+          <div className="flex items-center gap-2 mb-3">
+            <Mail className="h-4 w-4 text-primary shrink-0" />
+            <p className="text-sm font-medium text-card-foreground">
+              Укажите email — пришлём PDF с отчётом
+            </p>
+          </div>
+          <div className="flex gap-2">
+            <input
+              type="email"
+              placeholder="example@mail.ru"
+              value={email}
+              onChange={(e) => { setEmail(e.target.value); setEmailError(""); }}
+              onKeyDown={(e) => { if (e.key === "Enter") handleSubmitEmail(); }}
+              className="flex-1 rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none transition-colors placeholder:text-muted-foreground focus:border-primary"
+            />
+            <button
+              onClick={handleSubmitEmail}
+              disabled={submitting}
+              className="shrink-0 rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground transition-opacity hover:opacity-90 disabled:opacity-50"
+            >
+              {submitting ? "..." : "Готово"}
+            </button>
+          </div>
+          {emailError && <p className="mt-2 text-xs text-destructive">{emailError}</p>}
+        </>
+      )}
+    </div>
+  );
+}
+
+function ProcessingScreen({ orderId, hasEmail, onEmailSubmitted }: { orderId: string; hasEmail: boolean; onEmailSubmitted?: () => void }) {
+  return (
+    <div className="text-center">
+      <Spinner />
+      <h1 className="text-xl font-semibold mt-6 text-foreground">
+        Анализируем ваши результаты...
+      </h1>
+      <p className="text-sm text-muted-foreground mt-2">
+        Обычно это занимает 30–60 секунд
+      </p>
+      <div className="mt-6 w-64 mx-auto h-2 bg-muted rounded-full overflow-hidden">
+        <div className="h-full bg-primary rounded-full animate-pulse w-2/3" />
+      </div>
+
+      <div className="mt-8">
+        <EmailCaptureCard orderId={orderId} hasEmail={hasEmail} onSubmitted={onEmailSubmitted} />
+      </div>
+
+      <p className="mt-4 text-xs text-muted-foreground">Не закрывайте окно браузера</p>
+    </div>
+  );
+}
+
+function StatusScreen({ status, orderId }: { status: OrderStatus; orderId: string }) {
+  const [emailSubmitted, setEmailSubmitted] = useState(false);
+  const hasEmail = !!status.email || emailSubmitted;
+
   if (
     status.payment_status === "awaiting" ||
     status.payment_status === "pending"
@@ -154,27 +267,11 @@ function StatusScreen({ status }: { status: OrderStatus }) {
     status.processing_status === "not_started" ||
     status.processing_status === "light_complete"
   ) {
-    return (
-      <div className="text-center">
-        <Spinner />
-        <h1 className="text-xl font-semibold mt-6 text-foreground">
-          Анализируем ваши результаты...
-        </h1>
-        <p className="text-sm text-muted-foreground mt-2">
-          Обычно это занимает 30–60 секунд
-        </p>
-        <p className="text-xs text-muted-foreground mt-1">
-          Не закрывайте окно браузера
-        </p>
-        <div className="mt-6 w-64 mx-auto h-2 bg-muted rounded-full overflow-hidden">
-          <div className="h-full bg-primary rounded-full animate-pulse w-2/3" />
-        </div>
-      </div>
-    );
+    return <ProcessingScreen orderId={orderId} hasEmail={hasEmail} onEmailSubmitted={() => setEmailSubmitted(true)} />;
   }
 
   if (status.processing_status === "completed" && status.claude_result_json) {
-    return <FullReport status={status} />;
+    return <FullReport status={status} orderId={orderId} hasEmail={hasEmail} onEmailSubmitted={() => setEmailSubmitted(true)} />;
   }
 
   if (status.processing_status === "completed") {
@@ -184,24 +281,35 @@ function StatusScreen({ status }: { status: OrderStatus }) {
           <CheckCircle2 className="w-8 h-8 text-emerald-500" />
         </div>
         <h1 className="text-xl font-semibold text-foreground">
-          Ваш отчёт готов!
+          Отчёт готов
         </h1>
-        {status.email_status === "sent" && (
-          <p className="text-sm text-muted-foreground mt-2">
-            Отчёт отправлен на вашу электронную почту
-          </p>
-        )}
-        {status.pdf_download_url && (
+        {status.pdf_download_url ? (
           <a
             href={status.pdf_download_url}
             download
             onClick={() => ymGoal("pdf_downloaded")}
-            className="mt-6 inline-flex items-center gap-2 py-3 px-8 rounded-xl bg-primary text-primary-foreground font-semibold hover:opacity-90 transition"
+            className="mt-5 inline-flex items-center gap-2 py-3 px-8 rounded-xl bg-primary text-primary-foreground font-semibold hover:opacity-90 transition"
           >
             <Download className="w-5 h-5" />
-            Скачать PDF
+            Скачать PDF-отчёт
           </a>
+        ) : (
+          <button
+            disabled
+            className="mt-5 inline-flex items-center gap-2 py-3 px-8 rounded-xl bg-primary text-primary-foreground font-semibold opacity-50 cursor-not-allowed"
+          >
+            <Download className="w-5 h-5" />
+            Скачать PDF-отчёт
+          </button>
         )}
+        <div className="mt-6">
+          <EmailCaptureCard
+            orderId={orderId}
+            hasEmail={hasEmail}
+            confirmText="PDF отправим на ваш email"
+            onSubmitted={() => setEmailSubmitted(true)}
+          />
+        </div>
       </div>
     );
   }
@@ -245,7 +353,7 @@ function pluralIndicatorsGen(n: number): string {
   return `${n} показателей`;
 }
 
-function FullReport({ status }: { status: OrderStatus }) {
+function FullReport({ status, orderId, hasEmail, onEmailSubmitted }: { status: OrderStatus; orderId: string; hasEmail: boolean; onEmailSubmitted?: () => void }) {
   return (
     <div className="text-center py-8">
       <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-emerald-50 flex items-center justify-center">
@@ -288,21 +396,35 @@ function FullReport({ status }: { status: OrderStatus }) {
         </p>
       )}
 
+      {/* Email capture */}
+      {!hasEmail && (
+        <div className="mt-6">
+          <EmailCaptureCard
+            orderId={orderId}
+            hasEmail={false}
+            confirmText="PDF отправим на ваш email"
+            onSubmitted={onEmailSubmitted}
+          />
+        </div>
+      )}
+
       {/* Promo bonus block */}
-      <div
-        className="mt-8 mx-auto max-w-md rounded-xl p-5 text-center"
-        style={{ background: "rgba(0,180,188,0.06)", border: "1px solid rgba(0,180,188,0.15)" }}
-      >
-        <p className="text-lg font-bold text-primary">
-          Промокод –30% на следующие 3 анализа:
-        </p>
-        <p className="mt-1 text-lg font-bold text-primary">
-          {status.email}
-        </p>
-        <p className="mt-1 text-xs text-muted-foreground">
-          действителен 30 дней
-        </p>
-      </div>
+      {status.promo_code && (
+        <div
+          className="mt-8 mx-auto max-w-md rounded-xl p-5 text-center"
+          style={{ background: "rgba(0,180,188,0.06)", border: "1px solid rgba(0,180,188,0.15)" }}
+        >
+          <p className="text-lg font-bold text-primary">
+            Промокод –30% на следующие 3 анализа:
+          </p>
+          <p className="mt-1 text-lg font-bold text-primary uppercase">
+            {status.promo_code}
+          </p>
+          <p className="mt-1 text-xs text-muted-foreground">
+            действителен 30 дней
+          </p>
+        </div>
+      )}
     </div>
   );
 }

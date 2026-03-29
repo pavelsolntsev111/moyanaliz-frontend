@@ -17,7 +17,6 @@ import {
   BarChart3,
   Star,
   Users,
-  Target,
   Lock,
   FileDown,
 } from "lucide-react"
@@ -344,7 +343,7 @@ export function UploadStep({ onFileSelected }: UploadStepProps) {
         <input
           ref={inputRef}
           type="file"
-          accept="image/jpeg,image/png,image/webp,application/pdf"
+          accept="image/jpeg,image/png,image/webp,application/pdf,image/heic,image/heif"
           className="sr-only"
           onChange={(e) => {
             const file = e.target.files?.[0]
@@ -545,7 +544,7 @@ export function UploadStep({ onFileSelected }: UploadStepProps) {
                 value: "10 000+",
                 label: "расшифровок выполнено",
               },
-              { icon: Target, value: "РФ", label: "Расшифровка по клиническим рекомендациям" },
+              { icon: Clock, value: "2 мин", label: "среднее время получения отчёта" },
               { icon: Star, value: "4.8", label: "средняя оценка пользователей" },
             ].map((s) => (
               <div

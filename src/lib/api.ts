@@ -35,15 +35,9 @@ export async function detectPatient(file: File): Promise<DetectPatientResponse> 
   });
 }
 
-export async function uploadFile(
-  file: File,
-  sex: string,
-  age: number
-): Promise<UploadResponse> {
+export async function uploadFile(file: File): Promise<UploadResponse> {
   const formData = new FormData();
   formData.append("file", file);
-  formData.append("sex", sex);
-  formData.append("age", String(age));
   return request<UploadResponse>("/api/v1/upload", {
     method: "POST",
     body: formData,
@@ -56,15 +50,25 @@ export interface PaymentCreateResponse {
 
 export async function createPayment(
   orderId: string,
-  email: string,
   promoCode?: string
 ): Promise<PaymentCreateResponse> {
-  const body: Record<string, string> = { order_id: orderId, email };
+  const body: Record<string, string> = { order_id: orderId };
   if (promoCode) body.promo_code = promoCode;
   return request<PaymentCreateResponse>("/api/v1/payment/create", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),
+  });
+}
+
+export async function setOrderEmail(
+  orderId: string,
+  email: string
+): Promise<{ ok: boolean }> {
+  return request<{ ok: boolean }>(`/api/v1/order/${orderId}/email`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ email }),
   });
 }
 
@@ -111,6 +115,7 @@ export interface OrderStatus {
   processing_status: string;
   email_status: string;
   email?: string | null;
+  promo_code?: string | null;
   pdf_download_url: string | null;
   claude_result_json?: {
     meta: {
