@@ -119,10 +119,12 @@ function EmailCaptureCard({
   orderId,
   hasEmail,
   confirmText = "Пришлём PDF на ваш email когда отчёт будет готов",
+  onSubmitted,
 }: {
   orderId: string;
   hasEmail: boolean;
   confirmText?: string;
+  onSubmitted?: () => void;
 }) {
   const [email, setEmail] = useState("");
   const [submitted, setSubmitted] = useState(hasEmail);
@@ -141,6 +143,7 @@ function EmailCaptureCard({
     try {
       await setOrderEmail(orderId, email.trim());
       setSubmitted(true);
+      onSubmitted?.();
     } catch {
       setEmailError("Не удалось сохранить email, попробуйте позже");
     }
@@ -186,7 +189,7 @@ function EmailCaptureCard({
   );
 }
 
-function ProcessingScreen({ orderId, hasEmail }: { orderId: string; hasEmail: boolean }) {
+function ProcessingScreen({ orderId, hasEmail, onEmailSubmitted }: { orderId: string; hasEmail: boolean; onEmailSubmitted?: () => void }) {
   return (
     <div className="text-center">
       <Spinner />
@@ -201,7 +204,7 @@ function ProcessingScreen({ orderId, hasEmail }: { orderId: string; hasEmail: bo
       </div>
 
       <div className="mt-8">
-        <EmailCaptureCard orderId={orderId} hasEmail={hasEmail} />
+        <EmailCaptureCard orderId={orderId} hasEmail={hasEmail} onSubmitted={onEmailSubmitted} />
       </div>
 
       <p className="mt-4 text-xs text-muted-foreground">Не закрывайте окно браузера</p>
@@ -210,6 +213,9 @@ function ProcessingScreen({ orderId, hasEmail }: { orderId: string; hasEmail: bo
 }
 
 function StatusScreen({ status, orderId }: { status: OrderStatus; orderId: string }) {
+  const [emailSubmitted, setEmailSubmitted] = useState(false);
+  const hasEmail = !!status.email || emailSubmitted;
+
   if (
     status.payment_status === "awaiting" ||
     status.payment_status === "pending"
@@ -254,11 +260,11 @@ function StatusScreen({ status, orderId }: { status: OrderStatus; orderId: strin
     status.processing_status === "not_started" ||
     status.processing_status === "light_complete"
   ) {
-    return <ProcessingScreen orderId={orderId} hasEmail={!!status.email} />;
+    return <ProcessingScreen orderId={orderId} hasEmail={hasEmail} onEmailSubmitted={() => setEmailSubmitted(true)} />;
   }
 
   if (status.processing_status === "completed" && status.claude_result_json) {
-    return <FullReport status={status} orderId={orderId} />;
+    return <FullReport status={status} orderId={orderId} hasEmail={hasEmail} onEmailSubmitted={() => setEmailSubmitted(true)} />;
   }
 
   if (status.processing_status === "completed") {
@@ -292,8 +298,9 @@ function StatusScreen({ status, orderId }: { status: OrderStatus; orderId: strin
         <div className="mt-6">
           <EmailCaptureCard
             orderId={orderId}
-            hasEmail={!!status.email}
+            hasEmail={hasEmail}
             confirmText="PDF отправим на ваш email"
+            onSubmitted={() => setEmailSubmitted(true)}
           />
         </div>
       </div>
@@ -339,7 +346,7 @@ function pluralIndicatorsGen(n: number): string {
   return `${n} показателей`;
 }
 
-function FullReport({ status, orderId }: { status: OrderStatus; orderId: string }) {
+function FullReport({ status, orderId, hasEmail, onEmailSubmitted }: { status: OrderStatus; orderId: string; hasEmail: boolean; onEmailSubmitted?: () => void }) {
   return (
     <div className="text-center py-8">
       <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-emerald-50 flex items-center justify-center">
@@ -383,12 +390,13 @@ function FullReport({ status, orderId }: { status: OrderStatus; orderId: string 
       )}
 
       {/* Email capture */}
-      {!status.email && (
+      {!hasEmail && (
         <div className="mt-6">
           <EmailCaptureCard
             orderId={orderId}
             hasEmail={false}
             confirmText="PDF отправим на ваш email"
+            onSubmitted={onEmailSubmitted}
           />
         </div>
       )}
