@@ -256,33 +256,34 @@ function StatusScreen({ status, orderId }: { status: OrderStatus; orderId: strin
           <CheckCircle2 className="w-8 h-8 text-emerald-500" />
         </div>
         <h1 className="text-xl font-semibold text-foreground">
-          Ваш отчёт готов!
+          Отчёт готов
         </h1>
-        {status.email_status === "sent" && (
-          <p className="text-sm text-muted-foreground mt-2">
-            Отчёт отправлен на вашу электронную почту
-          </p>
-        )}
-        {status.pdf_download_url && (
+        {status.pdf_download_url ? (
           <a
             href={status.pdf_download_url}
             download
             onClick={() => ymGoal("pdf_downloaded")}
-            className="mt-6 inline-flex items-center gap-2 py-3 px-8 rounded-xl bg-primary text-primary-foreground font-semibold hover:opacity-90 transition"
+            className="mt-5 inline-flex items-center gap-2 py-3 px-8 rounded-xl bg-primary text-primary-foreground font-semibold hover:opacity-90 transition"
           >
             <Download className="w-5 h-5" />
             Скачать PDF-отчёт
           </a>
+        ) : (
+          <button
+            disabled
+            className="mt-5 inline-flex items-center gap-2 py-3 px-8 rounded-xl bg-primary text-primary-foreground font-semibold opacity-50 cursor-not-allowed"
+          >
+            <Download className="w-5 h-5" />
+            Скачать PDF-отчёт
+          </button>
         )}
-        {!status.email && (
-          <div className="mt-6">
-            <EmailCaptureCard
-              orderId={orderId}
-              hasEmail={false}
-              confirmText="Отправим PDF на ваш email"
-            />
-          </div>
-        )}
+        <div className="mt-6">
+          <EmailCaptureCard
+            orderId={orderId}
+            hasEmail={!!status.email}
+            confirmText="PDF отправим на ваш email"
+          />
+        </div>
       </div>
     );
   }
