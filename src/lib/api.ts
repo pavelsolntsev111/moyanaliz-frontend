@@ -35,15 +35,9 @@ export async function detectPatient(file: File): Promise<DetectPatientResponse> 
   });
 }
 
-export async function uploadFile(
-  file: File,
-  sex: string,
-  age: number
-): Promise<UploadResponse> {
+export async function uploadFile(file: File): Promise<UploadResponse> {
   const formData = new FormData();
   formData.append("file", file);
-  formData.append("sex", sex);
-  formData.append("age", String(age));
   return request<UploadResponse>("/api/v1/upload", {
     method: "POST",
     body: formData,

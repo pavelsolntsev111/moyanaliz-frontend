@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useCallback, useRef, useEffect } from "react";
-import type { AppStep, Gender, PreviewData } from "@/lib/types";
+import type { AppStep, PreviewData } from "@/lib/types";
 import { ymGoal } from "@/lib/ym";
 import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
@@ -15,47 +15,28 @@ export default function HomePage() {
   const router = useRouter();
   const [step, setStep] = useState<AppStep>("upload");
 
-  // 1. Сайт загружен
   useEffect(() => { ymGoal("page_loaded"); }, []);
-  const [file, setFile] = useState<File | null>(null);
   const [orderId, setOrderId] = useState<string>("");
   const [preview, setPreview] = useState<PreviewData | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [payLoading, setPayLoading] = useState(false);
   const uploadDone = useRef(false);
 
-  // Store gender/age for displaying badge on scanner
-  const [detectedSex, setDetectedSex] = useState<Gender | null>(null);
-  const [detectedAge, setDetectedAge] = useState<number | null>(null);
-
-  const handleFileSelected = useCallback((f: File) => {
-    setFile(f);
-    setDetectedSex(null);
-    setDetectedAge(null);
+  const handleFileSelected = useCallback(async (f: File) => {
     ymGoal("file_selected");
     setStep("analyzing");
+    uploadDone.current = false;
+    try {
+      const res = await uploadFile(f);
+      setOrderId(res.order_id);
+      setPreview(res.preview);
+      uploadDone.current = true;
+      ymGoal("file_uploaded");
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Ошибка загрузки");
+      setStep("upload");
+    }
   }, []);
-
-  const handleScannerSubmit = useCallback(
-    async (sex: Gender, age: number) => {
-      if (!file) return;
-      setDetectedSex(sex);
-      setDetectedAge(age);
-      ymGoal("form_submitted");
-      uploadDone.current = false;
-      try {
-        const res = await uploadFile(file, sex, age);
-        setOrderId(res.order_id);
-        setPreview(res.preview);
-        uploadDone.current = true;
-        ymGoal("file_uploaded");
-      } catch (e) {
-        setError(e instanceof Error ? e.message : "Ошибка загрузки");
-        setStep("upload");
-      }
-    },
-    [file]
-  );
 
   const handleAnalyzingComplete = useCallback(() => {
     setStep("paywall");
@@ -127,9 +108,6 @@ export default function HomePage() {
             onComplete={handleAnalyzingComplete}
             isReady={uploadDone}
             preview={preview}
-            detectedSex={detectedSex}
-            detectedAge={detectedAge}
-            onFormSubmit={handleScannerSubmit}
           />
         )}
 
