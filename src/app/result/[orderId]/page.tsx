@@ -45,6 +45,18 @@ export default function ResultPage({ params }: Props) {
     }
   }, [orderId]);
 
+  // payment_done metric with localStorage deduplication
+  useEffect(() => {
+    if (
+      status?.payment_status === "paid" &&
+      typeof window !== "undefined" &&
+      !localStorage.getItem(`payment_done_${orderId}`)
+    ) {
+      ymGoal("payment_done");
+      localStorage.setItem(`payment_done_${orderId}`, "1");
+    }
+  }, [status?.payment_status, orderId]);
+
   useEffect(() => {
     let active = true;
     let pdfRetries = 0;
@@ -246,7 +258,7 @@ function StatusScreen({ status, orderId }: { status: OrderStatus; orderId: strin
   }
 
   if (status.processing_status === "completed" && status.claude_result_json) {
-    return <FullReport status={status} />;
+    return <FullReport status={status} orderId={orderId} />;
   }
 
   if (status.processing_status === "completed") {
@@ -327,7 +339,7 @@ function pluralIndicatorsGen(n: number): string {
   return `${n} показателей`;
 }
 
-function FullReport({ status }: { status: OrderStatus }) {
+function FullReport({ status, orderId }: { status: OrderStatus; orderId: string }) {
   return (
     <div className="text-center py-8">
       <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-emerald-50 flex items-center justify-center">
@@ -368,6 +380,17 @@ function FullReport({ status }: { status: OrderStatus }) {
             support@moyanaliz.ru
           </a>
         </p>
+      )}
+
+      {/* Email capture */}
+      {!status.email && (
+        <div className="mt-6">
+          <EmailCaptureCard
+            orderId={orderId}
+            hasEmail={false}
+            confirmText="PDF отправим на ваш email"
+          />
+        </div>
       )}
 
       {/* Promo bonus block */}
