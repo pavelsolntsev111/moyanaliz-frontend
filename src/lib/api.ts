@@ -121,6 +121,7 @@ export interface OrderStatus {
   processing_status: string;
   email_status: string;
   email?: string | null;
+  promo_code?: string | null;
   pdf_download_url: string | null;
   claude_result_json?: {
     meta: {
