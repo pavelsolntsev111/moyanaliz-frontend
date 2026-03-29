@@ -284,14 +284,14 @@ export function UploadStep({ onFileSelected }: UploadStepProps) {
                 <div className="animate-marquee flex w-max items-center gap-12">
                   {[...Array(2)].map((_, dup) => (
                     <div key={dup} className="flex items-center gap-12">
-                      <img src="/labs/invitro.png" alt="Инвитро" className="h-6 w-auto object-contain opacity-50 grayscale" />
-                      <img src="/labs/gemotest.png" alt="Гемотест" className="h-6 w-auto object-contain opacity-50 grayscale" />
-                      <img src="/labs/kdl.png" alt="KDL" className="h-6 w-auto object-contain opacity-50 grayscale" />
-                      <img src="/labs/helix.png" alt="Helix" className="h-12 w-auto object-contain opacity-50 grayscale" />
-                      <img src="/labs/citilab.png" alt="Ситилаб" className="h-6 w-auto object-contain opacity-50 grayscale" />
-                      <img src="/labs/cl.png" alt="CL" className="h-6 w-auto object-contain opacity-50 grayscale" />
-                      <img src="/labs/dnkom.png" alt="ДНКОМ" className="h-6 w-auto object-contain opacity-50 grayscale" />
-                      <img src="/labs/dialab.png" alt="Диалаб" className="h-6 w-auto object-contain opacity-50 grayscale" />
+                      <img src="/labs/invitro.png" alt="Инвитро" height={24} style={{maxHeight:24}} className="h-6 w-auto object-contain opacity-50 grayscale" />
+                      <img src="/labs/gemotest.png" alt="Гемотест" height={24} style={{maxHeight:24}} className="h-6 w-auto object-contain opacity-50 grayscale" />
+                      <img src="/labs/kdl.png" alt="KDL" height={24} style={{maxHeight:24}} className="h-6 w-auto object-contain opacity-50 grayscale" />
+                      <img src="/labs/helix.png" alt="Helix" height={48} style={{maxHeight:48}} className="h-12 w-auto object-contain opacity-50 grayscale" />
+                      <img src="/labs/citilab.png" alt="Ситилаб" height={24} style={{maxHeight:24}} className="h-6 w-auto object-contain opacity-50 grayscale" />
+                      <img src="/labs/cl.png" alt="CL" height={24} style={{maxHeight:24}} className="h-6 w-auto object-contain opacity-50 grayscale" />
+                      <img src="/labs/dnkom.png" alt="ДНКОМ" height={24} style={{maxHeight:24}} className="h-6 w-auto object-contain opacity-50 grayscale" />
+                      <img src="/labs/dialab.png" alt="Диалаб" height={24} style={{maxHeight:24}} className="h-6 w-auto object-contain opacity-50 grayscale" />
                     </div>
                   ))}
                 </div>
@@ -363,14 +363,14 @@ export function UploadStep({ onFileSelected }: UploadStepProps) {
           <div className="animate-marquee flex w-max items-center gap-16">
             {[...Array(2)].map((_, dup) => (
               <div key={dup} className="flex items-center gap-16">
-                <img src="/labs/invitro.png" alt="Инвитро" className="h-7 w-auto object-contain opacity-50 grayscale" />
-                <img src="/labs/gemotest.png" alt="Гемотест" className="h-7 w-auto object-contain opacity-50 grayscale" />
-                <img src="/labs/kdl.png" alt="KDL" className="h-7 w-auto object-contain opacity-50 grayscale" />
-                <img src="/labs/helix.png" alt="Helix" className="h-14 w-auto object-contain opacity-50 grayscale" />
-                <img src="/labs/citilab.png" alt="Ситилаб" className="h-7 w-auto object-contain opacity-50 grayscale" />
-                <img src="/labs/cl.png" alt="CL" className="h-7 w-auto object-contain opacity-50 grayscale" />
-                <img src="/labs/dnkom.png" alt="ДНКОМ" className="h-7 w-auto object-contain opacity-50 grayscale" />
-                <img src="/labs/dialab.png" alt="Диалаб" className="h-7 w-auto object-contain opacity-50 grayscale" />
+                <img src="/labs/invitro.png" alt="Инвитро" height={28} style={{maxHeight:28}} className="h-7 w-auto object-contain opacity-50 grayscale" />
+                <img src="/labs/gemotest.png" alt="Гемотест" height={28} style={{maxHeight:28}} className="h-7 w-auto object-contain opacity-50 grayscale" />
+                <img src="/labs/kdl.png" alt="KDL" height={28} style={{maxHeight:28}} className="h-7 w-auto object-contain opacity-50 grayscale" />
+                <img src="/labs/helix.png" alt="Helix" height={56} style={{maxHeight:56}} className="h-14 w-auto object-contain opacity-50 grayscale" />
+                <img src="/labs/citilab.png" alt="Ситилаб" height={28} style={{maxHeight:28}} className="h-7 w-auto object-contain opacity-50 grayscale" />
+                <img src="/labs/cl.png" alt="CL" height={28} style={{maxHeight:28}} className="h-7 w-auto object-contain opacity-50 grayscale" />
+                <img src="/labs/dnkom.png" alt="ДНКОМ" height={28} style={{maxHeight:28}} className="h-7 w-auto object-contain opacity-50 grayscale" />
+                <img src="/labs/dialab.png" alt="Диалаб" height={28} style={{maxHeight:28}} className="h-7 w-auto object-contain opacity-50 grayscale" />
               </div>
             ))}
           </div>
