@@ -104,12 +104,12 @@ export default function IndicatorsV2Page() {
                       </div>
 
                       <p className="text-sm text-muted-foreground leading-relaxed line-clamp-2 mb-3">
-                        {ind.description}
+                        {ind.content.whatIs.slice(0, 120) + "..."}
                       </p>
 
                       <div className="flex items-center justify-between">
                         <span className="text-xs text-muted-foreground">
-                          Норма: {ind.normalRange.length > 30 ? ind.normalRange.slice(0, 30) + "..." : ind.normalRange}
+                          Норма: {ind.referenceRange.male.length > 30 ? ind.referenceRange.male.slice(0, 30) + "..." : ind.referenceRange.male}
                         </span>
                         <div className="flex items-center gap-1 text-xs text-primary opacity-0 group-hover:opacity-100 transition-opacity">
                           <span>Подробнее</span>

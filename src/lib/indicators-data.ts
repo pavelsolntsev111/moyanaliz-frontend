@@ -12,6 +12,7 @@ export interface IndicatorData {
 export function getIndicatorBySlug(slug: string): IndicatorData | undefined { return indicators.find((i) => i.slug === slug); }
 export function getIndicatorsByCategory(category: string): IndicatorData[] { return indicators.filter((i) => i.category === category); }
 export function getIndicatorSlug(name: string): string | null { return indicatorNameToSlug[name] || null; }
+export function getUsedCategories(): string[] { return [...new Set(indicators.map((i) => i.category))]; }
 export const indicatorCategories = ["Общий анализ крови", "Биохимия", "Гормоны"] as const;
 export const indicatorNameToSlug: Record<string, string> = {
   "Гемоглобин": "gemoglobin", "Эритроциты": "eritrocity", "Гематокрит": "gematokrit",
