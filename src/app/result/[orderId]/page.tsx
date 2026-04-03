@@ -23,7 +23,10 @@ import {
   CircleMinus,
   Plus,
   Mail,
+  ArrowRight,
 } from "lucide-react";
+import Link from "next/link";
+import { getIndicatorSlug } from "@/lib/indicators-data";
 
 interface Props {
   params: Promise<{ orderId: string }>;
@@ -556,6 +559,21 @@ function AbnormalCard({
             )}
           </div>
         )}
+
+        {/* Link to indicator reference page */}
+        {(() => {
+          const slug = getIndicatorSlug(ind.name);
+          return slug ? (
+            <Link
+              href={`/indicators/${slug}`}
+              target="_blank"
+              className="mt-4 inline-flex items-center gap-1.5 text-sm text-primary hover:underline transition-colors"
+            >
+              Подробнее о показателе
+              <ArrowRight className="h-3.5 w-3.5" />
+            </Link>
+          ) : null;
+        })()}
       </div>
     </div>
   );

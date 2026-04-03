@@ -14,6 +14,12 @@ export function SiteFooter() {
 
           <nav className="flex flex-wrap items-center justify-center gap-x-5 gap-y-2">
             <Link
+              href="/indicators"
+              className="text-xs text-muted-foreground transition-colors hover:text-primary"
+            >
+              Показатели
+            </Link>
+            <Link
               href="/offer"
               className="text-xs text-muted-foreground transition-colors hover:text-primary"
             >

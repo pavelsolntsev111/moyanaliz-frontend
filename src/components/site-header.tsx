@@ -21,6 +21,12 @@ export function SiteHeader() {
 
         <nav className="hidden items-center gap-6 md:flex">
           <Link
+            href="/indicators"
+            className="text-sm font-medium text-muted-foreground transition-colors hover:text-primary"
+          >
+            Показатели
+          </Link>
+          <Link
             href="/blog"
             className="text-sm font-medium text-muted-foreground transition-colors hover:text-primary"
           >
@@ -46,6 +52,13 @@ export function SiteHeader() {
       {menuOpen && (
         <nav className="border-t border-border bg-card px-4 py-3 md:hidden">
           <div className="flex flex-col gap-3">
+            <Link
+              href="/indicators"
+              onClick={() => setMenuOpen(false)}
+              className="text-sm font-medium text-muted-foreground transition-colors hover:text-primary"
+            >
+              Показатели
+            </Link>
             <Link
               href="/blog"
               onClick={() => setMenuOpen(false)}
