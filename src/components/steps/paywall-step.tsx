@@ -655,7 +655,7 @@ function InlinePaywall({
     try {
       const result = await validatePromo(promoCode.trim())
       if (result.valid && result.free) {
-        // Free promo (e.g. "111") — show email field to collect email
+        // Free promo flow — collect email before applying
         setPromoResult(result)
         setPromoValidating(false)
         return
