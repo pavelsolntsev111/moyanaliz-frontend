@@ -644,7 +644,7 @@ function InlinePaywall({
 
   const displayPrice = promoResult?.valid && !promoResult.free && promoResult.discounted_price
     ? promoResult.discounted_price
-    : 199
+    : 249
   const hasDiscount = promoResult?.valid && !promoResult.free && promoResult.discounted_price
 
   const handleValidatePromo = async () => {
@@ -685,11 +685,11 @@ function InlinePaywall({
               {headline} —{" "}
               {hasDiscount ? (
                 <>
-                  <span className="line-through text-muted-foreground text-base font-normal">199 ₽</span>{" "}
+                  <span className="line-through text-muted-foreground text-base font-normal">249 ₽</span>{" "}
                   <span style={{ color: "var(--primary)" }}>{displayPrice} ₽</span>
                 </>
               ) : (
-                <span style={{ color: "var(--primary)" }}>199 ₽</span>
+                <span style={{ color: "var(--primary)" }}>249 ₽</span>
               )}
             </h3>
             <p className="mt-2 text-sm text-muted-foreground leading-relaxed">{subtitle}</p>
@@ -842,7 +842,7 @@ function BottomCTA({ onPay, loading }: {
             className="flex w-full items-center justify-center gap-2 rounded-xl px-4 py-3.5 text-sm font-bold text-white disabled:opacity-50"
             style={{ background: "linear-gradient(135deg, #00b4bc 0%, #00a0a8 100%)" }}
           >
-            Получить полный отчёт — 199 ₽
+            Получить полный отчёт — 249 ₽
             <ChevronRight className="h-4 w-4" />
           </button>
         </div>
