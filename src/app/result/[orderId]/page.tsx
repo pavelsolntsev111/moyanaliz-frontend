@@ -261,7 +261,7 @@ function EmailRequiredScreen({
       </h1>
       <p className="text-sm text-muted-foreground mb-6">
         Платёж получен ✓ Отчёт уже готовится — укажите email, чтобы получить
-        PDF-отчёт и доступ к интерактивной расшифровке.
+        PDF-отчёт и доступ к расшифровке.
       </p>
 
       <div className="rounded-2xl border border-border bg-card p-5 text-left">
