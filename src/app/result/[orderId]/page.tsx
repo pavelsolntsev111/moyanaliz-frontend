@@ -222,6 +222,90 @@ function ProcessingScreen({ orderId, hasEmail, onEmailSubmitted }: { orderId: st
   );
 }
 
+function EmailRequiredScreen({
+  orderId,
+  onSubmitted,
+}: {
+  orderId: string;
+  onSubmitted: () => void;
+}) {
+  const [email, setEmail] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState("");
+
+  const isValid = (v: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v);
+
+  const handleSubmit = async () => {
+    if (!isValid(email)) {
+      setError("Введите корректный email");
+      return;
+    }
+    setSubmitting(true);
+    setError("");
+    try {
+      await setOrderEmail(orderId, email.trim());
+      onSubmitted();
+    } catch {
+      setError("Не удалось сохранить email, попробуйте ещё раз");
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <div className="text-center max-w-md mx-auto">
+      <div className="w-16 h-16 mx-auto mb-5 rounded-full bg-emerald-50 flex items-center justify-center">
+        <CheckCircle2 className="w-8 h-8 text-emerald-500" />
+      </div>
+      <h1 className="text-2xl font-bold text-foreground mb-2">
+        Куда отправить отчёт?
+      </h1>
+      <p className="text-sm text-muted-foreground mb-6">
+        Платёж получен ✓ Отчёт уже готовится — укажите email, чтобы получить
+        PDF-отчёт и доступ к интерактивной расшифровке.
+      </p>
+
+      <div className="rounded-2xl border border-border bg-card p-5 text-left">
+        <div className="flex items-center gap-2 mb-3">
+          <Mail className="h-4 w-4 text-primary shrink-0" />
+          <p className="text-sm font-medium text-card-foreground">
+            Ваш email
+          </p>
+        </div>
+        <input
+          type="email"
+          inputMode="email"
+          autoComplete="email"
+          autoFocus
+          placeholder="example@mail.ru"
+          value={email}
+          onChange={(e) => {
+            setEmail(e.target.value);
+            setError("");
+          }}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") handleSubmit();
+          }}
+          className="w-full rounded-lg border border-border bg-background px-4 py-3 text-base outline-none transition-colors placeholder:text-muted-foreground focus:border-primary"
+        />
+        {error && (
+          <p className="mt-2 text-xs text-destructive">{error}</p>
+        )}
+        <button
+          onClick={handleSubmit}
+          disabled={submitting}
+          className="mt-4 w-full rounded-xl bg-primary px-4 py-3 text-base font-semibold text-primary-foreground transition-opacity hover:opacity-90 disabled:opacity-50"
+        >
+          {submitting ? "Сохраняем…" : "Получить отчёт"}
+        </button>
+      </div>
+
+      <p className="mt-4 text-xs text-muted-foreground">
+        Email нужен только для отправки отчёта. Никакого спама.
+      </p>
+    </div>
+  );
+}
+
 function StatusScreen({ status, orderId }: { status: OrderStatus; orderId: string }) {
   const [emailSubmitted, setEmailSubmitted] = useState(false);
   const hasEmail = !!status.email || emailSubmitted;
@@ -262,6 +346,16 @@ function StatusScreen({ status, orderId }: { status: OrderStatus; orderId: strin
           Попробовать снова
         </a>
       </div>
+    );
+  }
+
+  // Email gate: paid but no email yet → block UI until email is submitted
+  if (status.payment_status === "paid" && !hasEmail) {
+    return (
+      <EmailRequiredScreen
+        orderId={orderId}
+        onSubmitted={() => setEmailSubmitted(true)}
+      />
     );
   }
 
