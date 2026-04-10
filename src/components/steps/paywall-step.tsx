@@ -177,15 +177,17 @@ function pluralIndicators(n: number): string {
 }
 
 function mapLightToAnalysis(ind: LightIndicator, index: number): AnalysisIndicator {
-  const numValue = parseFloat(ind.value.replace(",", "."))
-  const isNumeric = !isNaN(numValue) && ind.value.trim() !== ""
+  const valueStr = ind.value || ""
+  const refRange = ind.reference_range || ""
+  const numValue = parseFloat(valueStr.replace(",", "."))
+  const isNumeric = !isNaN(numValue) && valueStr.trim() !== ""
 
   let refMin = 0
   let refMax = 100
   let hasRange = false
-  const minMaxMatch = ind.reference_range.match(/([\d.,]+)\s*[-–]\s*([\d.,]+)/)
-  const ltMatch = ind.reference_range.match(/^[<до]\s*([\d.,]+)/u)
-  const gtMatch = ind.reference_range.match(/^>\s*([\d.,]+)/)
+  const minMaxMatch = refRange.match(/([\d.,]+)\s*[-–]\s*([\d.,]+)/)
+  const ltMatch = refRange.match(/^[<до]\s*([\d.,]+)/u)
+  const gtMatch = refRange.match(/^>\s*([\d.,]+)/)
   if (minMaxMatch) {
     refMin = parseFloat(minMaxMatch[1].replace(",", "."))
     refMax = parseFloat(minMaxMatch[2].replace(",", "."))
@@ -202,17 +204,25 @@ function mapLightToAnalysis(ind: LightIndicator, index: number): AnalysisIndicat
   }
 
   let status: AnalysisIndicator["status"] = "normal"
-  if (ind.status === "above_normal") status = "high"
-  else if (ind.status === "below_normal") status = "low"
-  else if (ind.status === "critical_high" || ind.status === "critical_low") status = "critical"
+  const rawStatus = (ind.status || "").toLowerCase().trim().replace(/\s+/g, "_")
+  if (rawStatus === "above_normal" || rawStatus === "high" || rawStatus === "elevated" || rawStatus === "above") {
+    status = "high"
+  } else if (rawStatus === "below_normal" || rawStatus === "low" || rawStatus === "decreased" || rawStatus === "below") {
+    status = "low"
+  } else if (rawStatus.includes("critical") || rawStatus === "very_high" || rawStatus === "very_low") {
+    status = "critical"
+  } else if (rawStatus !== "normal" && rawStatus !== "" && rawStatus !== "in_range") {
+    // Any unrecognized non-normal status — treat as abnormal
+    status = "high"
+  }
 
   return {
     id: `ind-${index}`,
-    name: ind.name,
-    shortName: ind.short_name,
+    name: ind.name || "",
+    shortName: ind.short_name || "",
     value: isNumeric ? numValue : 0,
-    textValue: isNumeric ? undefined : ind.value,
-    unit: ind.unit,
+    textValue: isNumeric ? undefined : valueStr,
+    unit: ind.unit || "",
     status,
     referenceMin: refMin,
     referenceMax: refMax,
@@ -326,20 +336,26 @@ function EmotionalSummary({
     const shown = abnormalIndicators.slice(0, 3)
     const remaining = abnormalIndicators.length - shown.length
 
-    const descriptions = shown.map((ind) => {
-      const impact = getHealthImpact(ind.name)
-      const direction = getDirectionText(ind.status)
-      if (impact) {
-        return `${ind.name} ${direction} нормы — это может влиять на ${impact}`
-      }
-      return `${ind.name} ${direction} нормы. Требует внимания`
-    })
+    let summaryText: string
+    if (shown.length === 0) {
+      // Fallback: meta says out_of_range but we couldn't map which ones
+      summaryText = `У вас ${outOfRangeCount === 1 ? "есть показатель, который отклоняется" : `есть ${outOfRangeCount} показателя, которые отклоняются`} от нормы. Подробный разбор и план действий — в полном отчёте.`
+    } else {
+      const descriptions = shown.map((ind) => {
+        const impact = getHealthImpact(ind.name)
+        const direction = getDirectionText(ind.status)
+        if (impact) {
+          return `${ind.name} ${direction} нормы — это может влиять на ${impact}`
+        }
+        return `${ind.name} ${direction} нормы. Требует внимания`
+      })
 
-    let summaryText = descriptions.join(". ") + "."
-    if (remaining > 0) {
-      summaryText += ` И ещё ${remaining}.`
+      summaryText = descriptions.join(". ") + "."
+      if (remaining > 0) {
+        summaryText += ` И ещё ${remaining}.`
+      }
+      summaryText += " Подробный разбор и план действий — в полном отчёте."
     }
-    summaryText += " Подробный разбор и план действий — в полном отчёте."
 
     return (
       <motion.div
