@@ -512,6 +512,11 @@ export function UploadStep({ onFileSelected }: UploadStepProps) {
                 title: "PDF-отчёт на email",
                 desc: "Полный отчёт в формате PDF отправляется на вашу электронную почту",
               },
+              {
+                icon: Shield,
+                title: "Гарантия возврата",
+                desc: "Если сервис не сформировал отчёт — вернём деньги",
+              },
             ].map((item) => (
               <div
                 key={item.title}

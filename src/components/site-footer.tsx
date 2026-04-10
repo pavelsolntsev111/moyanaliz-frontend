@@ -37,6 +37,12 @@ export function SiteFooter() {
             >
               Условия
             </Link>
+            <Link
+              href="/guarantee"
+              className="text-xs text-muted-foreground transition-colors hover:text-primary"
+            >
+              Гарантия
+            </Link>
             <a
               href="mailto:support@moyanaliz.ru"
               className="text-xs text-muted-foreground transition-colors hover:text-primary"
