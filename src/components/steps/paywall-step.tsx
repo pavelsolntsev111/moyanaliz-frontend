@@ -628,8 +628,6 @@ function InlinePaywall({
   const hasAbnormal = abnormalIndicators.length > 0
   const first = abnormalIndicators[0]
 
-  const headline = "Получить полный отчёт"
-
   const subtitle: React.ReactNode = (
     <a href="/guarantee" className="inline-flex items-center gap-1.5 text-muted-foreground hover:text-primary transition-colors">
       <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500 shrink-0" />
@@ -675,25 +673,55 @@ function InlinePaywall({
     >
       <GradientCard glowColor="rgba(0,180,188,0.16)">
         <div className="p-6 sm:p-7">
-          <div className="text-center">
-            <h3 className="text-xl font-bold text-card-foreground">
-              {headline} —{" "}
-              {hasDiscount ? (
-                <>
-                  <span className="line-through text-muted-foreground text-base font-normal">199 ₽</span>{" "}
-                  <span style={{ color: "var(--primary)" }}>{displayPrice} ₽</span>
-                </>
-              ) : (
-                <span style={{ color: "var(--primary)" }}>199 ₽</span>
-              )}
-            </h3>
-            <p className="mt-2 text-sm text-muted-foreground leading-relaxed">{subtitle}</p>
+          {/* 1. CTA Button */}
+          {!promoResult?.free && (
+          <button
+            onClick={() => {
+              ymGoal("click_get_report")
+              onPay(hasDiscount ? promoCode.trim() : undefined)
+            }}
+            disabled={loading}
+            className="flex w-full items-center justify-center gap-2 rounded-xl px-4 py-4 text-sm font-bold text-white transition-opacity hover:opacity-90 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
+            style={{ background: "linear-gradient(135deg, #00b4bc 0%, #00a0a8 100%)", boxShadow: "0 4px 16px rgba(0,180,188,0.35)" }}
+          >
+            {loading ? (
+              <>
+                <svg className="h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none">
+                  <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" className="opacity-25" />
+                  <path d="M12 2a10 10 0 0 1 10 10" stroke="currentColor" strokeWidth="3" strokeLinecap="round" />
+                </svg>
+                Переход к оплате...
+              </>
+            ) : (
+              <>
+                Получить полный отчёт — {displayPrice} ₽
+                <ChevronRight className="h-4 w-4" />
+              </>
+            )}
+          </button>
+          )}
+
+          {/* 2. Guarantee */}
+          <div className="mt-3 text-center">
+            <p className="text-sm text-muted-foreground leading-relaxed">{subtitle}</p>
           </div>
 
+          {/* 3. YooMoney badge */}
+          <div className="mt-2 flex items-center justify-center gap-2 text-muted-foreground">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <rect width="24" height="24" rx="6" fill="#8B3FFD"/>
+              <path d="M13.5 7H11.2C9.43 7 8 8.43 8 10.2C8 11.97 9.43 13.4 11.2 13.4H12V17H13.5V7ZM12 12H11.2C10.21 12 9.5 11.19 9.5 10.2C9.5 9.21 10.31 8.5 11.2 8.5H12V12Z" fill="white"/>
+            </svg>
+            <span className="text-xs font-medium">Безопасная оплата через ЮMoney</span>
+          </div>
+
+          {/* 4. Promo code */}
           {!promoVisible ? (
-            <button onClick={() => setPromoVisible(true)} className="mt-3 text-xs text-muted-foreground underline decoration-dotted underline-offset-4 transition-colors hover:text-primary">
-              Есть промокод?
-            </button>
+            <div className="mt-3 text-center">
+              <button onClick={() => setPromoVisible(true)} className="text-xs text-muted-foreground underline decoration-dotted underline-offset-4 transition-colors hover:text-primary">
+                Есть промокод?
+              </button>
+            </div>
           ) : (
             <div className="mt-3">
               <div className="flex gap-2">
@@ -765,43 +793,7 @@ function InlinePaywall({
             </div>
           )}
 
-          {!promoResult?.free && (
-          <button
-            onClick={() => {
-              ymGoal("click_get_report")
-              onPay(hasDiscount ? promoCode.trim() : undefined)
-            }}
-            disabled={loading}
-            className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl px-4 py-4 text-sm font-bold text-white transition-opacity hover:opacity-90 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
-            style={{ background: "linear-gradient(135deg, #00b4bc 0%, #00a0a8 100%)", boxShadow: "0 4px 16px rgba(0,180,188,0.35)" }}
-          >
-            {loading ? (
-              <>
-                <svg className="h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none">
-                  <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" className="opacity-25" />
-                  <path d="M12 2a10 10 0 0 1 10 10" stroke="currentColor" strokeWidth="3" strokeLinecap="round" />
-                </svg>
-                Переход к оплате...
-              </>
-            ) : (
-              <>
-                Получить полный отчёт — {displayPrice} ₽
-                <ChevronRight className="h-4 w-4" />
-              </>
-            )}
-          </button>
-          )}
-
-          {/* YooMoney badge */}
-          <div className="mt-3 flex items-center justify-center gap-2 text-muted-foreground">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <rect width="24" height="24" rx="6" fill="#8B3FFD"/>
-              <path d="M13.5 7H11.2C9.43 7 8 8.43 8 10.2C8 11.97 9.43 13.4 11.2 13.4H12V17H13.5V7ZM12 12H11.2C10.21 12 9.5 11.19 9.5 10.2C9.5 9.21 10.31 8.5 11.2 8.5H12V12Z" fill="white"/>
-            </svg>
-            <span className="text-xs font-medium">Безопасная оплата через ЮMoney</span>
-          </div>
-
-          <p className="mt-2 text-center text-[11px] leading-relaxed text-muted-foreground">
+          <p className="mt-3 text-center text-[11px] leading-relaxed text-muted-foreground">
             Нажимая кнопку, вы соглашаетесь с{" "}
             <a href="/offer" className="underline hover:text-primary">офертой</a>,{" "}
             <a href="/privacy" className="underline hover:text-primary">политикой конфиденциальности</a>{" "}и{" "}
