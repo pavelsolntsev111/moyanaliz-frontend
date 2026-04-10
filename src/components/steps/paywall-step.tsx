@@ -128,8 +128,8 @@ function mapLightToAnalysis(ind: LightIndicator, index: number): AnalysisIndicat
     referenceMin: refMin,
     referenceMax: refMax,
     hasRange,
-    explanation: ind.what_is && ind.sources && ind.recommendation
-      ? `${ind.what_is}\n\n${ind.sources}\n\n${ind.recommendation}`
+    explanation: ind.what_is
+      ? [ind.what_is, ind.sources, ind.recommendation].filter(Boolean).join("\n\n")
       : ind.short_description || "",
   }
 }
