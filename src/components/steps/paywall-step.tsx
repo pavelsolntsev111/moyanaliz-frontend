@@ -135,7 +135,13 @@ const HEALTH_IMPACT: Record<string, string> = {
 
 function getHealthImpact(name: string): string | null {
   const key = name.toLowerCase().trim()
-  return HEALTH_IMPACT[key] ?? null
+  // Exact match first
+  if (HEALTH_IMPACT[key]) return HEALTH_IMPACT[key]
+  // Fuzzy: check if any HEALTH_IMPACT key is contained in name or vice versa
+  for (const [k, v] of Object.entries(HEALTH_IMPACT)) {
+    if (key.includes(k) || k.includes(key)) return v
+  }
+  return null
 }
 
 function generateFallbackExplanation(ind: LightIndicator): string {
