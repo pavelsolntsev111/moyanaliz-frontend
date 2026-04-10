@@ -630,17 +630,12 @@ function InlinePaywall({
 
   const headline = "Получить полный отчёт"
 
-  let subtitle: React.ReactNode
-  if (abnormalIndicators.length === 1) {
-    subtitle = <>Мы объясним, почему <span className="font-medium text-destructive">{first.name}</span> вне нормы и что с этим делать.</>
-  } else if (abnormalIndicators.length >= 2) {
-    const names = abnormalIndicators.slice(0, 3).map(i => i.name)
-    const extra = abnormalIndicators.length - 3
-    const joined = names.join(", ") + (extra > 0 ? ` и ещё ${extra}` : "")
-    subtitle = <>Мы объясним отклонения в <span className="font-medium text-destructive">{joined}</span> и дадим план действий.</>
-  } else {
-    subtitle = "Подробный разбор каждого показателя и рекомендации по поддержанию здоровья."
-  }
+  const subtitle: React.ReactNode = (
+    <a href="/guarantee" className="inline-flex items-center gap-1.5 text-muted-foreground hover:text-primary transition-colors">
+      <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500 shrink-0" />
+      <span>Гарантия возврата, если сервис не справился</span>
+    </a>
+  )
 
   const displayPrice = promoResult?.valid && !promoResult.free && promoResult.discounted_price
     ? promoResult.discounted_price
@@ -808,8 +803,9 @@ function InlinePaywall({
 
           <p className="mt-2 text-center text-[11px] leading-relaxed text-muted-foreground">
             Нажимая кнопку, вы соглашаетесь с{" "}
-            <a href="/offer" className="underline hover:text-primary">офертой</a>{" "}и{" "}
-            <a href="/privacy" className="underline hover:text-primary">политикой конфиденциальности</a>
+            <a href="/offer" className="underline hover:text-primary">офертой</a>,{" "}
+            <a href="/privacy" className="underline hover:text-primary">политикой конфиденциальности</a>{" "}и{" "}
+            <a href="/guarantee" className="underline hover:text-primary">гарантией возврата</a>
           </p>
         </div>
       </GradientCard>
@@ -839,11 +835,16 @@ function BottomCTA({ onPay, loading }: {
           <button
             onClick={onPay}
             disabled={loading}
-            className="flex w-full items-center justify-center gap-2 rounded-xl px-4 py-3.5 text-sm font-bold text-white disabled:opacity-50"
+            className="flex w-full flex-col items-center justify-center rounded-xl px-4 py-4 text-white disabled:opacity-50"
             style={{ background: "linear-gradient(135deg, #00b4bc 0%, #00a0a8 100%)" }}
           >
-            Получить полный отчёт — 199 ₽
-            <ChevronRight className="h-4 w-4" />
+            <span className="flex items-center gap-2 text-sm font-bold">
+              Получить полный отчёт — 199 ₽
+              <ChevronRight className="h-4 w-4" />
+            </span>
+            <span className="mt-0.5 text-[10px] font-normal opacity-80">
+              Гарантия возврата, если сервис не справился
+            </span>
           </button>
         </div>
       )}
