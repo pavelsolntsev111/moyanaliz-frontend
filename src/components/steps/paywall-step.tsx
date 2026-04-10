@@ -230,6 +230,8 @@ function mapLightToAnalysis(ind: LightIndicator, index: number): AnalysisIndicat
     explanation: ind.what_is
       ? [ind.what_is, ind.sources, ind.recommendation].filter(Boolean).join("\n\n")
       : generateFallbackExplanation(ind),
+    whatIs: ind.what_is || undefined,
+    sources: ind.sources || undefined,
   }
 }
 

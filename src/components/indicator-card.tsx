@@ -1,7 +1,7 @@
 "use client"
 
 import type { AnalysisIndicator } from "@/lib/types"
-import { CheckCircle2, AlertTriangle, AlertOctagon, ArrowDown } from "lucide-react"
+import { CheckCircle2, AlertTriangle, AlertOctagon, ArrowDown, FileText, Beaker } from "lucide-react"
 
 const statusConfig = {
   normal: {
@@ -133,10 +133,38 @@ export function IndicatorCard({ indicator, locked }: IndicatorCardProps) {
         </div>
       )}
 
-      {!locked && indicator.explanation && (
-        <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
-          {indicator.explanation}
-        </p>
+      {!locked && (indicator.whatIs || indicator.sources || indicator.explanation) && (
+        <div className="mt-4 space-y-3">
+          {indicator.whatIs ? (
+            <>
+              {/* Structured sections from static DB */}
+              <div className="flex gap-2.5">
+                <div className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded" style={{ background: "rgba(0,180,188,0.10)" }}>
+                  <FileText className="h-3 w-3" style={{ color: "#00B4BC" }} />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-xs font-semibold text-card-foreground">Что это</p>
+                  <p className="mt-0.5 text-sm leading-relaxed text-muted-foreground">{indicator.whatIs}</p>
+                </div>
+              </div>
+              {indicator.sources && (
+                <div className="flex gap-2.5">
+                  <div className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded" style={{ background: "rgba(124,58,237,0.10)" }}>
+                    <Beaker className="h-3 w-3" style={{ color: "#7C3AED" }} />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-xs font-semibold text-card-foreground">Почему важен</p>
+                    <p className="mt-0.5 text-sm leading-relaxed text-muted-foreground">{indicator.sources}</p>
+                  </div>
+                </div>
+              )}
+            </>
+          ) : indicator.explanation ? (
+            <p className="text-sm leading-relaxed text-muted-foreground">
+              {indicator.explanation}
+            </p>
+          ) : null}
+        </div>
       )}
     </div>
   )

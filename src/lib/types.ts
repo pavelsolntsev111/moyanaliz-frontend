@@ -23,6 +23,8 @@ export interface AnalysisIndicator {
   referenceMax: number;
   hasRange?: boolean;
   explanation: string;
+  whatIs?: string;
+  sources?: string;
 }
 
 export interface LightIndicator {
