@@ -40,6 +40,9 @@ export interface LightIndicator {
   recommendation?: string;
 }
 
+export type ChatPaymentStatus = "not_purchased" | "pending" | "paid";
+export type ChatStatus = "not_started" | "active" | "expired";
+
 export interface PreviewData {
   meta: {
     analysis_type_label: string;

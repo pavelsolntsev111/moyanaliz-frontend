@@ -109,6 +109,19 @@ export async function validatePromo(
   });
 }
 
+export interface ChatPaymentResponse {
+  redirect_url: string;
+  chat_token?: string;
+}
+
+export async function createChatPayment(orderId: string): Promise<ChatPaymentResponse> {
+  return request<ChatPaymentResponse>("/api/v1/payment/create-chat", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ order_id: orderId }),
+  });
+}
+
 export interface OrderStatus {
   order_id: string;
   payment_status: string;
@@ -117,6 +130,9 @@ export interface OrderStatus {
   email?: string | null;
   promo_code?: string | null;
   pdf_download_url: string | null;
+  chat_payment_status?: string;
+  chat_status?: string;
+  chat_telegram_link?: string | null;
   claude_result_json?: {
     meta: {
       detected_analysis_types: string[];

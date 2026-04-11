@@ -4,7 +4,7 @@ import { useEffect, useState, useCallback, useRef, use } from "react";
 import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
 import { ymGoal } from "@/lib/ym";
-import { getOrderStatus, setOrderEmail, type OrderStatus } from "@/lib/api";
+import { getOrderStatus, setOrderEmail, createChatPayment, type OrderStatus } from "@/lib/api";
 import {
   CheckCircle2,
   AlertTriangle,
@@ -24,6 +24,8 @@ import {
   Plus,
   Mail,
   ArrowRight,
+  MessageSquare,
+  ExternalLink,
 } from "lucide-react";
 import Link from "next/link";
 import { getIndicatorSlug } from "@/lib/indicators-data";
@@ -61,6 +63,22 @@ export default function ResultPage({ params }: Props) {
       localStorage.setItem(`payment_done_${orderId}`, "1");
     }
   }, [status?.payment_status, orderId]);
+
+  // Re-fetch status when returning from chat payment (?chat=activated)
+  useEffect(() => {
+    if (typeof window === "undefined" || !window.location.search.includes("chat=activated")) return;
+    // Clean URL immediately
+    window.history.replaceState({}, "", window.location.pathname);
+    // Poll until chat_payment_status is "paid" (webhook may not have arrived yet)
+    let attempts = 0;
+    const chatPoll = async () => {
+      const s = await poll();
+      if (s?.chat_payment_status === "paid" || attempts >= 10) return;
+      attempts++;
+      setTimeout(chatPoll, 2000);
+    };
+    chatPoll();
+  }, [poll]);
 
   useEffect(() => {
     let active = true;
@@ -152,6 +170,7 @@ function EmailCaptureCard({
     setEmailError("");
     try {
       await setOrderEmail(orderId, email.trim());
+      ymGoal("email_submitted");
       setSubmitted(true);
       onSubmitted?.();
     } catch {
@@ -244,6 +263,7 @@ function EmailRequiredScreen({
     setError("");
     try {
       await setOrderEmail(orderId, email.trim());
+      ymGoal("email_submitted");
       onSubmitted();
     } catch {
       setError("Не удалось сохранить email, попробуйте ещё раз");
@@ -451,6 +471,7 @@ function pluralIndicatorsGen(n: number): string {
 }
 
 function FullReport({ status, orderId, hasEmail, onEmailSubmitted }: { status: OrderStatus; orderId: string; hasEmail: boolean; onEmailSubmitted?: () => void }) {
+  useEffect(() => { ymGoal("analysis_viewed"); }, []);
   return (
     <div className="text-center py-8">
       <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-emerald-50 flex items-center justify-center">
@@ -493,6 +514,9 @@ function FullReport({ status, orderId, hasEmail, onEmailSubmitted }: { status: O
         </p>
       )}
 
+      {/* Chat upsell */}
+      <ChatUpsellButton status={status} orderId={orderId} />
+
       {/* Email capture */}
       {!hasEmail && (
         <div className="mt-6">
@@ -506,22 +530,91 @@ function FullReport({ status, orderId, hasEmail, onEmailSubmitted }: { status: O
       )}
 
       {/* Promo bonus block */}
-      {status.promo_code && (
-        <div
-          className="mt-8 mx-auto max-w-md rounded-xl p-5 text-center"
-          style={{ background: "rgba(0,180,188,0.06)", border: "1px solid rgba(0,180,188,0.15)" }}
-        >
-          <p className="text-lg font-bold text-primary">
-            Промокод –30% на следующие 3 анализа:
-          </p>
-          <p className="mt-1 text-lg font-bold text-primary uppercase">
-            {status.promo_code}
-          </p>
-          <p className="mt-1 text-xs text-muted-foreground">
-            действителен 30 дней
-          </p>
+      <div
+        className="mt-8 mx-auto max-w-md rounded-xl p-5 text-center"
+        style={{ background: "rgba(0,180,188,0.06)", border: "1px solid rgba(0,180,188,0.15)" }}
+      >
+        <p className="text-lg font-bold text-primary">
+          Промокод –30% на следующий анализ:
+        </p>
+        <p className="mt-1 text-2xl font-bold text-primary">
+          30%
+        </p>
+        <p className="mt-1 text-xs text-muted-foreground">
+          введите в поле «Промокод» при оплате
+        </p>
+      </div>
+    </div>
+  );
+}
+
+/* ─── Chat upsell ─── */
+
+function ChatUpsellButton({ status, orderId }: { status: OrderStatus; orderId: string }) {
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+
+  const chatPaid = status.chat_payment_status === "paid";
+  const chatLink = status.chat_telegram_link;
+
+  const handleBuy = async () => {
+    setLoading(true);
+    setError("");
+    try {
+      const res = await createChatPayment(orderId);
+      if (res.redirect_url) {
+        window.location.href = res.redirect_url;
+      }
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Ошибка");
+      setLoading(false);
+    }
+  };
+
+  if (chatPaid && chatLink) {
+    return (
+      <div
+        className="mt-6 mx-auto max-w-md rounded-xl p-5 text-center"
+        style={{ background: "rgba(0,180,188,0.06)", border: "1px solid rgba(0,180,188,0.15)" }}
+      >
+        <div className="flex items-center justify-center gap-2 mb-2">
+          <CheckCircle2 className="w-5 h-5 text-emerald-500" />
+          <p className="text-sm font-semibold text-foreground">Чат активирован!</p>
         </div>
-      )}
+        <p className="text-xs text-muted-foreground mb-3">
+          Задайте вопросы AI-ассистенту по вашим анализам. Сессия 10 минут.
+        </p>
+        <a
+          href={chatLink}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex items-center gap-2 py-2.5 px-6 rounded-xl bg-[#0088cc] text-white font-semibold hover:opacity-90 transition text-sm"
+        >
+          <MessageSquare className="w-4 h-4" />
+          Открыть в Telegram
+          <ExternalLink className="w-3.5 h-3.5" />
+        </a>
+      </div>
+    );
+  }
+
+  return (
+    <div className="mt-6 mx-auto max-w-md rounded-xl border border-border bg-card p-5 text-center">
+      <div className="flex items-center justify-center gap-2 mb-2">
+        <MessageSquare className="w-5 h-5 text-primary" />
+        <p className="text-sm font-semibold text-foreground">Есть вопросы по анализам?</p>
+      </div>
+      <p className="text-xs text-muted-foreground mb-3">
+        Обсудите результаты с AI-ассистентом в Telegram. 10 минут консультации.
+      </p>
+      <button
+        onClick={handleBuy}
+        disabled={loading}
+        className="inline-flex items-center gap-2 py-2.5 px-6 rounded-xl bg-primary text-primary-foreground font-semibold hover:opacity-90 transition text-sm disabled:opacity-50"
+      >
+        {loading ? "Переход к оплате..." : "Обсудить анализ — 99 ₽"}
+      </button>
+      {error && <p className="mt-2 text-xs text-destructive">{error}</p>}
     </div>
   );
 }
