@@ -216,7 +216,7 @@ function EmailCaptureCard({
   );
 }
 
-function ProcessingScreen({ orderId, hasEmail, onEmailSubmitted }: { orderId: string; hasEmail: boolean; onEmailSubmitted?: () => void }) {
+function ProcessingScreen({ orderId, hasEmail, onEmailSubmitted, chatPaid }: { orderId: string; hasEmail: boolean; onEmailSubmitted?: () => void; chatPaid?: boolean }) {
   return (
     <div className="text-center">
       <Spinner />
@@ -233,6 +233,14 @@ function ProcessingScreen({ orderId, hasEmail, onEmailSubmitted }: { orderId: st
       <div className="mt-8">
         <EmailCaptureCard orderId={orderId} hasEmail={hasEmail} onSubmitted={onEmailSubmitted} />
       </div>
+
+      {chatPaid && (
+        <div className="mt-4 mx-auto max-w-xs rounded-xl px-4 py-3 text-left" style={{ background: "rgba(0,180,188,0.07)", border: "1px solid rgba(0,180,188,0.18)" }}>
+          <p className="text-xs text-primary font-medium leading-relaxed">
+            💬 Консультация с ИИ-ассистентом станет доступна сразу после формирования отчёта
+          </p>
+        </div>
+      )}
 
       <p className="mt-4 text-xs text-muted-foreground">Не закрывайте окно браузера</p>
     </div>
@@ -382,7 +390,7 @@ function StatusScreen({ status, orderId }: { status: OrderStatus; orderId: strin
     status.processing_status === "not_started" ||
     status.processing_status === "light_complete"
   ) {
-    return <ProcessingScreen orderId={orderId} hasEmail={hasEmail} onEmailSubmitted={() => setEmailSubmitted(true)} />;
+    return <ProcessingScreen orderId={orderId} hasEmail={hasEmail} onEmailSubmitted={() => setEmailSubmitted(true)} chatPaid={status.chat_payment_status === "paid"} />;
   }
 
   if (status.processing_status === "completed" && status.claude_result_json) {
