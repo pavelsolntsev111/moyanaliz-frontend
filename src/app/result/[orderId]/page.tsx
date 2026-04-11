@@ -597,7 +597,7 @@ function ChatUpsellButton({ status, orderId }: { status: OrderStatus; orderId: s
           <p className="text-sm font-semibold text-foreground">Чат активирован!</p>
         </div>
         <p className="text-xs text-muted-foreground mb-3">
-          Задайте вопросы AI-ассистенту по вашим анализам. Сессия 10 минут.
+          Задайте вопросы AI-ассистенту по вашим анализам. 20 вопросов в течение 24 часов.
         </p>
         <a
           href={chatLink}
@@ -620,14 +620,14 @@ function ChatUpsellButton({ status, orderId }: { status: OrderStatus; orderId: s
         <p className="text-sm font-semibold text-foreground">Есть вопросы по анализам?</p>
       </div>
       <p className="text-xs text-muted-foreground mb-3">
-        Обсудите результаты с AI-ассистентом в Telegram. 10 минут консультации.
+        Обсудите результаты с AI-ассистентом в Telegram. 20 вопросов AI-ассистенту в Telegram.
       </p>
       <button
         onClick={handleBuy}
         disabled={loading}
         className="inline-flex items-center gap-2 py-2.5 px-6 rounded-xl bg-primary text-primary-foreground font-semibold hover:opacity-90 transition text-sm disabled:opacity-50"
       >
-        {loading ? "Переход к оплате..." : "Обсудить анализ — 99 ₽"}
+        {loading ? "Переход к оплате..." : "Обсудить анализ — 100 ₽"}
       </button>
       {error && <p className="mt-2 text-xs text-destructive">{error}</p>}
     </div>

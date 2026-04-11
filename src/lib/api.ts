@@ -50,10 +50,12 @@ export interface PaymentCreateResponse {
 
 export async function createPayment(
   orderId: string,
-  promoCode?: string
+  promoCode?: string,
+  withChat?: boolean
 ): Promise<PaymentCreateResponse> {
-  const body: Record<string, string> = { order_id: orderId };
+  const body: Record<string, unknown> = { order_id: orderId };
   if (promoCode) body.promo_code = promoCode;
+  if (withChat) body.with_chat = true;
   return request<PaymentCreateResponse>("/api/v1/payment/create", {
     method: "POST",
     headers: { "Content-Type": "application/json" },

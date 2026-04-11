@@ -724,13 +724,14 @@ function InlinePaywall({
   loading: boolean
   abnormalIndicators: AnalysisIndicator[]
   totalCount: number
-  onPay: (promoCode?: string) => Promise<void>
+  onPay: (promoCode?: string, withChat?: boolean) => Promise<void>
   onPromo: (email: string, promoCode: string) => Promise<void>
 }) {
   const [promoValidating, setPromoValidating] = useState(false)
   const [promoResult, setPromoResult] = useState<PromoValidateResponse | null>(null)
   const [promoError, setPromoError] = useState<string | null>(null)
   const [freePromoEmail, setFreePromoEmail] = useState("")
+  const [withChat, setWithChat] = useState(false)
 
   const hasAbnormal = abnormalIndicators.length > 0
   const first = abnormalIndicators[0]
@@ -742,9 +743,13 @@ function InlinePaywall({
     </a>
   )
 
-  const displayPrice = promoResult?.valid && !promoResult.free && promoResult.discounted_price
+  const baseDisplayPrice = promoResult?.valid && !promoResult.free && promoResult.discounted_price
     ? promoResult.discounted_price
     : 199
+  const comboDisplayPrice = promoResult?.valid && !promoResult.free && promoResult.discounted_price
+    ? Math.round(promoResult.discounted_price * 299 / 199)
+    : 299
+  const displayPrice = withChat ? comboDisplayPrice : baseDisplayPrice
   const hasDiscount = promoResult?.valid && !promoResult.free && promoResult.discounted_price
 
   const handleValidatePromo = async () => {
@@ -780,12 +785,56 @@ function InlinePaywall({
     >
       <GradientCard glowColor="rgba(0,180,188,0.16)">
         <div className="p-6 sm:p-7">
+          {/* Tier selector */}
+          {!promoResult?.free && (
+          <div className="mb-4 space-y-2">
+            <button
+              onClick={() => setWithChat(false)}
+              className={`flex w-full items-center gap-3 rounded-xl border-2 p-3 text-left transition-colors ${
+                !withChat ? "border-primary bg-primary/5" : "border-border hover:border-muted-foreground/30"
+              }`}
+            >
+              <div className={`h-4 w-4 rounded-full border-2 flex items-center justify-center ${
+                !withChat ? "border-primary" : "border-muted-foreground/40"
+              }`}>
+                {!withChat && <div className="h-2 w-2 rounded-full bg-primary" />}
+              </div>
+              <div className="flex-1">
+                <p className="text-sm font-semibold text-foreground">Полный отчёт</p>
+                <p className="text-xs text-muted-foreground">PDF + расшифровка всех показателей</p>
+              </div>
+              <span className="text-sm font-bold text-foreground">{baseDisplayPrice} ₽</span>
+            </button>
+
+            <button
+              onClick={() => setWithChat(true)}
+              className={`relative flex w-full items-center gap-3 rounded-xl border-2 p-3 text-left transition-colors ${
+                withChat ? "border-primary bg-primary/5" : "border-border hover:border-muted-foreground/30"
+              }`}
+            >
+              <span className="absolute -top-2 right-3 rounded-full bg-primary px-2 py-0.5 text-[10px] font-bold text-white">
+                популярный
+              </span>
+              <div className={`h-4 w-4 rounded-full border-2 flex items-center justify-center ${
+                withChat ? "border-primary" : "border-muted-foreground/40"
+              }`}>
+                {withChat && <div className="h-2 w-2 rounded-full bg-primary" />}
+              </div>
+              <div className="flex-1">
+                <p className="text-sm font-semibold text-foreground">Отчёт + чат с AI</p>
+                <p className="text-xs text-muted-foreground">+ 20 вопросов AI-ассистенту в Telegram</p>
+              </div>
+              <span className="text-sm font-bold text-foreground">{comboDisplayPrice} ₽</span>
+            </button>
+          </div>
+          )}
+
           {/* 1. CTA Button */}
           {!promoResult?.free && (
           <button
             onClick={() => {
               ymGoal("click_get_report")
-              onPay(hasDiscount ? promoCode.trim() : undefined)
+              onPay(hasDiscount ? promoCode.trim() : undefined, withChat)
             }}
             disabled={loading}
             className="flex w-full items-center justify-center gap-2 rounded-xl px-4 py-4 text-sm font-bold text-white transition-opacity hover:opacity-90 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
@@ -801,7 +850,7 @@ function InlinePaywall({
               </>
             ) : (
               <>
-                Получить полный отчёт — {displayPrice} ₽
+                {withChat ? `Отчёт + чат — ${displayPrice} ₽` : `Получить полный отчёт — ${displayPrice} ₽`}
                 <ChevronRight className="h-4 w-4" />
               </>
             )}
@@ -1007,7 +1056,7 @@ function TestimonialsBlock() {
 interface PaywallStepProps {
   orderId: string
   preview: PreviewData | null
-  onPay: (promoCode?: string) => Promise<void>
+  onPay: (promoCode?: string, withChat?: boolean) => Promise<void>
   onPromo: (email: string, promoCode: string) => Promise<void>
   loading: boolean
 }
