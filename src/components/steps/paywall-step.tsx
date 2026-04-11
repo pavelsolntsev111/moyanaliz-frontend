@@ -536,6 +536,34 @@ function ReportSectionTeasers() {
   )
 }
 
+/** Chat consultation section teasers — shown below report teasers */
+function ChatConsultationTeasers() {
+  const items = [
+    { icon: MessageSquare, title: "До 20 вопросов по вашим анализам" },
+    { icon: Stethoscope, title: "Персональные рекомендации под ваши показатели" },
+    { icon: UtensilsCrossed, title: "Советы по питанию, добавкам и образу жизни" },
+    { icon: FileText, title: "Объяснение каждого отклонения простым языком" },
+    { icon: BarChart3, title: "Что контролировать и когда пересдать анализы" },
+  ]
+
+  return (
+    <div className="space-y-2">
+      <h3 className="text-lg font-bold text-card-foreground text-center">Онлайн-консультация с ИИ</h3>
+      <div className="grid gap-2">
+        {items.map(({ icon: SIcon, title }) => (
+          <div key={title} className="flex items-center gap-3 rounded-xl px-4 py-3" style={{ background: "var(--card)", border: "1px solid var(--border)" }}>
+            <div className="shrink-0 flex h-8 w-8 items-center justify-center rounded-lg" style={{ background: "rgba(0,180,188,0.10)" }}>
+              <SIcon className="h-4 w-4 text-primary" />
+            </div>
+            <span className="text-sm font-medium text-card-foreground">{title}</span>
+            <Lock className="ml-auto h-3.5 w-3.5 text-muted-foreground/40" />
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
 /** Locked NORMAL card — value + range, blurred interpretation, NO mini-CTA */
 function LockedNormalCard({ indicator }: { indicator: AnalysisIndicator }) {
   const position = getRangePosition(indicator.value, indicator.referenceMin, indicator.referenceMax)
@@ -830,29 +858,6 @@ function InlinePaywall({
               </div>
               <span className="text-sm font-bold text-foreground">{comboDisplayPrice} ₽</span>
             </button>
-          </div>
-          )}
-
-          {/* Chat consultation section — shown when withChat is selected */}
-          {withChat && (
-          <div className="rounded-xl border border-primary/20 bg-primary/5 p-4">
-            <p className="text-xs font-semibold text-primary uppercase tracking-wide mb-3">Онлайн-консультация с ИИ</p>
-            <ul className="space-y-2">
-              {[
-                { icon: MessageSquare, text: "До 20 вопросов по вашим анализам" },
-                { icon: Stethoscope, text: "Персональные рекомендации на основе ваших показателей" },
-                { icon: ListChecks, text: "Советы по питанию, добавкам и образу жизни" },
-                { icon: FileText, text: "Объяснение каждого отклонения простым языком" },
-                { icon: Check, text: "Ответы в Telegram — удобно и быстро" },
-              ].map(({ icon: Icon, text }, i) => (
-                <li key={i} className="flex items-start gap-2.5">
-                  <span className="mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-primary/15">
-                    <Icon className="h-2.5 w-2.5 text-primary" />
-                  </span>
-                  <span className="text-xs text-foreground leading-snug">{text}</span>
-                </li>
-              ))}
-            </ul>
           </div>
           )}
 
@@ -1197,6 +1202,11 @@ export function PaywallStep({ onPay, onPromo, loading, preview }: PaywallStepPro
       {/* ── 6. Report section teasers ── */}
       <div className="mt-8">
         <ReportSectionTeasers />
+      </div>
+
+      {/* ── 6b. Chat consultation teasers ── */}
+      <div className="mt-4">
+        <ChatConsultationTeasers />
       </div>
 
       {/* ── 7. Bottom CTA + sticky mobile ── */}
