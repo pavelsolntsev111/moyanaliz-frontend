@@ -597,7 +597,7 @@ function ChatUpsellButton({ status, orderId }: { status: OrderStatus; orderId: s
           <p className="text-sm font-semibold text-foreground">Чат активирован!</p>
         </div>
         <p className="text-xs text-muted-foreground mb-3">
-          Задайте вопросы AI-ассистенту по вашим анализам. 20 вопросов в течение 24 часов.
+          Задайте до 20 вопросов по вашим анализам. Сессия 24 часа.
         </p>
         <a
           href={chatLink}
@@ -620,7 +620,7 @@ function ChatUpsellButton({ status, orderId }: { status: OrderStatus; orderId: s
         <p className="text-sm font-semibold text-foreground">Есть вопросы по анализам?</p>
       </div>
       <p className="text-xs text-muted-foreground mb-3">
-        Обсудите результаты с AI-ассистентом в Telegram. 20 вопросов AI-ассистенту в Telegram.
+        Задайте до 20 вопросов AI-ассистенту по вашим анализам в Telegram.
       </p>
       <button
         onClick={handleBuy}

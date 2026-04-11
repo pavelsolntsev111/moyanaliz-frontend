@@ -716,6 +716,7 @@ function LockedAbnormalCard({ indicator }: { indicator: AnalysisIndicator }) {
 function InlinePaywall({
   promoVisible, setPromoVisible, promoCode, setPromoCode,
   loading, abnormalIndicators, totalCount, onPay, onPromo,
+  withChat, setWithChat,
 }: {
   promoVisible: boolean
   setPromoVisible: (v: boolean) => void
@@ -726,12 +727,13 @@ function InlinePaywall({
   totalCount: number
   onPay: (promoCode?: string, withChat?: boolean) => Promise<void>
   onPromo: (email: string, promoCode: string) => Promise<void>
+  withChat: boolean
+  setWithChat: (v: boolean) => void
 }) {
   const [promoValidating, setPromoValidating] = useState(false)
   const [promoResult, setPromoResult] = useState<PromoValidateResponse | null>(null)
   const [promoError, setPromoError] = useState<string | null>(null)
   const [freePromoEmail, setFreePromoEmail] = useState("")
-  const [withChat, setWithChat] = useState(false)
 
   const hasAbnormal = abnormalIndicators.length > 0
   const first = abnormalIndicators[0]
@@ -743,14 +745,14 @@ function InlinePaywall({
     </a>
   )
 
-  const baseDisplayPrice = promoResult?.valid && !promoResult.free && promoResult.discounted_price
-    ? promoResult.discounted_price
+  const baseDisplayPrice = promoResult?.valid && !promoResult.free && promoResult.discount_percent
+    ? Math.max(1, Math.round(199 * (100 - promoResult.discount_percent) / 100))
     : 199
-  const comboDisplayPrice = promoResult?.valid && !promoResult.free && promoResult.discounted_price
-    ? Math.round(promoResult.discounted_price * 299 / 199)
+  const comboDisplayPrice = promoResult?.valid && !promoResult.free && promoResult.discount_percent
+    ? Math.max(1, Math.round(299 * (100 - promoResult.discount_percent) / 100))
     : 299
   const displayPrice = withChat ? comboDisplayPrice : baseDisplayPrice
-  const hasDiscount = promoResult?.valid && !promoResult.free && promoResult.discounted_price
+  const hasDiscount = promoResult?.valid && !promoResult.free && promoResult.discount_percent
 
   const handleValidatePromo = async () => {
     if (!promoCode.trim()) return
@@ -790,9 +792,10 @@ function InlinePaywall({
           <div className="mb-4 space-y-2">
             <button
               onClick={() => setWithChat(false)}
+              disabled={loading}
               className={`flex w-full items-center gap-3 rounded-xl border-2 p-3 text-left transition-colors ${
                 !withChat ? "border-primary bg-primary/5" : "border-border hover:border-muted-foreground/30"
-              }`}
+              } ${loading ? "opacity-50 pointer-events-none" : ""}`}
             >
               <div className={`h-4 w-4 rounded-full border-2 flex items-center justify-center ${
                 !withChat ? "border-primary" : "border-muted-foreground/40"
@@ -808,9 +811,10 @@ function InlinePaywall({
 
             <button
               onClick={() => setWithChat(true)}
+              disabled={loading}
               className={`relative flex w-full items-center gap-3 rounded-xl border-2 p-3 text-left transition-colors ${
                 withChat ? "border-primary bg-primary/5" : "border-border hover:border-muted-foreground/30"
-              }`}
+              } ${loading ? "opacity-50 pointer-events-none" : ""}`}
             >
               <span className="absolute -top-2 right-3 rounded-full bg-primary px-2 py-0.5 text-[10px] font-bold text-white">
                 популярный
@@ -962,9 +966,10 @@ function InlinePaywall({
 }
 
 /** Bottom CTA card + sticky mobile button */
-function BottomCTA({ onPay, loading }: {
+function BottomCTA({ onPay, loading, withChat }: {
   onPay: () => void
   loading: boolean
+  withChat: boolean
 }) {
   const [showSticky, setShowSticky] = useState(false)
 
@@ -987,7 +992,7 @@ function BottomCTA({ onPay, loading }: {
             style={{ background: "linear-gradient(135deg, #00b4bc 0%, #00a0a8 100%)" }}
           >
             <span className="flex items-center gap-2 text-sm font-bold">
-              Получить полный отчёт — 199 ₽
+              {withChat ? "Отчёт + чат — 299 ₽" : "Получить полный отчёт — 199 ₽"}
               <ChevronRight className="h-4 w-4" />
             </span>
             <span className="mt-0.5 text-[10px] font-normal opacity-80">
@@ -1064,6 +1069,7 @@ interface PaywallStepProps {
 export function PaywallStep({ onPay, onPromo, loading, preview }: PaywallStepProps) {
   const [promoVisible, setPromoVisible] = useState(false)
   const [promoCode, setPromoCode] = useState("")
+  const [withChat, setWithChat] = useState(false)
 
   const allIndicators = useMemo(() => {
     if (preview?.indicators?.length) {
@@ -1158,6 +1164,7 @@ export function PaywallStep({ onPay, onPromo, loading, preview }: PaywallStepPro
           promoVisible={promoVisible} setPromoVisible={setPromoVisible}
           promoCode={promoCode} setPromoCode={setPromoCode} loading={loading}
           abnormalIndicators={abnormalIndicators} totalCount={totalCount} onPay={onPay} onPromo={onPromo}
+          withChat={withChat} setWithChat={setWithChat}
         />
       </div>
 
@@ -1171,8 +1178,9 @@ export function PaywallStep({ onPay, onPromo, loading, preview }: PaywallStepPro
 
       {/* ── 7. Bottom CTA + sticky mobile ── */}
       <BottomCTA
-        onPay={() => onPay()}
+        onPay={() => onPay(undefined, withChat)}
         loading={loading}
+        withChat={withChat}
       />
     </div>
   )
