@@ -506,22 +506,20 @@ function FullReport({ status, orderId, hasEmail, onEmailSubmitted }: { status: O
       )}
 
       {/* Promo bonus block */}
-      {status.promo_code && (
-        <div
-          className="mt-8 mx-auto max-w-md rounded-xl p-5 text-center"
-          style={{ background: "rgba(0,180,188,0.06)", border: "1px solid rgba(0,180,188,0.15)" }}
-        >
-          <p className="text-lg font-bold text-primary">
-            Промокод –30% на следующие 3 анализа:
-          </p>
-          <p className="mt-1 text-lg font-bold text-primary uppercase">
-            {status.promo_code}
-          </p>
-          <p className="mt-1 text-xs text-muted-foreground">
-            действителен 30 дней
-          </p>
-        </div>
-      )}
+      <div
+        className="mt-8 mx-auto max-w-md rounded-xl p-5 text-center"
+        style={{ background: "rgba(0,180,188,0.06)", border: "1px solid rgba(0,180,188,0.15)" }}
+      >
+        <p className="text-lg font-bold text-primary">
+          Промокод –30% на следующий анализ:
+        </p>
+        <p className="mt-1 text-2xl font-bold text-primary">
+          30%
+        </p>
+        <p className="mt-1 text-xs text-muted-foreground">
+          введите в поле «Промокод» при оплате
+        </p>
+      </div>
     </div>
   );
 }

@@ -23,6 +23,8 @@ export interface AnalysisIndicator {
   referenceMax: number;
   hasRange?: boolean;
   explanation: string;
+  whatIs?: string;
+  sources?: string;
 }
 
 export interface LightIndicator {
@@ -37,6 +39,9 @@ export interface LightIndicator {
   sources?: string;
   recommendation?: string;
 }
+
+export type ChatPaymentStatus = "not_purchased" | "pending" | "paid";
+export type ChatStatus = "not_started" | "active" | "expired";
 
 export interface PreviewData {
   meta: {

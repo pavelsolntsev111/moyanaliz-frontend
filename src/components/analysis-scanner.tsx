@@ -96,15 +96,15 @@ export function AnalysisScanner({ isReady, onComplete, preview }: AnalysisScanne
     setChecked(1);
     setTimeout(() => setFlash(null), 700);
 
-    timerRef.current = setInterval(advance, 800);
+    timerRef.current = setInterval(advance, 400);
 
-    // Slow fake progress to ~85%
+    // Fast fake progress to ~90% in 5-6 seconds
     fakeProgressRef.current = setInterval(() => {
       setFakeProgress(prev => {
-        if (prev >= 85) return prev;
-        return prev + 0.5 + Math.random() * 1.5;
+        if (prev >= 90) return prev;
+        return prev + 3 + Math.random() * 5;
       });
-    }, 1000);
+    }, 300);
 
     // Check isReady
     readyCheckRef.current = setInterval(() => {

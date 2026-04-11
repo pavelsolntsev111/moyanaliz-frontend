@@ -37,38 +37,127 @@ function isValidEmail(email: string) {
 
 /** Health impact descriptions by indicator name (lowercase key) */
 const HEALTH_IMPACT: Record<string, string> = {
+  // Витамины
   "витамин d": "иммунитет, настроение и здоровье костей",
   "витамин 25(oh) d": "иммунитет, настроение и здоровье костей",
   "витамин d 25(oh)": "иммунитет, настроение и здоровье костей",
+  "витамин d (25-гидроксикальциферол)": "иммунитет, настроение и здоровье костей",
   "25(oh)d": "иммунитет, настроение и здоровье костей",
+  "25-oh витамин d": "иммунитет, настроение и здоровье костей",
+  "витамин b12": "нервную систему и кроветворение",
+  "витамин в12": "нервную систему и кроветворение",
+  "кобаламин": "нервную систему и кроветворение",
+  "фолиевая кислота": "кроветворение и здоровье нервной системы",
+  "витамин b9": "кроветворение и здоровье нервной системы",
+  // Щитовидная железа
   "ттг": "обмен веществ и работу щитовидной железы",
   "тиреотропный гормон": "обмен веществ и работу щитовидной железы",
+  "т4 свободный": "обмен веществ и работу щитовидной железы",
+  "тироксин свободный": "обмен веществ и работу щитовидной железы",
+  "т3 свободный": "обмен веществ и работу щитовидной железы",
+  "трийодтиронин свободный": "обмен веществ и работу щитовидной железы",
+  // Железо и анемия
   "ферритин": "запасы железа, энергию и состояние волос",
   "железо": "запасы железа, энергию и состояние волос",
   "железо сывороточное": "запасы железа, энергию и состояние волос",
-  "глюкоза": "энергию, вес и риск диабета",
+  // Общий анализ крови
   "гемоглобин": "перенос кислорода и общую энергию",
-  "холестерин": "здоровье сосудов и риск атеросклероза",
-  "холестерин общий": "здоровье сосудов и риск атеросклероза",
+  "эритроциты": "перенос кислорода к тканям",
+  "гематокрит": "объём красных клеток крови и вязкость крови",
   "лейкоциты": "иммунную защиту организма",
   "тромбоциты": "свёртываемость крови",
-  "алт": "функцию печени",
-  "аст": "функцию печени и сердца",
+  "лимфоциты": "иммунную защиту и борьбу с вирусами",
+  "моноциты": "иммунную защиту и борьбу с хроническими инфекциями",
+  "эозинофилы": "аллергические реакции и защиту от паразитов",
+  "базофилы": "аллергические и воспалительные реакции",
+  "нейтрофилы": "иммунную защиту от бактерий",
+  "палочкоядерные нейтрофилы": "иммунную защиту и наличие острого воспаления",
+  "сегментоядерные нейтрофилы": "иммунную защиту от бактериальных инфекций",
+  "соэ": "наличие воспалительных процессов",
+  "скорость оседания эритроцитов": "наличие воспалительных процессов",
+  // Эритроцитарные индексы
+  "средний объём эритроцита": "размер эритроцитов и тип анемии",
+  "средний объем эритроцита": "размер эритроцитов и тип анемии",
+  "mcv": "размер эритроцитов и тип анемии",
+  "среднее содержание гемоглобина в эритроците": "насыщение эритроцитов гемоглобином",
+  "mch": "насыщение эритроцитов гемоглобином",
+  "средняя концентрация гемоглобина в эритроците": "концентрацию гемоглобина в эритроцитах",
+  "средняя концентрация гемоглобина в эритроцитах": "концентрацию гемоглобина в эритроцитах",
+  "mchc": "концентрацию гемоглобина в эритроцитах",
+  "rdw": "однородность размера эритроцитов",
+  "ширина распределения эритроцитов": "однородность размера эритроцитов",
+  // Биохимия
+  "глюкоза": "энергию, вес и риск диабета",
+  "гликированный гемоглобин": "средний уровень сахара за 3 месяца",
+  "hba1c": "средний уровень сахара за 3 месяца",
+  "инсулин": "обмен углеводов и риск диабета",
+  "холестерин": "здоровье сосудов и риск атеросклероза",
+  "холестерин общий": "здоровье сосудов и риск атеросклероза",
+  "лпнп": "риск атеросклероза и здоровье сосудов",
+  "лпвп": "защиту сосудов от атеросклероза",
+  "триглицериды": "жировой обмен и риск атеросклероза",
   "креатинин": "функцию почек",
   "мочевина": "функцию почек и белковый обмен",
+  "мочевая кислота": "обмен пуринов и риск подагры",
+  "общий белок": "белковый обмен и иммунитет",
+  "альбумин": "белковый обмен и функцию печени",
+  "гомоцистеин": "здоровье сосудов и риск тромбозов",
+  // Печёночные пробы
+  "алт": "функцию печени",
+  "аланинаминотрансфераза": "функцию печени",
+  "аст": "функцию печени и сердца",
+  "аспартатаминотрансфераза": "функцию печени и сердца",
   "билирубин": "функцию печени и обмен гемоглобина",
   "билирубин общий": "функцию печени и обмен гемоглобина",
-  "общий белок": "белковый обмен и иммунитет",
+  "билирубин прямой": "функцию печени и отток желчи",
+  "щелочная фосфатаза": "функцию печени и костной ткани",
+  "гамма-гт": "функцию печени и желчных протоков",
+  "ггт": "функцию печени и желчных протоков",
+  "лдг": "общий клеточный метаболизм",
+  // Электролиты
+  "калий": "работу сердца и мышц",
+  "натрий": "водно-солевой баланс организма",
   "кальций": "здоровье костей, мышц и нервной системы",
-  "соэ": "наличие воспалительных процессов",
-  "эритроциты": "перенос кислорода к тканям",
-  "т4 свободный": "обмен веществ и работу щитовидной железы",
-  "тироксин свободный": "обмен веществ и работу щитовидной железы",
+  "кальций общий": "здоровье костей, мышц и нервной системы",
+  "магний": "работу нервной системы, мышц и сердца",
+  "фосфор": "здоровье костей и энергетический обмен",
+  "хлориды": "водно-электролитный баланс",
+  // Воспаление и свёртываемость
+  "с-реактивный белок": "наличие воспалительных процессов",
+  "срб": "наличие воспалительных процессов",
+  "фибриноген": "свёртываемость крови",
+  "д-димер": "риск тромбозов",
+  "протромбиновое время": "свёртываемость крови",
+  // Поджелудочная
+  "амилаза": "функцию поджелудочной железы",
+  "липаза": "функцию поджелудочной железы",
 }
 
 function getHealthImpact(name: string): string | null {
   const key = name.toLowerCase().trim()
-  return HEALTH_IMPACT[key] ?? null
+  // Exact match first
+  if (HEALTH_IMPACT[key]) return HEALTH_IMPACT[key]
+  // Fuzzy: check if any HEALTH_IMPACT key is contained in name or vice versa
+  for (const [k, v] of Object.entries(HEALTH_IMPACT)) {
+    if (key.includes(k) || k.includes(key)) return v
+  }
+  return null
+}
+
+function generateFallbackExplanation(ind: LightIndicator): string {
+  const impact = getHealthImpact(ind.name)
+
+  const statusText = ind.status === "normal" ? "в пределах нормы"
+    : ind.status === "above_normal" ? "выше нормы"
+    : ind.status === "below_normal" ? "ниже нормы"
+    : ind.status === "critical_high" ? "критически повышен"
+    : "критически понижен"
+
+  if (impact) {
+    return `${ind.name} — показатель, который влияет на ${impact}. Ваш результат ${ind.value} ${ind.unit} — ${statusText}.`
+  }
+
+  return ind.short_description || `${ind.name} — ${ind.value} ${ind.unit}. Показатель ${statusText}.`
 }
 
 function getDirectionText(status: AnalysisIndicator["status"]): string {
@@ -88,15 +177,17 @@ function pluralIndicators(n: number): string {
 }
 
 function mapLightToAnalysis(ind: LightIndicator, index: number): AnalysisIndicator {
-  const numValue = parseFloat(ind.value.replace(",", "."))
-  const isNumeric = !isNaN(numValue) && ind.value.trim() !== ""
+  const valueStr = ind.value || ""
+  const refRange = ind.reference_range || ""
+  const numValue = parseFloat(valueStr.replace(",", "."))
+  const isNumeric = !isNaN(numValue) && valueStr.trim() !== ""
 
   let refMin = 0
   let refMax = 100
   let hasRange = false
-  const minMaxMatch = ind.reference_range.match(/([\d.,]+)\s*[-–]\s*([\d.,]+)/)
-  const ltMatch = ind.reference_range.match(/^[<до]\s*([\d.,]+)/u)
-  const gtMatch = ind.reference_range.match(/^>\s*([\d.,]+)/)
+  const minMaxMatch = refRange.match(/([\d.,]+)\s*[-–]\s*([\d.,]+)/)
+  const ltMatch = refRange.match(/^[<до]\s*([\d.,]+)/u)
+  const gtMatch = refRange.match(/^>\s*([\d.,]+)/)
   if (minMaxMatch) {
     refMin = parseFloat(minMaxMatch[1].replace(",", "."))
     refMax = parseFloat(minMaxMatch[2].replace(",", "."))
@@ -113,24 +204,34 @@ function mapLightToAnalysis(ind: LightIndicator, index: number): AnalysisIndicat
   }
 
   let status: AnalysisIndicator["status"] = "normal"
-  if (ind.status === "above_normal") status = "high"
-  else if (ind.status === "below_normal") status = "low"
-  else if (ind.status === "critical_high" || ind.status === "critical_low") status = "critical"
+  const rawStatus = (ind.status || "").toLowerCase().trim().replace(/\s+/g, "_")
+  if (rawStatus === "above_normal" || rawStatus === "high" || rawStatus === "elevated" || rawStatus === "above") {
+    status = "high"
+  } else if (rawStatus === "below_normal" || rawStatus === "low" || rawStatus === "decreased" || rawStatus === "below") {
+    status = "low"
+  } else if (rawStatus.includes("critical") || rawStatus === "very_high" || rawStatus === "very_low") {
+    status = "critical"
+  } else if (rawStatus !== "normal" && rawStatus !== "" && rawStatus !== "in_range") {
+    // Any unrecognized non-normal status — treat as abnormal
+    status = "high"
+  }
 
   return {
     id: `ind-${index}`,
-    name: ind.name,
-    shortName: ind.short_name,
+    name: ind.name || "",
+    shortName: ind.short_name || "",
     value: isNumeric ? numValue : 0,
-    textValue: isNumeric ? undefined : ind.value,
-    unit: ind.unit,
+    textValue: isNumeric ? undefined : valueStr,
+    unit: ind.unit || "",
     status,
     referenceMin: refMin,
     referenceMax: refMax,
     hasRange,
     explanation: ind.what_is
       ? [ind.what_is, ind.sources, ind.recommendation].filter(Boolean).join("\n\n")
-      : ind.short_description || "",
+      : generateFallbackExplanation(ind),
+    whatIs: ind.what_is || undefined,
+    sources: ind.sources || undefined,
   }
 }
 
@@ -237,20 +338,26 @@ function EmotionalSummary({
     const shown = abnormalIndicators.slice(0, 3)
     const remaining = abnormalIndicators.length - shown.length
 
-    const descriptions = shown.map((ind) => {
-      const impact = getHealthImpact(ind.name)
-      const direction = getDirectionText(ind.status)
-      if (impact) {
-        return `${ind.name} ${direction} нормы — это может влиять на ${impact}`
-      }
-      return `${ind.name} ${direction} нормы. Требует внимания`
-    })
+    let summaryText: string
+    if (shown.length === 0) {
+      // Fallback: meta says out_of_range but we couldn't map which ones
+      summaryText = `У вас ${outOfRangeCount === 1 ? "есть показатель, который отклоняется" : `есть ${outOfRangeCount} показателя, которые отклоняются`} от нормы. Подробный разбор и план действий — в полном отчёте.`
+    } else {
+      const descriptions = shown.map((ind) => {
+        const impact = getHealthImpact(ind.name)
+        const direction = getDirectionText(ind.status)
+        if (impact) {
+          return `${ind.name} ${direction} нормы — это может влиять на ${impact}`
+        }
+        return `${ind.name} ${direction} нормы. Требует внимания`
+      })
 
-    let summaryText = descriptions.join(". ") + "."
-    if (remaining > 0) {
-      summaryText += ` И ещё ${remaining}.`
+      summaryText = descriptions.join(". ") + "."
+      if (remaining > 0) {
+        summaryText += ` И ещё ${remaining}.`
+      }
+      summaryText += " Подробный разбор и план действий — в полном отчёте."
     }
-    summaryText += " Подробный разбор и план действий — в полном отчёте."
 
     return (
       <motion.div
