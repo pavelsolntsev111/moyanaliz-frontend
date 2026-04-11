@@ -825,11 +825,34 @@ function InlinePaywall({
                 {withChat && <div className="h-2 w-2 rounded-full bg-primary" />}
               </div>
               <div className="flex-1">
-                <p className="text-sm font-semibold text-foreground">Отчёт + чат с AI</p>
-                <p className="text-xs text-muted-foreground">+ 20 вопросов AI-ассистенту в Telegram</p>
+                <p className="text-sm font-semibold text-foreground">Полный отчет + онлайн-консультация с ИИ</p>
+                <p className="text-xs text-muted-foreground">+ AI-ассистент в Telegram, до 20 вопросов</p>
               </div>
               <span className="text-sm font-bold text-foreground">{comboDisplayPrice} ₽</span>
             </button>
+          </div>
+          )}
+
+          {/* Chat consultation section — shown when withChat is selected */}
+          {withChat && (
+          <div className="rounded-xl border border-primary/20 bg-primary/5 p-4">
+            <p className="text-xs font-semibold text-primary uppercase tracking-wide mb-3">Онлайн-консультация с ИИ</p>
+            <ul className="space-y-2">
+              {[
+                { icon: MessageSquare, text: "До 20 вопросов по вашим анализам" },
+                { icon: Stethoscope, text: "Персональные рекомендации на основе ваших показателей" },
+                { icon: ListChecks, text: "Советы по питанию, добавкам и образу жизни" },
+                { icon: FileText, text: "Объяснение каждого отклонения простым языком" },
+                { icon: Check, text: "Ответы в Telegram — удобно и быстро" },
+              ].map(({ icon: Icon, text }, i) => (
+                <li key={i} className="flex items-start gap-2.5">
+                  <span className="mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-primary/15">
+                    <Icon className="h-2.5 w-2.5 text-primary" />
+                  </span>
+                  <span className="text-xs text-foreground leading-snug">{text}</span>
+                </li>
+              ))}
+            </ul>
           </div>
           )}
 
@@ -854,7 +877,7 @@ function InlinePaywall({
               </>
             ) : (
               <>
-                {withChat ? `Отчёт + чат — ${displayPrice} ₽` : `Получить полный отчёт — ${displayPrice} ₽`}
+                {withChat ? `С консультацией — ${displayPrice} ₽` : `Получить полный отчёт — ${displayPrice} ₽`}
                 <ChevronRight className="h-4 w-4" />
               </>
             )}
@@ -992,7 +1015,7 @@ function BottomCTA({ onPay, loading, withChat }: {
             style={{ background: "linear-gradient(135deg, #00b4bc 0%, #00a0a8 100%)" }}
           >
             <span className="flex items-center gap-2 text-sm font-bold">
-              {withChat ? "Отчёт + чат — 299 ₽" : "Получить полный отчёт — 199 ₽"}
+              {withChat ? "С консультацией — 299 ₽" : "Получить полный отчёт — 199 ₽"}
               <ChevronRight className="h-4 w-4" />
             </span>
             <span className="mt-0.5 text-[10px] font-normal opacity-80">
