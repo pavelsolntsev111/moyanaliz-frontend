@@ -539,7 +539,7 @@ function ReportSectionTeasers() {
 /** Chat consultation section teasers — shown below report teasers */
 function ChatConsultationTeasers() {
   const items = [
-    { icon: MessageSquare, title: "До 20 вопросов по вашим анализам" },
+    { icon: MessageSquare, title: "До 10 вопросов по вашим анализам" },
     { icon: Stethoscope, title: "Персональные рекомендации под ваши показатели" },
     { icon: UtensilsCrossed, title: "Советы по питанию, добавкам и образу жизни" },
     { icon: FileText, title: "Объяснение каждого отклонения простым языком" },
@@ -854,7 +854,7 @@ function InlinePaywall({
               </div>
               <div className="flex-1">
                 <p className="text-sm font-semibold text-foreground">Полный отчет + онлайн-консультация с ИИ</p>
-                <p className="text-xs text-muted-foreground">+ AI-ассистент в Telegram, до 20 вопросов</p>
+                <p className="text-xs text-muted-foreground">+ AI-ассистент в Telegram, до 10 вопросов</p>
               </div>
               <span className="text-sm font-bold text-foreground">{comboDisplayPrice} ₽</span>
             </button>
