@@ -542,6 +542,23 @@ function FullReport({ status, orderId, hasEmail, onEmailSubmitted }: { status: O
           введите в поле «Промокод» при оплате
         </p>
       </div>
+
+      {/* Telegram channel */}
+      <a
+        href="https://t.me/moy_analiz"
+        target="_blank"
+        rel="noopener noreferrer"
+        className="mt-6 mx-auto max-w-md rounded-xl border border-border bg-card p-5 text-center block hover:border-[#0088cc]/30 transition-colors"
+      >
+        <div className="flex items-center justify-center gap-2 mb-2">
+          <MessageSquare className="w-5 h-5 text-[#0088cc]" />
+          <p className="text-sm font-semibold text-foreground">Наш канал в Telegram</p>
+        </div>
+        <p className="text-xs text-muted-foreground">
+          Подпишись, если следишь за своим здоровьем и хочешь знать больше научных данных о своем теле
+        </p>
+        <p className="mt-2 text-sm font-semibold text-[#0088cc]">@moy_analiz</p>
+      </a>
     </div>
   );
 }
