@@ -777,8 +777,8 @@ function InlinePaywall({
     ? Math.max(1, Math.round(199 * (100 - promoResult.discount_percent) / 100))
     : 199
   const comboDisplayPrice = promoResult?.valid && !promoResult.free && promoResult.discount_percent
-    ? Math.max(1, Math.round(249 * (100 - promoResult.discount_percent) / 100))
-    : 249
+    ? Math.max(1, Math.round(248 * (100 - promoResult.discount_percent) / 100))
+    : 248
   const displayPrice = withChat ? comboDisplayPrice : baseDisplayPrice
   const hasDiscount = promoResult?.valid && !promoResult.free && promoResult.discount_percent
 
@@ -1015,7 +1015,7 @@ function BottomCTA({ onPay, loading, withChat }: {
             style={{ background: "linear-gradient(135deg, #00b4bc 0%, #00a0a8 100%)" }}
           >
             <span className="flex items-center gap-2 text-sm font-bold">
-              {withChat ? "С консультацией — 249 ₽" : "Получить полный отчёт — 199 ₽"}
+              {withChat ? "С консультацией — 248 ₽" : "Получить полный отчёт — 199 ₽"}
               <ChevronRight className="h-4 w-4" />
             </span>
             <span className="mt-0.5 text-[10px] font-normal opacity-80">
