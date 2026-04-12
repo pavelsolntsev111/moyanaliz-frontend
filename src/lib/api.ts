@@ -2,18 +2,29 @@ import type { PreviewData } from "./types";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "https://moyanaliz-backend-production.up.railway.app";
 
-async function request<T>(path: string, options?: RequestInit): Promise<T> {
-  const res = await fetch(`${API_URL}${path}`, {
-    ...options,
-    headers: {
-      ...options?.headers,
-    },
-  });
-  if (!res.ok) {
-    const body = await res.json().catch(() => ({}));
-    throw new Error(body.detail || `API error ${res.status}`);
+async function request<T>(path: string, options?: RequestInit, retries = 2): Promise<T> {
+  let lastError: unknown;
+  for (let attempt = 0; attempt <= retries; attempt++) {
+    try {
+      const res = await fetch(`${API_URL}${path}`, {
+        ...options,
+        headers: { ...options?.headers },
+      });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body.detail || `API error ${res.status}`);
+      }
+      return res.json();
+    } catch (e) {
+      lastError = e;
+      // Don't retry deliberate HTTP errors (4xx/5xx with body)
+      if (e instanceof Error && e.message.startsWith("API error")) throw e;
+      if (e instanceof Error && e.message !== "Failed to fetch") throw e;
+      // Network failure — wait and retry
+      if (attempt < retries) await new Promise(r => setTimeout(r, 600 * (attempt + 1)));
+    }
   }
-  return res.json();
+  throw lastError;
 }
 
 export interface UploadResponse {
