@@ -280,15 +280,12 @@ function EmailRequiredScreen({
 
   return (
     <div className="text-center max-w-md mx-auto">
-      <div className="w-16 h-16 mx-auto mb-5 rounded-full bg-emerald-50 flex items-center justify-center">
-        <CheckCircle2 className="w-8 h-8 text-emerald-500" />
-      </div>
+      <p className="text-sm font-semibold text-primary mb-2">Платеж получен</p>
       <h1 className="text-2xl font-bold text-foreground mb-2">
         Куда отправить отчёт?
       </h1>
       <p className="text-sm text-muted-foreground mb-6">
-        Платёж получен ✓ Отчёт уже готовится — укажите email, чтобы получить
-        PDF-отчёт и доступ к расшифровке.
+        Отчёт уже готовится — укажите email, чтобы получить PDF-отчёт и доступ к расшифровке.
       </p>
 
       <div className="rounded-2xl border border-border bg-card p-5 text-left">

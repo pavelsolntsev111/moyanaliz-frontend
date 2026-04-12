@@ -821,42 +821,40 @@ function InlinePaywall({
             <button
               onClick={() => setWithChat(false)}
               disabled={loading}
-              className={`flex w-full items-center gap-3 rounded-xl border-2 p-3 text-left transition-colors ${
+              className={`flex w-full min-h-[56px] items-center gap-3 rounded-xl border-2 p-3 text-left transition-colors ${
                 !withChat ? "border-primary bg-primary/5" : "border-border hover:border-muted-foreground/30"
               } ${loading ? "opacity-50 pointer-events-none" : ""}`}
             >
-              <div className={`h-4 w-4 rounded-full border-2 flex items-center justify-center ${
+              <div className={`h-4 w-4 shrink-0 rounded-full border-2 flex items-center justify-center ${
                 !withChat ? "border-primary" : "border-muted-foreground/40"
               }`}>
                 {!withChat && <div className="h-2 w-2 rounded-full bg-primary" />}
               </div>
               <div className="flex-1">
-                <p className="text-sm font-semibold text-foreground">Полный отчёт</p>
-                <p className="text-xs text-muted-foreground">PDF + расшифровка всех показателей</p>
+                <p className="text-sm font-semibold text-foreground">Полный отчет</p>
               </div>
-              <span className="text-sm font-bold text-foreground">{baseDisplayPrice} ₽</span>
+              <span className="text-sm font-bold text-foreground shrink-0">{baseDisplayPrice} ₽</span>
             </button>
 
             <button
               onClick={() => setWithChat(true)}
               disabled={loading}
-              className={`relative flex w-full items-center gap-3 rounded-xl border-2 p-3 text-left transition-colors ${
+              className={`relative flex w-full min-h-[56px] items-center gap-3 rounded-xl border-2 p-3 text-left transition-colors ${
                 withChat ? "border-primary bg-primary/5" : "border-border hover:border-muted-foreground/30"
               } ${loading ? "opacity-50 pointer-events-none" : ""}`}
             >
               <span className="absolute -top-2 right-3 rounded-full bg-primary px-2 py-0.5 text-[10px] font-bold text-white">
                 популярный
               </span>
-              <div className={`h-4 w-4 rounded-full border-2 flex items-center justify-center ${
+              <div className={`h-4 w-4 shrink-0 rounded-full border-2 flex items-center justify-center ${
                 withChat ? "border-primary" : "border-muted-foreground/40"
               }`}>
                 {withChat && <div className="h-2 w-2 rounded-full bg-primary" />}
               </div>
               <div className="flex-1">
-                <p className="text-sm font-semibold text-foreground">Полный отчет + онлайн-консультация с ИИ</p>
-                <p className="text-xs text-muted-foreground">+ AI-ассистент в Telegram, до 10 вопросов</p>
+                <p className="text-sm font-semibold text-foreground">Полный отчет + консультация с ИИ в Telegram</p>
               </div>
-              <span className="text-sm font-bold text-foreground">{comboDisplayPrice} ₽</span>
+              <span className="text-sm font-bold text-foreground shrink-0">{comboDisplayPrice} ₽</span>
             </button>
           </div>
           )}
@@ -889,28 +887,25 @@ function InlinePaywall({
           </button>
           )}
 
-          {/* 2. Guarantee */}
-          <div className="mt-3 text-center">
-            <p className="text-sm text-muted-foreground leading-relaxed">{subtitle}</p>
-          </div>
-
-          {/* 3. YooMoney badge */}
-          <div className="mt-2 flex items-center justify-center gap-2 text-muted-foreground">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <rect width="24" height="24" rx="6" fill="#8B3FFD"/>
-              <path d="M13.5 7H11.2C9.43 7 8 8.43 8 10.2C8 11.97 9.43 13.4 11.2 13.4H12V17H13.5V7ZM12 12H11.2C10.21 12 9.5 11.19 9.5 10.2C9.5 9.21 10.31 8.5 11.2 8.5H12V12Z" fill="white"/>
-            </svg>
-            <span className="text-xs font-medium">Безопасная оплата через ЮMoney</span>
-          </div>
-
-          {/* 4. Promo code */}
-          {!promoVisible ? (
-            <div className="mt-3 text-center">
+          {/* 2–4. Guarantee + YooMoney + Promo — unified block */}
+          <div className="mt-3 flex flex-col items-center gap-2">
+            <p className="text-xs text-muted-foreground text-center leading-relaxed">{subtitle}</p>
+            <div className="flex items-center gap-2 text-muted-foreground">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <rect width="24" height="24" rx="6" fill="#8B3FFD"/>
+                <path d="M13.5 7H11.2C9.43 7 8 8.43 8 10.2C8 11.97 9.43 13.4 11.2 13.4H12V17H13.5V7ZM12 12H11.2C10.21 12 9.5 11.19 9.5 10.2C9.5 9.21 10.31 8.5 11.2 8.5H12V12Z" fill="white"/>
+              </svg>
+              <span className="text-xs">Безопасная оплата через ЮMoney</span>
+            </div>
+            {!promoVisible && (
               <button onClick={() => setPromoVisible(true)} className="text-xs text-muted-foreground underline decoration-dotted underline-offset-4 transition-colors hover:text-primary">
                 Есть промокод?
               </button>
-            </div>
-          ) : (
+            )}
+          </div>
+
+          {/* 4. Promo code input */}
+          {promoVisible && (
             <div className="mt-3">
               <div className="flex gap-2">
                 <div className="relative flex-1">
