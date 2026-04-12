@@ -816,7 +816,6 @@ function InlinePaywall({
       <GradientCard glowColor="rgba(0,180,188,0.16)">
         <div className="p-6 sm:p-7">
           {/* Tier selector */}
-          {!promoResult?.free && (
           <div className="mb-4 space-y-2">
             <button
               onClick={() => setWithChat(false)}
@@ -833,7 +832,9 @@ function InlinePaywall({
               <div className="flex-1">
                 <p className="text-sm font-semibold text-foreground">Полный отчет</p>
               </div>
-              <span className="text-sm font-bold text-foreground shrink-0">{baseDisplayPrice} ₽</span>
+              <span className="text-sm font-bold text-foreground shrink-0">
+                {promoResult?.free ? "бесплатно" : `${baseDisplayPrice} ₽`}
+              </span>
             </button>
 
             <button
@@ -854,10 +855,11 @@ function InlinePaywall({
               <div className="flex-1">
                 <p className="text-sm font-semibold text-foreground">Полный отчет + консультация с ИИ в Telegram</p>
               </div>
-              <span className="text-sm font-bold text-foreground shrink-0">{comboDisplayPrice} ₽</span>
+              <span className="text-sm font-bold text-foreground shrink-0">
+                {promoResult?.free ? "бесплатно" : `${comboDisplayPrice} ₽`}
+              </span>
             </button>
           </div>
-          )}
 
           {/* 1. CTA Button */}
           {!promoResult?.free && (
@@ -969,7 +971,7 @@ function InlinePaywall({
                     className="mt-2 w-full rounded-xl px-4 py-3 text-sm font-bold text-white transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
                     style={{ background: "linear-gradient(135deg, #16a34a 0%, #15803d 100%)" }}
                   >
-                    Получить бесплатный отчёт
+                    {withChat ? "Получить бесплатно + консультация" : "Получить бесплатный отчёт"}
                   </button>
                 </div>
               )}
