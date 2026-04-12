@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback, useRef, use } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
 import { ymGoal } from "@/lib/ym";
@@ -476,97 +477,286 @@ function pluralIndicatorsGen(n: number): string {
   return `${n} показателей`;
 }
 
-function FullReport({ status, orderId, hasEmail, onEmailSubmitted }: { status: OrderStatus; orderId: string; hasEmail: boolean; onEmailSubmitted?: () => void }) {
-  useEffect(() => { ymGoal("analysis_viewed"); }, []);
+/* Sparkle particle for confetti effect */
+const SPARKLES = [
+  { x: -52, y: -38, delay: 0,    size: 6,  color: "#00b4bc" },
+  { x:  44, y: -44, delay: 0.06, size: 5,  color: "#f59e0b" },
+  { x:  60, y:  10, delay: 0.1,  size: 4,  color: "#00b4bc" },
+  { x: -60, y:  18, delay: 0.04, size: 5,  color: "#a78bfa" },
+  { x:  18, y:  58, delay: 0.12, size: 4,  color: "#f59e0b" },
+  { x: -22, y:  62, delay: 0.08, size: 6,  color: "#34d399" },
+  { x:  72, y: -18, delay: 0.14, size: 4,  color: "#34d399" },
+  { x: -72, y: -10, delay: 0.02, size: 5,  color: "#a78bfa" },
+];
+
+function ReportHero() {
   return (
-    <div className="text-center py-8">
-      <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-emerald-50 flex items-center justify-center">
-        <CheckCircle2 className="w-8 h-8 text-emerald-500" />
-      </div>
-      <h1 className="text-2xl font-bold text-foreground">Ваш отчёт готов</h1>
+    <div className="relative flex items-center justify-center w-20 h-20 mx-auto">
+      {/* Sparkle particles */}
+      {SPARKLES.map((s, i) => (
+        <motion.span
+          key={i}
+          initial={{ opacity: 0, x: 0, y: 0, scale: 0 }}
+          animate={{ opacity: [0, 1, 0], x: s.x, y: s.y, scale: [0, 1, 0.6] }}
+          transition={{ duration: 0.7, delay: s.delay, ease: "easeOut" }}
+          style={{
+            position: "absolute",
+            width: s.size,
+            height: s.size,
+            borderRadius: "50%",
+            backgroundColor: s.color,
+            pointerEvents: "none",
+          }}
+        />
+      ))}
 
-      {status.email && (
-        <p className="mt-2 text-sm text-muted-foreground">
-          {status.email_status === "sent" ? "Отправлен" : "Будет отправлен"} на {status.email}
-        </p>
-      )}
+      {/* Outer pulse ring */}
+      <motion.span
+        initial={{ scale: 0.6, opacity: 0 }}
+        animate={{ scale: 1, opacity: 1 }}
+        transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
+        style={{
+          position: "absolute",
+          inset: 0,
+          borderRadius: "50%",
+          border: "2px solid rgba(0,180,188,0.25)",
+        }}
+      />
 
-      {status.pdf_download_url ? (
-        <a
-          href={status.pdf_download_url}
-          download
-          onClick={() => ymGoal("pdf_downloaded")}
-          className="mt-6 inline-flex items-center gap-2 py-3 px-8 rounded-xl bg-primary text-primary-foreground font-semibold hover:opacity-90 transition shadow-sm"
+      {/* Icon circle */}
+      <motion.div
+        initial={{ scale: 0.5, opacity: 0 }}
+        animate={{ scale: 1, opacity: 1 }}
+        transition={{ duration: 0.45, ease: [0.16, 1, 0.3, 1] }}
+        style={{
+          width: 72,
+          height: 72,
+          borderRadius: "50%",
+          background: "linear-gradient(135deg, #00b4bc 0%, #008f96 100%)",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          boxShadow: "0 8px 24px rgba(0,180,188,0.30)",
+        }}
+      >
+        <motion.div
+          initial={{ pathLength: 0, opacity: 0 }}
+          animate={{ pathLength: 1, opacity: 1 }}
+          transition={{ duration: 0.35, delay: 0.3, ease: "easeOut" }}
         >
-          <Download className="w-5 h-5" />
-          Скачать PDF-отчёт
-        </a>
-      ) : (
-        <button
-          disabled
-          className="mt-6 inline-flex items-center gap-2 py-3 px-8 rounded-xl bg-primary text-primary-foreground font-semibold opacity-50 cursor-not-allowed"
-        >
-          <Download className="w-5 h-5" />
-          Скачать PDF-отчёт
-        </button>
-      )}
+          {/* SVG checkmark drawn with stroke animation */}
+          <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
+            <motion.path
+              d="M8 16.5 L13.5 22 L24 11"
+              stroke="white"
+              strokeWidth="2.8"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              initial={{ pathLength: 0, opacity: 0 }}
+              animate={{ pathLength: 1, opacity: 1 }}
+              transition={{ duration: 0.4, delay: 0.35, ease: "easeOut" }}
+              fill="none"
+            />
+          </svg>
+        </motion.div>
+      </motion.div>
+    </div>
+  );
+}
 
-      {status.email_status === "sent" && (
-        <p className="mt-3 text-xs text-muted-foreground/70">
-          Не пришло? Проверьте «Спам» или напишите на{" "}
-          <a href="mailto:support@moyanaliz.ru" className="text-primary underline">
-            support@moyanaliz.ru
+function FullReport({ status, orderId, hasEmail, onEmailSubmitted }: { status: OrderStatus; orderId: string; hasEmail: boolean; onEmailSubmitted?: () => void }) {
+  const [promoCopied, setPromoCopied] = useState(false);
+  useEffect(() => { ymGoal("analysis_viewed"); }, []);
+
+  const handleCopyPromo = () => {
+    if (!status.promo_code) return;
+    navigator.clipboard.writeText(status.promo_code.toUpperCase()).then(() => {
+      setPromoCopied(true);
+      setTimeout(() => setPromoCopied(false), 2000);
+    });
+  };
+
+  return (
+    <div className="py-8">
+      {/* ── Hero: celebration header ── */}
+      <motion.div
+        initial={{ opacity: 0, y: 16 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
+        className="text-center mb-8"
+      >
+        <ReportHero />
+
+        <motion.h1
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4, delay: 0.15, ease: "easeOut" }}
+          className="mt-5 text-2xl font-bold text-foreground tracking-tight"
+        >
+          Ваш отчёт готов
+        </motion.h1>
+
+        {status.email && (
+          <motion.p
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.4, delay: 0.25 }}
+            className="mt-1.5 text-sm text-muted-foreground"
+          >
+            {status.email_status === "sent" ? "Отправлен" : "Будет отправлен"} на{" "}
+            <span className="font-medium text-foreground/80">{status.email}</span>
+          </motion.p>
+        )}
+      </motion.div>
+
+      {/* ── Primary action: PDF download ── */}
+      <motion.div
+        initial={{ opacity: 0, y: 12 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.4, delay: 0.2, ease: "easeOut" }}
+        className="mb-3"
+      >
+        {status.pdf_download_url ? (
+          <a
+            href={status.pdf_download_url}
+            download
+            onClick={() => ymGoal("pdf_downloaded")}
+            className="group flex items-center justify-center gap-3 w-full py-4 px-6 rounded-2xl font-semibold text-white transition-all duration-200"
+            style={{
+              background: "linear-gradient(135deg, #00b4bc 0%, #008f96 100%)",
+              boxShadow: "0 4px 20px rgba(0,180,188,0.35)",
+            }}
+            onMouseEnter={e => {
+              (e.currentTarget as HTMLAnchorElement).style.boxShadow = "0 6px 28px rgba(0,180,188,0.45)";
+              (e.currentTarget as HTMLAnchorElement).style.transform = "translateY(-1px)";
+            }}
+            onMouseLeave={e => {
+              (e.currentTarget as HTMLAnchorElement).style.boxShadow = "0 4px 20px rgba(0,180,188,0.35)";
+              (e.currentTarget as HTMLAnchorElement).style.transform = "translateY(0)";
+            }}
+          >
+            <Download className="w-5 h-5 shrink-0 transition-transform duration-200 group-hover:-translate-y-0.5" />
+            <span className="text-base">Скачать PDF-отчёт</span>
           </a>
-        </p>
-      )}
+        ) : (
+          <div
+            className="flex items-center justify-center gap-3 w-full py-4 px-6 rounded-2xl font-semibold text-white opacity-50 cursor-not-allowed"
+            style={{ background: "linear-gradient(135deg, #00b4bc 0%, #008f96 100%)" }}
+          >
+            <Download className="w-5 h-5 shrink-0" />
+            <span className="text-base">Скачать PDF-отчёт</span>
+          </div>
+        )}
 
-      {/* Chat upsell */}
-      <ChatUpsellButton status={status} orderId={orderId} />
+        {status.email_status === "sent" && (
+          <p className="mt-2 text-center text-xs text-muted-foreground/60">
+            Не пришло?{" "}
+            <a href="mailto:support@moyanaliz.ru" className="text-primary underline underline-offset-2">
+              Напишите нам
+            </a>{" "}
+            или проверьте папку «Спам»
+          </p>
+        )}
+      </motion.div>
 
-      {/* Email capture */}
+      {/* ── Email capture (if no email yet) ── */}
       {!hasEmail && (
-        <div className="mt-6">
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.35, delay: 0.3 }}
+          className="mb-6"
+        >
           <EmailCaptureCard
             orderId={orderId}
             hasEmail={false}
             confirmText="PDF отправим на ваш email"
             onSubmitted={onEmailSubmitted}
           />
-        </div>
+        </motion.div>
       )}
 
-      {/* Promo bonus block */}
-      <div
-        className="mt-8 mx-auto max-w-md rounded-xl p-5 text-center"
-        style={{ background: "rgba(0,180,188,0.06)", border: "1px solid rgba(0,180,188,0.15)" }}
+      {/* ── Secondary cards row ── */}
+      <motion.div
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.4, delay: 0.3, ease: "easeOut" }}
+        className="space-y-3 mb-6"
       >
-        <p className="text-lg font-bold text-primary">
-          Промокод –30% на следующий анализ:
-        </p>
-        <p className="mt-1 text-2xl font-bold text-primary">
-          30%
-        </p>
-        <p className="mt-1 text-xs text-muted-foreground">
-          введите в поле «Промокод» при оплате
-        </p>
-      </div>
+        {/* Chat upsell */}
+        <ChatUpsellButton status={status} orderId={orderId} />
 
-      {/* Telegram channel */}
-      <a
-        href="https://t.me/moy_analiz"
-        target="_blank"
-        rel="noopener noreferrer"
-        className="mt-6 mx-auto max-w-md rounded-xl border border-border bg-card p-5 text-center block hover:border-[#0088cc]/30 transition-colors"
-      >
-        <div className="flex items-center justify-center gap-2 mb-2">
-          <MessageSquare className="w-5 h-5 text-[#0088cc]" />
-          <p className="text-sm font-semibold text-foreground">Наш канал в Telegram</p>
-        </div>
-        <p className="text-xs text-muted-foreground">
-          Подпишись, если следишь за своим здоровьем и хочешь знать больше научных данных о своем теле
-        </p>
-        <p className="mt-2 text-sm font-semibold text-[#0088cc]">@moy_analiz</p>
-      </a>
+        {/* Promo code card */}
+        {status.promo_code && (
+          <div className="rounded-2xl border border-border bg-card p-5">
+            <div className="flex items-start gap-3">
+              {/* Gift icon column */}
+              <div
+                className="shrink-0 w-10 h-10 rounded-xl flex items-center justify-center mt-0.5"
+                style={{ background: "rgba(0,180,188,0.08)" }}
+              >
+                {/* Gift SVG — inline since no gift icon in current lucide import */}
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#00b4bc" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <polyline points="20 12 20 22 4 22 4 12" />
+                  <rect x="2" y="7" width="20" height="5" />
+                  <line x1="12" y1="22" x2="12" y2="7" />
+                  <path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z" />
+                  <path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z" />
+                </svg>
+              </div>
+
+              {/* Text + code */}
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-semibold text-foreground">Скидка 30% на следующий анализ</p>
+                <p className="text-xs text-muted-foreground mt-0.5">Введите при оплате</p>
+
+                {/* Promo code chip */}
+                <button
+                  onClick={handleCopyPromo}
+                  className="mt-3 flex items-center gap-2 group"
+                  title="Нажмите, чтобы скопировать"
+                >
+                  <span
+                    className="font-mono text-sm font-bold tracking-widest uppercase px-3 py-1.5 rounded-lg transition-colors duration-150"
+                    style={{
+                      background: "rgba(0,180,188,0.08)",
+                      color: "#008f96",
+                      letterSpacing: "0.12em",
+                    }}
+                  >
+                    {status.promo_code.toUpperCase()}
+                  </span>
+                  <span className="text-xs text-muted-foreground/70 group-hover:text-primary transition-colors duration-150">
+                    {promoCopied ? "Скопировано ✓" : "Нажмите, чтобы скопировать"}
+                  </span>
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Telegram channel */}
+        <a
+          href="https://t.me/moy_analiz"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex items-center gap-3 rounded-2xl border border-border bg-card p-4 hover:border-[#0088cc]/25 hover:shadow-sm transition-all duration-200 group"
+        >
+          <div className="shrink-0 w-10 h-10 rounded-xl flex items-center justify-center" style={{ background: "rgba(0,136,204,0.08)" }}>
+            <MessageSquare className="w-5 h-5 text-[#0088cc]" />
+          </div>
+          <div className="flex-1 text-left min-w-0">
+            <p className="text-sm font-semibold text-foreground">Канал в Telegram</p>
+            <p className="text-xs text-muted-foreground mt-0.5 leading-snug">
+              Советы и научные данные о здоровье
+            </p>
+          </div>
+          <div className="shrink-0 flex items-center gap-1 text-[#0088cc]">
+            <span className="text-xs font-medium hidden sm:block">@moy_analiz</span>
+            <ExternalLink className="w-3.5 h-3.5 opacity-60 group-hover:opacity-100 transition-opacity" />
+          </div>
+        </a>
+      </motion.div>
     </div>
   );
 }
@@ -596,48 +786,50 @@ function ChatUpsellButton({ status, orderId }: { status: OrderStatus; orderId: s
 
   if (chatPaid && chatLink) {
     return (
-      <div
-        className="mt-6 mx-auto max-w-md rounded-xl p-5 text-center"
-        style={{ background: "rgba(0,180,188,0.06)", border: "1px solid rgba(0,180,188,0.15)" }}
-      >
-        <div className="flex items-center justify-center gap-2 mb-2">
-          <CheckCircle2 className="w-5 h-5 text-emerald-500" />
-          <p className="text-sm font-semibold text-foreground">Чат активирован!</p>
+      <div className="rounded-2xl border bg-card p-4" style={{ borderColor: "rgba(0,180,188,0.25)", background: "rgba(0,180,188,0.04)" }}>
+        <div className="flex items-center gap-3">
+          <div className="shrink-0 w-10 h-10 rounded-xl flex items-center justify-center" style={{ background: "rgba(52,211,153,0.12)" }}>
+            <CheckCircle2 className="w-5 h-5 text-emerald-500" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-semibold text-foreground">Чат активирован</p>
+            <p className="text-xs text-muted-foreground mt-0.5">До 10 вопросов по анализам · Сессия 24 ч</p>
+          </div>
+          <a
+            href={chatLink}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="shrink-0 inline-flex items-center gap-1.5 py-2 px-3.5 rounded-xl text-white text-xs font-semibold transition-opacity hover:opacity-90"
+            style={{ background: "#0088cc" }}
+          >
+            <MessageSquare className="w-3.5 h-3.5" />
+            Открыть
+          </a>
         </div>
-        <p className="text-xs text-muted-foreground mb-3">
-          Задайте до 10 вопросов по вашим анализам. Сессия 24 часа.
-        </p>
-        <a
-          href={chatLink}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="inline-flex items-center gap-2 py-2.5 px-6 rounded-xl bg-[#0088cc] text-white font-semibold hover:opacity-90 transition text-sm"
-        >
-          <MessageSquare className="w-4 h-4" />
-          Открыть в Telegram
-          <ExternalLink className="w-3.5 h-3.5" />
-        </a>
       </div>
     );
   }
 
   return (
-    <div className="mt-6 mx-auto max-w-md rounded-xl border border-border bg-card p-5 text-center">
-      <div className="flex items-center justify-center gap-2 mb-2">
-        <MessageSquare className="w-5 h-5 text-primary" />
-        <p className="text-sm font-semibold text-foreground">Есть вопросы по анализам?</p>
+    <div className="rounded-2xl border border-border bg-card p-4">
+      <div className="flex items-center gap-3">
+        <div className="shrink-0 w-10 h-10 rounded-xl flex items-center justify-center" style={{ background: "rgba(0,180,188,0.08)" }}>
+          <MessageCircleQuestion className="w-5 h-5 text-primary" />
+        </div>
+        <div className="flex-1 min-w-0">
+          <p className="text-sm font-semibold text-foreground">Есть вопросы по анализам?</p>
+          <p className="text-xs text-muted-foreground mt-0.5">До 10 вопросов AI-ассистенту в Telegram</p>
+        </div>
+        <button
+          onClick={handleBuy}
+          disabled={loading}
+          className="shrink-0 inline-flex items-center gap-1.5 py-2 px-3.5 rounded-xl text-xs font-semibold transition-opacity hover:opacity-90 disabled:opacity-50"
+          style={{ background: "rgba(0,180,188,0.1)", color: "#008f96" }}
+        >
+          {loading ? "..." : "100 ₽"}
+        </button>
       </div>
-      <p className="text-xs text-muted-foreground mb-3">
-        Задайте до 10 вопросов AI-ассистенту по вашим анализам в Telegram.
-      </p>
-      <button
-        onClick={handleBuy}
-        disabled={loading}
-        className="inline-flex items-center gap-2 py-2.5 px-6 rounded-xl bg-primary text-primary-foreground font-semibold hover:opacity-90 transition text-sm disabled:opacity-50"
-      >
-        {loading ? "Переход к оплате..." : "Обсудить анализ — 100 ₽"}
-      </button>
-      {error && <p className="mt-2 text-xs text-destructive">{error}</p>}
+      {error && <p className="mt-2 text-xs text-destructive pl-13">{error}</p>}
     </div>
   );
 }
