@@ -754,7 +754,7 @@ function InlinePaywall({
   abnormalIndicators: AnalysisIndicator[]
   totalCount: number
   onPay: (promoCode?: string, withChat?: boolean) => Promise<void>
-  onPromo: (email: string, promoCode: string) => Promise<void>
+  onPromo: (email: string, promoCode: string, withChat?: boolean) => Promise<void>
   withChat: boolean
   setWithChat: (v: boolean) => void
 }) {
@@ -957,14 +957,14 @@ function InlinePaywall({
                       onChange={(e) => setFreePromoEmail(e.target.value)}
                       onKeyDown={(e) => {
                         if (e.key === "Enter" && isValidEmail(freePromoEmail)) {
-                          onPromo(freePromoEmail.trim(), promoCode.trim())
+                          onPromo(freePromoEmail.trim(), promoCode.trim(), withChat)
                         }
                       }}
                       className="w-full rounded-xl border-2 border-border bg-background py-2.5 pl-11 pr-4 text-sm text-foreground outline-none transition-colors placeholder:text-muted-foreground focus:border-primary"
                     />
                   </div>
                   <button
-                    onClick={() => onPromo(freePromoEmail.trim(), promoCode.trim())}
+                    onClick={() => onPromo(freePromoEmail.trim(), promoCode.trim(), withChat)}
                     disabled={!isValidEmail(freePromoEmail) || loading}
                     className="mt-2 w-full rounded-xl px-4 py-3 text-sm font-bold text-white transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
                     style={{ background: "linear-gradient(135deg, #16a34a 0%, #15803d 100%)" }}
@@ -1085,7 +1085,7 @@ interface PaywallStepProps {
   orderId: string
   preview: PreviewData | null
   onPay: (promoCode?: string, withChat?: boolean) => Promise<void>
-  onPromo: (email: string, promoCode: string) => Promise<void>
+  onPromo: (email: string, promoCode: string, withChat?: boolean) => Promise<void>
   loading: boolean
 }
 

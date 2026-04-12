@@ -63,10 +63,10 @@ export default function HomePage() {
   );
 
   const handlePromo = useCallback(
-    async (email: string, promoCode: string) => {
+    async (email: string, promoCode: string, withChat?: boolean) => {
       setPayLoading(true);
       try {
-        const res = await applyPromo(orderId, email, promoCode);
+        const res = await applyPromo(orderId, email, promoCode, withChat);
         if (res.redirect_url.startsWith("http")) {
           window.location.href = res.redirect_url;
         } else {
