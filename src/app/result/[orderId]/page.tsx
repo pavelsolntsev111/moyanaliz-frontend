@@ -217,33 +217,227 @@ function EmailCaptureCard({
   );
 }
 
+const PROCESSING_STEPS = [
+  { id: 0, label: "Читаем анализ", duration: 4000 },
+  { id: 1, label: "Расшифровываем показатели", duration: 8000 },
+  { id: 2, label: "Сравниваем с нормами", duration: 6000 },
+  { id: 3, label: "Формируем отчёт", duration: 0 },
+];
+
 function ProcessingScreen({ orderId, hasEmail, onEmailSubmitted, chatPaid }: { orderId: string; hasEmail: boolean; onEmailSubmitted?: () => void; chatPaid?: boolean }) {
+  const [activeStep, setActiveStep] = useState(0);
+  const [completedSteps, setCompletedSteps] = useState<number[]>([]);
+
+  useEffect(() => {
+    let stepIndex = 0;
+
+    const advance = () => {
+      const step = PROCESSING_STEPS[stepIndex];
+      if (!step || step.duration === 0) return;
+
+      const timer = setTimeout(() => {
+        setCompletedSteps((prev) => [...prev, stepIndex]);
+        stepIndex += 1;
+        if (stepIndex < PROCESSING_STEPS.length) {
+          setActiveStep(stepIndex);
+          advance();
+        }
+      }, step.duration);
+
+      return timer;
+    };
+
+    const first = advance();
+    return () => { if (first) clearTimeout(first); };
+  }, []);
+
+  // Progress 0–90%: steps 0–2 each add ~28%. Step 3 stays at 90% (server controls completion).
+  const progressPercent = Math.min(90, completedSteps.length * 28 + (activeStep > 0 ? 4 : 0));
+
   return (
-    <div className="text-center">
-      <Spinner />
-      <h1 className="text-xl font-semibold mt-6 text-foreground">
-        Анализируем ваши результаты...
-      </h1>
-      <p className="text-sm text-muted-foreground mt-2">
-        Обычно это занимает 30–60 секунд
-      </p>
-      <div className="mt-6 w-64 mx-auto h-2 bg-muted rounded-full overflow-hidden">
-        <div className="h-full bg-primary rounded-full animate-pulse w-2/3" />
+    <div className="flex flex-col items-center">
+      {/* Animated orb / pulse ring */}
+      <div className="relative flex items-center justify-center" style={{ width: 80, height: 80 }}>
+        {/* Outer pulse ring */}
+        <motion.div
+          className="absolute inset-0 rounded-full"
+          style={{ background: "rgba(0,180,188,0.12)" }}
+          animate={{ scale: [1, 1.25, 1], opacity: [0.6, 0, 0.6] }}
+          transition={{ duration: 2.4, repeat: Infinity, ease: "easeInOut" }}
+        />
+        {/* Middle ring */}
+        <motion.div
+          className="absolute rounded-full"
+          style={{ inset: 10, background: "rgba(0,180,188,0.18)" }}
+          animate={{ scale: [1, 1.15, 1], opacity: [0.8, 0.2, 0.8] }}
+          transition={{ duration: 2.4, repeat: Infinity, ease: "easeInOut", delay: 0.3 }}
+        />
+        {/* Core icon */}
+        <div
+          className="relative z-10 flex items-center justify-center rounded-full"
+          style={{ width: 48, height: 48, background: "rgba(0,180,188,0.15)", border: "1.5px solid rgba(0,180,188,0.35)" }}
+        >
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#00b4bc" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M9 3H5a2 2 0 0 0-2 2v4m6-6h10a2 2 0 0 1 2 2v4M9 3v18m0 0h10a2 2 0 0 0 2-2v-4M9 21H5a2 2 0 0 1-2-2v-4m0 0h18" />
+          </svg>
+        </div>
       </div>
 
-      <div className="mt-8">
+      {/* Heading */}
+      <motion.h1
+        className="mt-5 text-lg font-semibold text-foreground"
+        initial={{ opacity: 0, y: 6 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.4, delay: 0.1 }}
+      >
+        Анализируем ваши результаты
+      </motion.h1>
+      <motion.p
+        className="mt-1 text-sm text-muted-foreground"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ duration: 0.4, delay: 0.2 }}
+      >
+        Обычно это занимает 30–60 секунд
+      </motion.p>
+
+      {/* Progress bar */}
+      <div className="mt-5 w-full max-w-xs mx-auto">
+        <div className="h-1.5 bg-muted rounded-full overflow-hidden">
+          <motion.div
+            className="h-full rounded-full"
+            style={{ background: "linear-gradient(90deg, #00b4bc, #00d4dc)" }}
+            initial={{ width: "4%" }}
+            animate={{ width: `${progressPercent}%` }}
+            transition={{ duration: 1.2, ease: "easeOut" }}
+          />
+        </div>
+      </div>
+
+      {/* Step list */}
+      <div className="mt-6 w-full max-w-xs mx-auto flex flex-col gap-2.5">
+        {PROCESSING_STEPS.map((step, i) => {
+          const isDone = completedSteps.includes(i);
+          const isActive = activeStep === i && !isDone;
+          const isPending = !isDone && !isActive;
+
+          return (
+            <motion.div
+              key={step.id}
+              className="flex items-center gap-3 rounded-xl px-4 py-3"
+              style={{
+                background: isActive
+                  ? "rgba(0,180,188,0.08)"
+                  : isDone
+                  ? "rgba(0,180,188,0.04)"
+                  : "transparent",
+                border: isActive
+                  ? "1px solid rgba(0,180,188,0.22)"
+                  : isDone
+                  ? "1px solid rgba(0,180,188,0.12)"
+                  : "1px solid transparent",
+                transition: "background 0.3s, border-color 0.3s",
+              }}
+              initial={{ opacity: 0, x: -8 }}
+              animate={{ opacity: isPending ? 0.38 : 1, x: 0 }}
+              transition={{ duration: 0.35, delay: i * 0.07 }}
+            >
+              {/* Step indicator */}
+              <div className="shrink-0" style={{ width: 22, height: 22 }}>
+                <AnimatePresence mode="wait">
+                  {isDone ? (
+                    <motion.div
+                      key="done"
+                      initial={{ scale: 0.5, opacity: 0 }}
+                      animate={{ scale: 1, opacity: 1 }}
+                      exit={{ scale: 0.5, opacity: 0 }}
+                      transition={{ duration: 0.25, ease: "easeOut" }}
+                    >
+                      <svg width="22" height="22" viewBox="0 0 22 22" fill="none">
+                        <circle cx="11" cy="11" r="11" fill="rgba(0,180,188,0.18)" />
+                        <path d="M6.5 11l3 3 6-6" stroke="#00b4bc" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+                      </svg>
+                    </motion.div>
+                  ) : isActive ? (
+                    <motion.div
+                      key="active"
+                      initial={{ scale: 0.7, opacity: 0 }}
+                      animate={{ scale: 1, opacity: 1 }}
+                      exit={{ scale: 0.7, opacity: 0 }}
+                      transition={{ duration: 0.2 }}
+                    >
+                      <motion.svg
+                        width="22"
+                        height="22"
+                        viewBox="0 0 22 22"
+                        fill="none"
+                        animate={{ rotate: 360 }}
+                        transition={{ duration: 1.6, repeat: Infinity, ease: "linear" }}
+                      >
+                        <circle cx="11" cy="11" r="9" stroke="rgba(0,180,188,0.2)" strokeWidth="2" />
+                        <path d="M11 2a9 9 0 0 1 9 9" stroke="#00b4bc" strokeWidth="2" strokeLinecap="round" />
+                      </motion.svg>
+                    </motion.div>
+                  ) : (
+                    <motion.div key="pending" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+                      <svg width="22" height="22" viewBox="0 0 22 22" fill="none">
+                        <circle cx="11" cy="11" r="9" stroke="rgba(0,0,0,0.12)" strokeWidth="1.5" />
+                        <circle cx="11" cy="11" r="3" fill="rgba(0,0,0,0.12)" />
+                      </svg>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
+
+              {/* Label */}
+              <span
+                className="text-sm font-medium"
+                style={{
+                  color: isDone ? "#00b4bc" : isActive ? "var(--foreground)" : "var(--muted-foreground)",
+                  transition: "color 0.3s",
+                }}
+              >
+                {step.label}
+              </span>
+
+              {/* "В процессе" badge on active */}
+              {isActive && (
+                <motion.span
+                  className="ml-auto text-xs font-medium shrink-0"
+                  style={{ color: "#00b4bc" }}
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: [1, 0.4, 1] }}
+                  transition={{ duration: 1.4, repeat: Infinity, ease: "easeInOut" }}
+                >
+                  В процессе
+                </motion.span>
+              )}
+            </motion.div>
+          );
+        })}
+      </div>
+
+      {/* Email capture */}
+      <div className="mt-7 w-full max-w-xs mx-auto">
         <EmailCaptureCard orderId={orderId} hasEmail={hasEmail} onSubmitted={onEmailSubmitted} />
       </div>
 
+      {/* Chat paid notice */}
       {chatPaid && (
-        <div className="mt-4 mx-auto max-w-xs rounded-xl px-4 py-3 text-left" style={{ background: "rgba(0,180,188,0.07)", border: "1px solid rgba(0,180,188,0.18)" }}>
+        <motion.div
+          className="mt-4 w-full max-w-xs mx-auto rounded-xl px-4 py-3 text-left"
+          style={{ background: "rgba(0,180,188,0.07)", border: "1px solid rgba(0,180,188,0.18)" }}
+          initial={{ opacity: 0, y: 6 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4, delay: 0.5 }}
+        >
           <p className="text-xs text-primary font-medium leading-relaxed">
-            💬 Консультация с ИИ-ассистентом станет доступна сразу после формирования отчёта
+            Консультация с ИИ-ассистентом станет доступна сразу после формирования отчёта
           </p>
-        </div>
+        </motion.div>
       )}
 
-      <p className="mt-4 text-xs text-muted-foreground">Не закрывайте окно браузера</p>
+      <p className="mt-5 text-xs text-muted-foreground">Не закрывайте окно браузера</p>
     </div>
   );
 }
@@ -574,7 +768,7 @@ function FullReport({ status, orderId, hasEmail, onEmailSubmitted }: { status: O
   };
 
   return (
-    <div className="py-8">
+    <div className="pt-4 pb-8">
       {/* ── Hero: celebration header ── */}
       <motion.div
         initial={{ opacity: 0, y: 16 }}
@@ -673,26 +867,25 @@ function FullReport({ status, orderId, hasEmail, onEmailSubmitted }: { status: O
         </motion.div>
       )}
 
-      {/* ── Secondary cards row ── */}
+      {/* ── Secondary cards ── */}
       <motion.div
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.4, delay: 0.3, ease: "easeOut" }}
         className="space-y-3 mb-6"
       >
-        {/* Chat upsell */}
+        {/* Chat card — always shown; content differs by purchase status */}
         <ChatUpsellButton status={status} orderId={orderId} />
 
-        {/* Promo code card */}
-        {status.promo_code && (
-          <div className="rounded-2xl border border-border bg-card p-5">
-            <div className="flex items-start gap-3">
-              {/* Gift icon column */}
+        {/* Cards below only for users WITH chat paid */}
+        {status.chat_payment_status === "paid" && (
+          <>
+            {/* Static 30% discount badge */}
+            <div className="rounded-2xl border border-border bg-card p-4 min-h-[72px] flex items-center gap-3">
               <div
-                className="shrink-0 w-10 h-10 rounded-xl flex items-center justify-center mt-0.5"
+                className="shrink-0 w-10 h-10 rounded-xl flex items-center justify-center"
                 style={{ background: "rgba(0,180,188,0.08)" }}
               >
-                {/* Gift SVG — inline since no gift icon in current lucide import */}
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#00b4bc" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <polyline points="20 12 20 22 4 22 4 12" />
                   <rect x="2" y="7" width="20" height="5" />
@@ -701,58 +894,35 @@ function FullReport({ status, orderId, hasEmail, onEmailSubmitted }: { status: O
                   <path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z" />
                 </svg>
               </div>
-
-              {/* Text + code */}
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-semibold text-foreground">Скидка 30% на следующий анализ</p>
-                <p className="text-xs text-muted-foreground mt-0.5">Введите при оплате</p>
-
-                {/* Promo code chip */}
-                <button
-                  onClick={handleCopyPromo}
-                  className="mt-3 flex items-center gap-2 group"
-                  title="Нажмите, чтобы скопировать"
-                >
-                  <span
-                    className="font-mono text-sm font-bold tracking-widest uppercase px-3 py-1.5 rounded-lg transition-colors duration-150"
-                    style={{
-                      background: "rgba(0,180,188,0.08)",
-                      color: "#008f96",
-                      letterSpacing: "0.12em",
-                    }}
-                  >
-                    {status.promo_code.toUpperCase()}
-                  </span>
-                  <span className="text-xs text-muted-foreground/70 group-hover:text-primary transition-colors duration-150">
-                    {promoCopied ? "Скопировано ✓" : "Нажмите, чтобы скопировать"}
-                  </span>
-                </button>
+                <p className="text-xs text-muted-foreground mt-0.5">Введите промокод при следующей оплате</p>
               </div>
             </div>
-          </div>
-        )}
 
-        {/* Telegram channel */}
-        <a
-          href="https://t.me/moy_analiz"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="flex items-center gap-3 rounded-2xl border border-border bg-card p-4 hover:border-[#0088cc]/25 hover:shadow-sm transition-all duration-200 group"
-        >
-          <div className="shrink-0 w-10 h-10 rounded-xl flex items-center justify-center" style={{ background: "rgba(0,136,204,0.08)" }}>
-            <MessageSquare className="w-5 h-5 text-[#0088cc]" />
-          </div>
-          <div className="flex-1 text-left min-w-0">
-            <p className="text-sm font-semibold text-foreground">Канал в Telegram</p>
-            <p className="text-xs text-muted-foreground mt-0.5 leading-snug">
-              Советы и научные данные о здоровье
-            </p>
-          </div>
-          <div className="shrink-0 flex items-center gap-1 text-[#0088cc]">
-            <span className="text-xs font-medium hidden sm:block">@moy_analiz</span>
-            <ExternalLink className="w-3.5 h-3.5 opacity-60 group-hover:opacity-100 transition-opacity" />
-          </div>
-        </a>
+            {/* Telegram channel */}
+            <a
+              href="https://t.me/moy_analiz"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-3 rounded-2xl border border-border bg-card p-4 min-h-[72px] hover:border-[#0088cc]/25 hover:shadow-sm transition-all duration-200 group"
+            >
+              <div className="shrink-0 w-10 h-10 rounded-xl flex items-center justify-center" style={{ background: "rgba(0,136,204,0.08)" }}>
+                <MessageSquare className="w-5 h-5 text-[#0088cc]" />
+              </div>
+              <div className="flex-1 text-left min-w-0">
+                <p className="text-sm font-semibold text-foreground">Канал в Telegram</p>
+                <p className="text-xs text-muted-foreground mt-0.5 leading-snug">
+                  Советы и научные данные о здоровье
+                </p>
+              </div>
+              <div className="shrink-0 flex items-center gap-1 text-[#0088cc]">
+                <span className="text-xs font-medium hidden sm:block">@moy_analiz</span>
+                <ExternalLink className="w-3.5 h-3.5 opacity-60 group-hover:opacity-100 transition-opacity" />
+              </div>
+            </a>
+          </>
+        )}
       </motion.div>
     </div>
   );
@@ -783,8 +953,8 @@ function ChatUpsellButton({ status, orderId }: { status: OrderStatus; orderId: s
 
   if (chatPaid && chatLink) {
     return (
-      <div className="rounded-2xl border bg-card p-4" style={{ borderColor: "rgba(0,180,188,0.25)", background: "rgba(0,180,188,0.04)" }}>
-        <div className="flex items-center gap-3">
+      <div className="rounded-2xl border bg-card p-4 min-h-[72px] flex items-center" style={{ borderColor: "rgba(0,180,188,0.25)", background: "rgba(0,180,188,0.04)" }}>
+        <div className="flex items-center gap-3 w-full">
           <div className="shrink-0 w-10 h-10 rounded-xl flex items-center justify-center" style={{ background: "rgba(52,211,153,0.12)" }}>
             <CheckCircle2 className="w-5 h-5 text-emerald-500" />
           </div>
@@ -808,8 +978,8 @@ function ChatUpsellButton({ status, orderId }: { status: OrderStatus; orderId: s
   }
 
   return (
-    <div className="rounded-2xl border border-border bg-card p-4">
-      <div className="flex items-center gap-3">
+    <div className="rounded-2xl border border-border bg-card p-4 min-h-[72px] flex items-center">
+      <div className="flex items-center gap-3 w-full">
         <div className="shrink-0 w-10 h-10 rounded-xl flex items-center justify-center" style={{ background: "rgba(0,180,188,0.08)" }}>
           <MessageCircleQuestion className="w-5 h-5 text-primary" />
         </div>
@@ -823,7 +993,7 @@ function ChatUpsellButton({ status, orderId }: { status: OrderStatus; orderId: s
           className="shrink-0 inline-flex items-center gap-1.5 py-2 px-3.5 rounded-xl text-xs font-semibold transition-opacity hover:opacity-90 disabled:opacity-50"
           style={{ background: "rgba(0,180,188,0.1)", color: "#008f96" }}
         >
-          {loading ? "..." : "100 ₽"}
+          {loading ? "..." : "49 ₽"}
         </button>
       </div>
       {error && <p className="mt-2 text-xs text-destructive pl-13">{error}</p>}
