@@ -896,7 +896,7 @@ function FullReport({ status, orderId, hasEmail, onEmailSubmitted }: { status: O
               </div>
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-semibold text-foreground">Скидка 30% на следующий анализ</p>
-                <p className="text-xs text-muted-foreground mt-0.5">Введите промокод при следующей оплате</p>
+                <p className="text-xs text-muted-foreground mt-0.5">Введите промокод «30%» при следующей оплате</p>
               </div>
             </div>
 
@@ -978,26 +978,29 @@ function ChatUpsellButton({ status, orderId }: { status: OrderStatus; orderId: s
   }
 
   return (
-    <div className="rounded-2xl border border-border bg-card p-4 min-h-[72px] flex items-center">
+    <button
+      onClick={handleBuy}
+      disabled={loading}
+      className="w-full text-left rounded-2xl border border-border bg-card p-4 min-h-[72px] flex items-center cursor-pointer hover:border-primary/30 hover:shadow-sm transition-all duration-200 disabled:opacity-60 disabled:cursor-not-allowed"
+    >
       <div className="flex items-center gap-3 w-full">
         <div className="shrink-0 w-10 h-10 rounded-xl flex items-center justify-center" style={{ background: "rgba(0,180,188,0.08)" }}>
           <MessageCircleQuestion className="w-5 h-5 text-primary" />
         </div>
         <div className="flex-1 min-w-0">
           <p className="text-sm font-semibold text-foreground">Есть вопросы по анализам?</p>
-          <p className="text-xs text-muted-foreground mt-0.5">До 10 вопросов AI-ассистенту в Telegram</p>
+          <p className="text-xs text-muted-foreground mt-0.5">
+            {loading ? "Создаём ссылку..." : error ? error : "До 10 вопросов AI-ассистенту в Telegram"}
+          </p>
         </div>
-        <button
-          onClick={handleBuy}
-          disabled={loading}
-          className="shrink-0 inline-flex items-center gap-1.5 py-2 px-3.5 rounded-xl text-xs font-semibold transition-opacity hover:opacity-90 disabled:opacity-50"
+        <div
+          className="shrink-0 inline-flex items-center gap-1.5 py-2 px-3.5 rounded-xl text-xs font-semibold"
           style={{ background: "rgba(0,180,188,0.1)", color: "#008f96" }}
         >
           {loading ? "..." : "49 ₽"}
-        </button>
+        </div>
       </div>
-      {error && <p className="mt-2 text-xs text-destructive pl-13">{error}</p>}
-    </div>
+    </button>
   );
 }
 
