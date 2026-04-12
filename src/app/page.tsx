@@ -44,11 +44,11 @@ export default function HomePage() {
   }, []);
 
   const handlePay = useCallback(
-    async (promoCode?: string) => {
+    async (promoCode?: string, withChat?: boolean) => {
       ymGoal("click_pay");
       setPayLoading(true);
       try {
-        const res = await createPayment(orderId, promoCode);
+        const res = await createPayment(orderId, promoCode, withChat);
         if (res.redirect_url.startsWith("http")) {
           window.location.href = res.redirect_url;
         } else {

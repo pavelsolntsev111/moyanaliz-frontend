@@ -536,6 +536,34 @@ function ReportSectionTeasers() {
   )
 }
 
+/** Chat consultation section teasers — shown below report teasers */
+function ChatConsultationTeasers() {
+  const items = [
+    { icon: MessageSquare, title: "До 10 вопросов по вашим анализам" },
+    { icon: Stethoscope, title: "Персональные рекомендации под ваши показатели" },
+    { icon: UtensilsCrossed, title: "Советы по питанию, добавкам и образу жизни" },
+    { icon: FileText, title: "Объяснение каждого отклонения простым языком" },
+    { icon: BarChart3, title: "Что контролировать и когда пересдать анализы" },
+  ]
+
+  return (
+    <div className="space-y-2">
+      <h3 className="text-lg font-bold text-card-foreground text-center">Онлайн-консультация с ИИ</h3>
+      <div className="grid gap-2">
+        {items.map(({ icon: SIcon, title }) => (
+          <div key={title} className="flex items-center gap-3 rounded-xl px-4 py-3" style={{ background: "var(--card)", border: "1px solid var(--border)" }}>
+            <div className="shrink-0 flex h-8 w-8 items-center justify-center rounded-lg" style={{ background: "rgba(0,180,188,0.10)" }}>
+              <SIcon className="h-4 w-4 text-primary" />
+            </div>
+            <span className="text-sm font-medium text-card-foreground">{title}</span>
+            <Lock className="ml-auto h-3.5 w-3.5 text-muted-foreground/40" />
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
 /** Locked NORMAL card — value + range, blurred interpretation, NO mini-CTA */
 function LockedNormalCard({ indicator }: { indicator: AnalysisIndicator }) {
   const position = getRangePosition(indicator.value, indicator.referenceMin, indicator.referenceMax)
@@ -716,6 +744,7 @@ function LockedAbnormalCard({ indicator }: { indicator: AnalysisIndicator }) {
 function InlinePaywall({
   promoVisible, setPromoVisible, promoCode, setPromoCode,
   loading, abnormalIndicators, totalCount, onPay, onPromo,
+  withChat, setWithChat,
 }: {
   promoVisible: boolean
   setPromoVisible: (v: boolean) => void
@@ -724,8 +753,10 @@ function InlinePaywall({
   loading: boolean
   abnormalIndicators: AnalysisIndicator[]
   totalCount: number
-  onPay: (promoCode?: string) => Promise<void>
+  onPay: (promoCode?: string, withChat?: boolean) => Promise<void>
   onPromo: (email: string, promoCode: string) => Promise<void>
+  withChat: boolean
+  setWithChat: (v: boolean) => void
 }) {
   const [promoValidating, setPromoValidating] = useState(false)
   const [promoResult, setPromoResult] = useState<PromoValidateResponse | null>(null)
@@ -742,10 +773,14 @@ function InlinePaywall({
     </a>
   )
 
-  const displayPrice = promoResult?.valid && !promoResult.free && promoResult.discounted_price
-    ? promoResult.discounted_price
+  const baseDisplayPrice = promoResult?.valid && !promoResult.free && promoResult.discount_percent
+    ? Math.max(1, Math.round(199 * (100 - promoResult.discount_percent) / 100))
     : 199
-  const hasDiscount = promoResult?.valid && !promoResult.free && promoResult.discounted_price
+  const comboDisplayPrice = promoResult?.valid && !promoResult.free && promoResult.discount_percent
+    ? Math.max(1, Math.round(248 * (100 - promoResult.discount_percent) / 100))
+    : 248
+  const displayPrice = withChat ? comboDisplayPrice : baseDisplayPrice
+  const hasDiscount = promoResult?.valid && !promoResult.free && promoResult.discount_percent
 
   const handleValidatePromo = async () => {
     if (!promoCode.trim()) return
@@ -780,12 +815,56 @@ function InlinePaywall({
     >
       <GradientCard glowColor="rgba(0,180,188,0.16)">
         <div className="p-6 sm:p-7">
+          {/* Tier selector */}
+          {!promoResult?.free && (
+          <div className="mb-4 space-y-2">
+            <button
+              onClick={() => setWithChat(false)}
+              disabled={loading}
+              className={`flex w-full min-h-[56px] items-center gap-3 rounded-xl border-2 p-3 text-left transition-colors ${
+                !withChat ? "border-primary bg-primary/5" : "border-border hover:border-muted-foreground/30"
+              } ${loading ? "opacity-50 pointer-events-none" : ""}`}
+            >
+              <div className={`h-4 w-4 shrink-0 rounded-full border-2 flex items-center justify-center ${
+                !withChat ? "border-primary" : "border-muted-foreground/40"
+              }`}>
+                {!withChat && <div className="h-2 w-2 rounded-full bg-primary" />}
+              </div>
+              <div className="flex-1">
+                <p className="text-sm font-semibold text-foreground">Полный отчет</p>
+              </div>
+              <span className="text-sm font-bold text-foreground shrink-0">{baseDisplayPrice} ₽</span>
+            </button>
+
+            <button
+              onClick={() => setWithChat(true)}
+              disabled={loading}
+              className={`relative flex w-full min-h-[56px] items-center gap-3 rounded-xl border-2 p-3 text-left transition-colors ${
+                withChat ? "border-primary bg-primary/5" : "border-border hover:border-muted-foreground/30"
+              } ${loading ? "opacity-50 pointer-events-none" : ""}`}
+            >
+              <span className="absolute -top-2 right-3 rounded-full bg-primary px-2 py-0.5 text-[10px] font-bold text-white">
+                популярный
+              </span>
+              <div className={`h-4 w-4 shrink-0 rounded-full border-2 flex items-center justify-center ${
+                withChat ? "border-primary" : "border-muted-foreground/40"
+              }`}>
+                {withChat && <div className="h-2 w-2 rounded-full bg-primary" />}
+              </div>
+              <div className="flex-1">
+                <p className="text-sm font-semibold text-foreground">Полный отчет + консультация с ИИ в Telegram</p>
+              </div>
+              <span className="text-sm font-bold text-foreground shrink-0">{comboDisplayPrice} ₽</span>
+            </button>
+          </div>
+          )}
+
           {/* 1. CTA Button */}
           {!promoResult?.free && (
           <button
             onClick={() => {
               ymGoal("click_get_report")
-              onPay(hasDiscount ? promoCode.trim() : undefined)
+              onPay(hasDiscount ? promoCode.trim() : undefined, withChat)
             }}
             disabled={loading}
             className="flex w-full items-center justify-center gap-2 rounded-xl px-4 py-4 text-sm font-bold text-white transition-opacity hover:opacity-90 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
@@ -801,35 +880,32 @@ function InlinePaywall({
               </>
             ) : (
               <>
-                Получить полный отчёт — {displayPrice} ₽
+                {withChat ? `С консультацией — ${displayPrice} ₽` : `Получить полный отчёт — ${displayPrice} ₽`}
                 <ChevronRight className="h-4 w-4" />
               </>
             )}
           </button>
           )}
 
-          {/* 2. Guarantee */}
-          <div className="mt-3 text-center">
-            <p className="text-sm text-muted-foreground leading-relaxed">{subtitle}</p>
-          </div>
-
-          {/* 3. YooMoney badge */}
-          <div className="mt-2 flex items-center justify-center gap-2 text-muted-foreground">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <rect width="24" height="24" rx="6" fill="#8B3FFD"/>
-              <path d="M13.5 7H11.2C9.43 7 8 8.43 8 10.2C8 11.97 9.43 13.4 11.2 13.4H12V17H13.5V7ZM12 12H11.2C10.21 12 9.5 11.19 9.5 10.2C9.5 9.21 10.31 8.5 11.2 8.5H12V12Z" fill="white"/>
-            </svg>
-            <span className="text-xs font-medium">Безопасная оплата через ЮMoney</span>
-          </div>
-
-          {/* 4. Promo code */}
-          {!promoVisible ? (
-            <div className="mt-3 text-center">
+          {/* 2–4. Guarantee + YooMoney + Promo — unified block */}
+          <div className="mt-3 flex flex-col items-center gap-2">
+            <p className="text-xs text-muted-foreground text-center leading-relaxed">{subtitle}</p>
+            <div className="flex items-center gap-2 text-muted-foreground">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <rect width="24" height="24" rx="6" fill="#8B3FFD"/>
+                <path d="M13.5 7H11.2C9.43 7 8 8.43 8 10.2C8 11.97 9.43 13.4 11.2 13.4H12V17H13.5V7ZM12 12H11.2C10.21 12 9.5 11.19 9.5 10.2C9.5 9.21 10.31 8.5 11.2 8.5H12V12Z" fill="white"/>
+              </svg>
+              <span className="text-xs">Безопасная оплата через ЮMoney</span>
+            </div>
+            {!promoVisible && (
               <button onClick={() => setPromoVisible(true)} className="text-xs text-muted-foreground underline decoration-dotted underline-offset-4 transition-colors hover:text-primary">
                 Есть промокод?
               </button>
-            </div>
-          ) : (
+            )}
+          </div>
+
+          {/* 4. Promo code input */}
+          {promoVisible && (
             <div className="mt-3">
               <div className="flex gap-2">
                 <div className="relative flex-1">
@@ -913,9 +989,10 @@ function InlinePaywall({
 }
 
 /** Bottom CTA card + sticky mobile button */
-function BottomCTA({ onPay, loading }: {
+function BottomCTA({ onPay, loading, withChat }: {
   onPay: () => void
   loading: boolean
+  withChat: boolean
 }) {
   const [showSticky, setShowSticky] = useState(false)
 
@@ -938,7 +1015,7 @@ function BottomCTA({ onPay, loading }: {
             style={{ background: "linear-gradient(135deg, #00b4bc 0%, #00a0a8 100%)" }}
           >
             <span className="flex items-center gap-2 text-sm font-bold">
-              Получить полный отчёт — 199 ₽
+              {withChat ? "С консультацией — 248 ₽" : "Получить полный отчёт — 199 ₽"}
               <ChevronRight className="h-4 w-4" />
             </span>
             <span className="mt-0.5 text-[10px] font-normal opacity-80">
@@ -1007,7 +1084,7 @@ function TestimonialsBlock() {
 interface PaywallStepProps {
   orderId: string
   preview: PreviewData | null
-  onPay: (promoCode?: string) => Promise<void>
+  onPay: (promoCode?: string, withChat?: boolean) => Promise<void>
   onPromo: (email: string, promoCode: string) => Promise<void>
   loading: boolean
 }
@@ -1015,6 +1092,7 @@ interface PaywallStepProps {
 export function PaywallStep({ onPay, onPromo, loading, preview }: PaywallStepProps) {
   const [promoVisible, setPromoVisible] = useState(false)
   const [promoCode, setPromoCode] = useState("")
+  const [withChat, setWithChat] = useState(false)
 
   const allIndicators = useMemo(() => {
     if (preview?.indicators?.length) {
@@ -1109,6 +1187,7 @@ export function PaywallStep({ onPay, onPromo, loading, preview }: PaywallStepPro
           promoVisible={promoVisible} setPromoVisible={setPromoVisible}
           promoCode={promoCode} setPromoCode={setPromoCode} loading={loading}
           abnormalIndicators={abnormalIndicators} totalCount={totalCount} onPay={onPay} onPromo={onPromo}
+          withChat={withChat} setWithChat={setWithChat}
         />
       </div>
 
@@ -1120,10 +1199,16 @@ export function PaywallStep({ onPay, onPromo, loading, preview }: PaywallStepPro
         <ReportSectionTeasers />
       </div>
 
+      {/* ── 6b. Chat consultation teasers ── */}
+      <div className="mt-4">
+        <ChatConsultationTeasers />
+      </div>
+
       {/* ── 7. Bottom CTA + sticky mobile ── */}
       <BottomCTA
-        onPay={() => onPay()}
+        onPay={() => onPay(undefined, withChat)}
         loading={loading}
+        withChat={withChat}
       />
     </div>
   )
