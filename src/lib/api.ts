@@ -67,6 +67,13 @@ export async function createPayment(
   const body: Record<string, unknown> = { order_id: orderId };
   if (promoCode) body.promo_code = promoCode;
   if (withChat) body.with_chat = true;
+  // Pass UTM params for payment attribution
+  if (typeof window !== "undefined") {
+    try {
+      const utm = sessionStorage.getItem("utm_params");
+      if (utm) body.utm_params = JSON.parse(utm);
+    } catch {}
+  }
   return request<PaymentCreateResponse>("/api/v1/payment/create", {
     method: "POST",
     headers: { "Content-Type": "application/json" },

@@ -15,7 +15,21 @@ export default function HomePage() {
   const router = useRouter();
   const [step, setStep] = useState<AppStep>("upload");
 
-  useEffect(() => { ymGoal("page_loaded"); }, []);
+  useEffect(() => {
+    ymGoal("page_loaded");
+    // Save UTM params for payment attribution
+    if (typeof window !== "undefined") {
+      const sp = new URLSearchParams(window.location.search);
+      const utm: Record<string, string> = {};
+      for (const key of ["utm_source", "utm_medium", "utm_campaign", "utm_content", "utm_term"]) {
+        const v = sp.get(key);
+        if (v) utm[key] = v;
+      }
+      if (Object.keys(utm).length > 0) {
+        sessionStorage.setItem("utm_params", JSON.stringify(utm));
+      }
+    }
+  }, []);
   const [orderId, setOrderId] = useState<string>("");
   const [preview, setPreview] = useState<PreviewData | null>(null);
   const [error, setError] = useState<string | null>(null);

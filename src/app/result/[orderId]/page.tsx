@@ -66,9 +66,16 @@ export default function ResultPage({ params }: Props) {
   }, [status?.payment_status, orderId]);
 
   // Re-fetch status when returning from chat payment (?chat=activated)
+  // Also clean UTM params from URL (Metrika already captured them on load)
   useEffect(() => {
-    if (typeof window === "undefined" || !window.location.search.includes("chat=activated")) return;
-    window.history.replaceState({}, "", window.location.pathname);
+    if (typeof window === "undefined") return;
+    const hasChat = window.location.search.includes("chat=activated");
+    const hasQuery = window.location.search.length > 0;
+    // Clean all query params from URL (UTMs, chat=activated, etc.)
+    if (hasQuery) {
+      window.history.replaceState({}, "", window.location.pathname);
+    }
+    if (!hasChat) return;
     let attempts = 0;
     const chatPoll = async () => {
       const s = await poll();
