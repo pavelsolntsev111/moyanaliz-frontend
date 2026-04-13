@@ -937,7 +937,7 @@ function ChatUpsellButton({ status, orderId }: { status: OrderStatus; orderId: s
   const chatPaid = status.chat_payment_status === "paid";
   const chatToken = status.chat_token;
   const chatLink = chatPaid && chatToken
-    ? `https://t.me/MoyAnalizBot?start=${chatToken}`
+    ? `https://t.me/MoyAnaliz_chat_bot?start=${chatToken}`
     : (status.chat_telegram_link ?? null);
 
   const handleBuy = async () => {
