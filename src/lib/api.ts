@@ -157,6 +157,7 @@ export interface OrderStatus {
   chat_payment_status?: string;
   chat_status?: string;
   chat_telegram_link?: string | null;
+  chat_token?: string | null;
   claude_result_json?: {
     meta: {
       detected_analysis_types: string[];
