@@ -58,11 +58,11 @@ export default function HomePage() {
   }, []);
 
   const handlePay = useCallback(
-    async (promoCode?: string, withChat?: boolean) => {
+    async (promoCode?: string, withChat?: boolean, withFiveReports?: boolean) => {
       ymGoal("click_pay");
       setPayLoading(true);
       try {
-        const res = await createPayment(orderId, promoCode, withChat);
+        const res = await createPayment(orderId, promoCode, withChat, withFiveReports);
         if (res.redirect_url.startsWith("http")) {
           window.location.href = res.redirect_url;
         } else {

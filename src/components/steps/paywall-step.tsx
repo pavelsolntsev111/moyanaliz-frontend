@@ -744,7 +744,7 @@ function LockedAbnormalCard({ indicator }: { indicator: AnalysisIndicator }) {
 function InlinePaywall({
   promoVisible, setPromoVisible, promoCode, setPromoCode,
   loading, abnormalIndicators, totalCount, onPay, onPromo,
-  withChat, setWithChat,
+  withChat, setWithChat, withFiveReports, setWithFiveReports,
 }: {
   promoVisible: boolean
   setPromoVisible: (v: boolean) => void
@@ -753,10 +753,12 @@ function InlinePaywall({
   loading: boolean
   abnormalIndicators: AnalysisIndicator[]
   totalCount: number
-  onPay: (promoCode?: string, withChat?: boolean) => Promise<void>
+  onPay: (promoCode?: string, withChat?: boolean, withFiveReports?: boolean) => Promise<void>
   onPromo: (email: string, promoCode: string, withChat?: boolean) => Promise<void>
   withChat: boolean
   setWithChat: (v: boolean) => void
+  withFiveReports: boolean
+  setWithFiveReports: (v: boolean) => void
 }) {
   const [promoValidating, setPromoValidating] = useState(false)
   const [promoResult, setPromoResult] = useState<PromoValidateResponse | null>(null)
@@ -779,7 +781,7 @@ function InlinePaywall({
   const comboDisplayPrice = promoResult?.valid && !promoResult.free && promoResult.discount_percent
     ? Math.max(1, Math.round(248 * (100 - promoResult.discount_percent) / 100))
     : 248
-  const displayPrice = withChat ? comboDisplayPrice : baseDisplayPrice
+  const displayPrice = withFiveReports ? 499 : withChat ? comboDisplayPrice : baseDisplayPrice
   const hasDiscount = promoResult?.valid && !promoResult.free && promoResult.discount_percent
 
   const handleValidatePromo = async () => {
@@ -818,16 +820,16 @@ function InlinePaywall({
           {/* Tier selector */}
           <div className="mb-4 space-y-2">
             <button
-              onClick={() => setWithChat(false)}
+              onClick={() => { setWithChat(false); setWithFiveReports(false) }}
               disabled={loading}
               className={`flex w-full min-h-[56px] items-center gap-3 rounded-xl border-2 p-3 text-left transition-colors ${
-                !withChat ? "border-primary bg-primary/5" : "border-border hover:border-muted-foreground/30"
+                !withChat && !withFiveReports ? "border-primary bg-primary/5" : "border-border hover:border-muted-foreground/30"
               } ${loading ? "opacity-50 pointer-events-none" : ""}`}
             >
               <div className={`h-4 w-4 shrink-0 rounded-full border-2 flex items-center justify-center ${
-                !withChat ? "border-primary" : "border-muted-foreground/40"
+                !withChat && !withFiveReports ? "border-primary" : "border-muted-foreground/40"
               }`}>
-                {!withChat && <div className="h-2 w-2 rounded-full bg-primary" />}
+                {!withChat && !withFiveReports && <div className="h-2 w-2 rounded-full bg-primary" />}
               </div>
               <div className="flex-1">
                 <p className="text-sm font-semibold text-foreground">Полный отчет</p>
@@ -838,19 +840,19 @@ function InlinePaywall({
             </button>
 
             <button
-              onClick={() => setWithChat(true)}
+              onClick={() => { setWithChat(true); setWithFiveReports(false) }}
               disabled={loading}
               className={`relative flex w-full min-h-[56px] items-center gap-3 rounded-xl border-2 p-3 text-left transition-colors ${
-                withChat ? "border-primary bg-primary/5" : "border-border hover:border-muted-foreground/30"
+                withChat && !withFiveReports ? "border-primary bg-primary/5" : "border-border hover:border-muted-foreground/30"
               } ${loading ? "opacity-50 pointer-events-none" : ""}`}
             >
               <span className="absolute -top-2 right-3 rounded-full bg-primary px-2 py-0.5 text-[10px] font-bold text-white">
                 популярный
               </span>
               <div className={`h-4 w-4 shrink-0 rounded-full border-2 flex items-center justify-center ${
-                withChat ? "border-primary" : "border-muted-foreground/40"
+                withChat && !withFiveReports ? "border-primary" : "border-muted-foreground/40"
               }`}>
-                {withChat && <div className="h-2 w-2 rounded-full bg-primary" />}
+                {withChat && !withFiveReports && <div className="h-2 w-2 rounded-full bg-primary" />}
               </div>
               <div className="flex-1">
                 <p className="text-sm font-semibold text-foreground">Полный отчет + консультация с ИИ в Telegram</p>
@@ -859,18 +861,48 @@ function InlinePaywall({
                 {promoResult?.free ? "бесплатно" : `${comboDisplayPrice} ₽`}
               </span>
             </button>
+
+            <button
+              onClick={() => { setWithFiveReports(true); setWithChat(false) }}
+              disabled={loading}
+              className={`relative flex w-full min-h-[56px] items-center gap-3 rounded-xl border-2 p-3 text-left transition-colors ${
+                withFiveReports ? "border-emerald-500 bg-emerald-50/50 dark:bg-emerald-950/20" : "border-border hover:border-muted-foreground/30"
+              } ${loading ? "opacity-50 pointer-events-none" : ""}`}
+            >
+              <span className="absolute -top-2 right-3 rounded-full px-2 py-0.5 text-[10px] font-bold text-white" style={{ background: "#16a34a" }}>
+                −50%
+              </span>
+              <div className={`h-4 w-4 shrink-0 rounded-full border-2 flex items-center justify-center ${
+                withFiveReports ? "border-emerald-600" : "border-muted-foreground/40"
+              }`}>
+                {withFiveReports && <div className="h-2 w-2 rounded-full bg-emerald-600" />}
+              </div>
+              <div className="flex-1">
+                <p className="text-sm font-semibold text-foreground">5 отчётов</p>
+                <p className="text-xs text-muted-foreground mt-0.5">~99 ₽/отчёт — промокод на следующие 4</p>
+              </div>
+              <span className="text-sm font-bold shrink-0" style={{ color: "#16a34a" }}>499 ₽</span>
+            </button>
           </div>
 
           {/* 1. CTA Button */}
           {!promoResult?.free && (
           <button
             onClick={() => {
-              ymGoal("click_get_report")
-              onPay(hasDiscount ? promoCode.trim() : undefined, withChat)
+              if (withFiveReports) {
+                ymGoal("click_pay_five_reports")
+                onPay(undefined, false, true)
+              } else {
+                ymGoal("click_get_report")
+                onPay(hasDiscount ? promoCode.trim() : undefined, withChat, false)
+              }
             }}
             disabled={loading}
             className="flex w-full items-center justify-center gap-2 rounded-xl px-4 py-4 text-sm font-bold text-white transition-opacity hover:opacity-90 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
-            style={{ background: "linear-gradient(135deg, #00b4bc 0%, #00a0a8 100%)", boxShadow: "0 4px 16px rgba(0,180,188,0.35)" }}
+            style={withFiveReports
+              ? { background: "linear-gradient(135deg, #16a34a 0%, #15803d 100%)", boxShadow: "0 4px 16px rgba(22,163,74,0.35)" }
+              : { background: "linear-gradient(135deg, #00b4bc 0%, #00a0a8 100%)", boxShadow: "0 4px 16px rgba(0,180,188,0.35)" }
+            }
           >
             {loading ? (
               <>
@@ -882,7 +914,11 @@ function InlinePaywall({
               </>
             ) : (
               <>
-                {withChat ? `С консультацией — ${displayPrice} ₽` : `Получить полный отчёт — ${displayPrice} ₽`}
+                {withFiveReports
+                  ? "Купить 5 отчётов — 499 ₽"
+                  : withChat
+                  ? `С консультацией — ${displayPrice} ₽`
+                  : `Получить полный отчёт — ${displayPrice} ₽`}
                 <ChevronRight className="h-4 w-4" />
               </>
             )}
@@ -959,19 +995,19 @@ function InlinePaywall({
                       onChange={(e) => setFreePromoEmail(e.target.value)}
                       onKeyDown={(e) => {
                         if (e.key === "Enter" && isValidEmail(freePromoEmail)) {
-                          onPromo(freePromoEmail.trim(), promoCode.trim(), withChat)
+                          onPromo(freePromoEmail.trim(), promoCode.trim(), false)
                         }
                       }}
                       className="w-full rounded-xl border-2 border-border bg-background py-2.5 pl-11 pr-4 text-sm text-foreground outline-none transition-colors placeholder:text-muted-foreground focus:border-primary"
                     />
                   </div>
                   <button
-                    onClick={() => onPromo(freePromoEmail.trim(), promoCode.trim(), withChat)}
+                    onClick={() => onPromo(freePromoEmail.trim(), promoCode.trim(), false)}
                     disabled={!isValidEmail(freePromoEmail) || loading}
                     className="mt-2 w-full rounded-xl px-4 py-3 text-sm font-bold text-white transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
                     style={{ background: "linear-gradient(135deg, #16a34a 0%, #15803d 100%)" }}
                   >
-                    {withChat ? "Получить бесплатно + консультация" : "Получить бесплатный отчёт"}
+                    Получить бесплатный отчёт
                   </button>
                 </div>
               )}
@@ -991,10 +1027,11 @@ function InlinePaywall({
 }
 
 /** Bottom CTA card + sticky mobile button */
-function BottomCTA({ onPay, loading, withChat }: {
+function BottomCTA({ onPay, loading, withChat, withFiveReports }: {
   onPay: () => void
   loading: boolean
   withChat: boolean
+  withFiveReports?: boolean
 }) {
   const [showSticky, setShowSticky] = useState(false)
 
@@ -1017,7 +1054,7 @@ function BottomCTA({ onPay, loading, withChat }: {
             style={{ background: "linear-gradient(135deg, #00b4bc 0%, #00a0a8 100%)" }}
           >
             <span className="flex items-center gap-2 text-sm font-bold">
-              {withChat ? "С консультацией — 248 ₽" : "Получить полный отчёт — 199 ₽"}
+              {withFiveReports ? "Купить 5 отчётов — 499 ₽" : withChat ? "С консультацией — 248 ₽" : "Получить полный отчёт — 199 ₽"}
               <ChevronRight className="h-4 w-4" />
             </span>
             <span className="mt-0.5 text-[10px] font-normal opacity-80">
@@ -1086,7 +1123,7 @@ function TestimonialsBlock() {
 interface PaywallStepProps {
   orderId: string
   preview: PreviewData | null
-  onPay: (promoCode?: string, withChat?: boolean) => Promise<void>
+  onPay: (promoCode?: string, withChat?: boolean, withFiveReports?: boolean) => Promise<void>
   onPromo: (email: string, promoCode: string, withChat?: boolean) => Promise<void>
   loading: boolean
 }
@@ -1095,6 +1132,7 @@ export function PaywallStep({ onPay, onPromo, loading, preview }: PaywallStepPro
   const [promoVisible, setPromoVisible] = useState(false)
   const [promoCode, setPromoCode] = useState("")
   const [withChat, setWithChat] = useState(false)
+  const [withFiveReports, setWithFiveReports] = useState(false)
 
   const allIndicators = useMemo(() => {
     if (preview?.indicators?.length) {
@@ -1190,6 +1228,7 @@ export function PaywallStep({ onPay, onPromo, loading, preview }: PaywallStepPro
           promoCode={promoCode} setPromoCode={setPromoCode} loading={loading}
           abnormalIndicators={abnormalIndicators} totalCount={totalCount} onPay={onPay} onPromo={onPromo}
           withChat={withChat} setWithChat={setWithChat}
+          withFiveReports={withFiveReports} setWithFiveReports={setWithFiveReports}
         />
       </div>
 
@@ -1208,9 +1247,10 @@ export function PaywallStep({ onPay, onPromo, loading, preview }: PaywallStepPro
 
       {/* ── 7. Bottom CTA + sticky mobile ── */}
       <BottomCTA
-        onPay={() => onPay(undefined, withChat)}
+        onPay={() => withFiveReports ? onPay(undefined, false, true) : onPay(undefined, withChat, false)}
         loading={loading}
         withChat={withChat}
+        withFiveReports={withFiveReports}
       />
     </div>
   )
