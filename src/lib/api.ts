@@ -152,6 +152,7 @@ export interface OrderStatus {
   email_status: string;
   email?: string | null;
   promo_code?: string | null;
+  promo_uses_left?: number | null;
   order_tier?: string | null;
   pdf_download_url: string | null;
   chat_payment_status?: string;

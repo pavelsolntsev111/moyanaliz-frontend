@@ -880,7 +880,11 @@ function FullReport({ status, orderId, hasEmail, onEmailSubmitted }: { status: O
                 </svg>
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-semibold" style={{ color: "#15803d" }}>Ваш промокод на 4 бесплатных отчёта</p>
+                <p className="text-sm font-semibold" style={{ color: "#15803d" }}>
+                  {typeof status.promo_uses_left === "number"
+                    ? `Ваш промокод — осталось использований: ${status.promo_uses_left}`
+                    : "Ваш промокод на 4 бесплатных отчёта"}
+                </p>
                 <p className="text-xs text-muted-foreground mt-0.5 mb-2">Введите при следующей расшифровке на moyanaliz.ru</p>
                 <div className="flex items-center gap-2">
                   <div

@@ -879,7 +879,7 @@ function InlinePaywall({
               </div>
               <div className="flex-1">
                 <p className="text-sm font-semibold text-foreground">5 отчётов</p>
-                <p className="text-xs text-muted-foreground mt-0.5">~99 ₽/отчёт — промокод на следующие 4</p>
+                <p className="text-xs text-muted-foreground mt-0.5">в два раза дешевле, чем при покупке одного отчёта</p>
               </div>
               <span className="text-sm font-bold shrink-0" style={{ color: "#16a34a" }}>499 ₽</span>
             </button>
@@ -983,7 +983,12 @@ function InlinePaywall({
                 <div className="mt-3">
                   <div className="flex items-center gap-2 rounded-lg px-3 py-2 mb-2" style={{ background: "rgba(34,197,94,0.08)" }}>
                     <Check className="h-4 w-4 shrink-0" style={{ color: "#16a34a" }} />
-                    <span className="text-xs text-card-foreground">Промокод активирован — отчёт бесплатно!</span>
+                    <span className="text-xs text-card-foreground">
+                      Промокод активирован — отчёт бесплатно!
+                      {typeof promoResult.uses_left === "number" && (
+                        <> Осталось использований после этого: {Math.max(0, promoResult.uses_left - 1)}.</>
+                      )}
+                    </span>
                   </div>
                   <label className="text-xs font-medium text-card-foreground">Email для получения отчёта</label>
                   <div className="relative mt-1">
