@@ -62,11 +62,13 @@ export interface PaymentCreateResponse {
 export async function createPayment(
   orderId: string,
   promoCode?: string,
-  withChat?: boolean
+  withChat?: boolean,
+  withFiveReports?: boolean
 ): Promise<PaymentCreateResponse> {
   const body: Record<string, unknown> = { order_id: orderId };
   if (promoCode) body.promo_code = promoCode;
   if (withChat) body.with_chat = true;
+  if (withFiveReports) body.with_five_reports = true;
   // Pass UTM params for payment attribution
   if (typeof window !== "undefined") {
     try {
@@ -150,10 +152,13 @@ export interface OrderStatus {
   email_status: string;
   email?: string | null;
   promo_code?: string | null;
+  promo_uses_left?: number | null;
+  order_tier?: string | null;
   pdf_download_url: string | null;
   chat_payment_status?: string;
   chat_status?: string;
   chat_telegram_link?: string | null;
+  chat_token?: string | null;
   claude_result_json?: {
     meta: {
       detected_analysis_types: string[];

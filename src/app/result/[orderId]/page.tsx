@@ -857,6 +857,56 @@ function FullReport({ status, orderId, hasEmail, onEmailSubmitted }: { status: O
         )}
       </motion.div>
 
+      {/* ── Five-reports pack: promo code block ── */}
+      {status.order_tier === "five_reports" && status.promo_code && (
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4, delay: 0.25, ease: "easeOut" }}
+          className="mb-4"
+        >
+          <div className="rounded-2xl border-2 p-4" style={{ borderColor: "#86efac", background: "#f0fdf4" }}>
+            <div className="flex items-start gap-3">
+              <div
+                className="shrink-0 w-10 h-10 rounded-xl flex items-center justify-center mt-0.5"
+                style={{ background: "rgba(22,163,74,0.12)" }}
+              >
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#16a34a" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <polyline points="20 12 20 22 4 22 4 12" />
+                  <rect x="2" y="7" width="20" height="5" />
+                  <line x1="12" y1="22" x2="12" y2="7" />
+                  <path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z" />
+                  <path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z" />
+                </svg>
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-semibold" style={{ color: "#15803d" }}>
+                  {typeof status.promo_uses_left === "number"
+                    ? `Ваш промокод — осталось использований: ${status.promo_uses_left}`
+                    : "Ваш промокод на 4 бесплатных отчёта"}
+                </p>
+                <p className="text-xs text-muted-foreground mt-0.5 mb-2">Введите при следующей расшифровке на moyanaliz.ru</p>
+                <div className="flex items-center gap-2">
+                  <div
+                    className="flex-1 rounded-lg px-3 py-2 font-mono text-sm font-bold tracking-widest text-center uppercase"
+                    style={{ background: "#fff", border: "2px dashed #86efac", color: "#166534", letterSpacing: "0.1em" }}
+                  >
+                    {status.promo_code.toUpperCase()}
+                  </div>
+                  <button
+                    onClick={handleCopyPromo}
+                    className="shrink-0 rounded-lg px-3 py-2 text-xs font-semibold text-white transition-opacity hover:opacity-90"
+                    style={{ background: "#16a34a" }}
+                  >
+                    {promoCopied ? "Скопировано!" : "Копировать"}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </motion.div>
+      )}
+
       {/* ── Email capture (if no email yet) ── */}
       {!hasEmail && (
         <motion.div
