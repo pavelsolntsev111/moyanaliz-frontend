@@ -66,14 +66,20 @@ export default function ResultPage({ params }: Props) {
   }, [status?.payment_status, orderId]);
 
   // Re-fetch status when returning from chat payment (?chat=activated)
-  // Also clean UTM params from URL (Metrika already captured them on load)
+  // Remove only `chat=activated` from URL — keep UTM/yclid so Metrika can
+  // attribute the payment_done goal to the original ad campaign.
   useEffect(() => {
     if (typeof window === "undefined") return;
-    const hasChat = window.location.search.includes("chat=activated");
-    const hasQuery = window.location.search.length > 0;
-    // Clean all query params from URL (UTMs, chat=activated, etc.)
-    if (hasQuery) {
-      window.history.replaceState({}, "", window.location.pathname);
+    const sp = new URLSearchParams(window.location.search);
+    const hasChat = sp.get("chat") === "activated";
+    if (hasChat) {
+      sp.delete("chat");
+      const qs = sp.toString();
+      window.history.replaceState(
+        {},
+        "",
+        window.location.pathname + (qs ? `?${qs}` : "")
+      );
     }
     if (!hasChat) return;
     let attempts = 0;
