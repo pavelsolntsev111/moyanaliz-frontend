@@ -878,10 +878,10 @@ function InlinePaywall({
                 {withFiveReports && <div className="h-2 w-2 rounded-full bg-emerald-600" />}
               </div>
               <div className="flex-1">
-                <p className="text-sm font-semibold text-foreground">5 отчётов</p>
+                <p className="text-sm font-semibold text-foreground">3 отчёта</p>
                 <p className="text-xs text-muted-foreground mt-0.5">в два раза дешевле, чем при покупке одного отчёта</p>
               </div>
-              <span className="text-sm font-bold shrink-0" style={{ color: "#16a34a" }}>499 ₽</span>
+              <span className="text-sm font-bold shrink-0" style={{ color: "#16a34a" }}>299 ₽</span>
             </button>
           </div>
 
@@ -915,7 +915,7 @@ function InlinePaywall({
             ) : (
               <>
                 {withFiveReports
-                  ? "Купить 5 отчётов — 499 ₽"
+                  ? "Купить 3 отчёта — 299 ₽"
                   : withChat
                   ? `С консультацией — ${displayPrice} ₽`
                   : `Получить полный отчёт — ${displayPrice} ₽`}
@@ -1059,7 +1059,7 @@ function BottomCTA({ onPay, loading, withChat, withFiveReports }: {
             style={{ background: "linear-gradient(135deg, #00b4bc 0%, #00a0a8 100%)" }}
           >
             <span className="flex items-center gap-2 text-sm font-bold">
-              {withFiveReports ? "Купить 5 отчётов — 499 ₽" : withChat ? "С консультацией — 248 ₽" : "Получить полный отчёт — 199 ₽"}
+              {withFiveReports ? "Купить 3 отчёта — 299 ₽" : withChat ? "С консультацией — 248 ₽" : "Получить полный отчёт — 199 ₽"}
               <ChevronRight className="h-4 w-4" />
             </span>
             <span className="mt-0.5 text-[10px] font-normal opacity-80">
