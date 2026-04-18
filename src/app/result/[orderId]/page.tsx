@@ -27,6 +27,7 @@ import {
   ArrowRight,
   MessageSquare,
   ExternalLink,
+  Loader2,
 } from "lucide-react";
 import Link from "next/link";
 import { getIndicatorSlug } from "@/lib/indicators-data";
@@ -118,6 +119,27 @@ export default function ResultPage({ params }: Props) {
       active = false;
     };
   }, [poll]);
+
+  // Keep polling while chat payment is pending so the UI flips to "activated"
+  // as soon as YooKassa confirms (or our fallback poll resolves a missed webhook).
+  useEffect(() => {
+    if (status?.chat_payment_status !== "pending") return;
+    let active = true;
+    let attempts = 0;
+    const tick = async () => {
+      if (!active) return;
+      const s = await poll();
+      if (!active) return;
+      if (s?.chat_payment_status === "paid") return;
+      if (attempts >= 40) return; // ~2 min cap
+      attempts++;
+      setTimeout(tick, 3000);
+    };
+    tick();
+    return () => {
+      active = false;
+    };
+  }, [status?.chat_payment_status, poll]);
 
   return (
     <div className="flex min-h-screen flex-col">
@@ -998,6 +1020,7 @@ function ChatUpsellButton({ status, orderId }: { status: OrderStatus; orderId: s
   const [error, setError] = useState("");
 
   const chatPaid = status.chat_payment_status === "paid";
+  const chatPending = status.chat_payment_status === "pending";
   const chatToken = status.chat_token;
   const chatLink = chatPaid && chatToken
     ? `https://t.me/MoyAnaliz_consultant_bot?start=${chatToken}`
@@ -1038,6 +1061,27 @@ function ChatUpsellButton({ status, orderId }: { status: OrderStatus; orderId: s
             <MessageSquare className="w-3.5 h-3.5" />
             Открыть
           </a>
+        </div>
+      </div>
+    );
+  }
+
+  if (chatPending) {
+    return (
+      <div
+        className="w-full rounded-2xl border p-4 min-h-[72px] flex items-center"
+        style={{ borderColor: "rgba(0,180,188,0.25)", background: "rgba(0,180,188,0.04)" }}
+      >
+        <div className="flex items-center gap-3 w-full">
+          <div className="shrink-0 w-10 h-10 rounded-xl flex items-center justify-center" style={{ background: "rgba(0,180,188,0.12)" }}>
+            <Loader2 className="w-5 h-5 text-primary animate-spin" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-semibold text-foreground">Подтверждаем оплату чата…</p>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              Это занимает до минуты. Не оплачивайте повторно — если платёж прошёл, чат активируется автоматически.
+            </p>
+          </div>
         </div>
       </div>
     );
