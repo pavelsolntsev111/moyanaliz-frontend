@@ -84,7 +84,16 @@ export default function RootLayout({
             for(var j=0;j<document.scripts.length;j++){if(document.scripts[j].src===r){return;}}
             k=e.createElement(t),a=e.getElementsByTagName(t)[0],k.async=1,k.src=r,a.parentNode.insertBefore(k,a)
           })(window,document,'script','https://mc.yandex.ru/metrika/tag.js?id=108175626','ym');
-          ym(108175626,'init',{ssr:true,webvisor:true,clickmap:true,ecommerce:"dataLayer",referrer:document.referrer,url:location.href,accurateTrackBounce:true,trackLinks:true});
+          // Strip payment-provider referrers so returning from checkout doesn't
+          // reset attribution to yookassa.ru (keep original Direct/UTM source).
+          var _ymRef = document.referrer;
+          try {
+            if (_ymRef) {
+              var _ymHost = new URL(_ymRef).hostname.toLowerCase();
+              if (/(^|\\.)(yookassa|yoomoney|qiwi|sberbank|tinkoff)\\.[a-z]+$/.test(_ymHost)) { _ymRef = ''; }
+            }
+          } catch (e) {}
+          ym(108175626,'init',{ssr:true,webvisor:true,clickmap:true,ecommerce:"dataLayer",referrer:_ymRef,url:location.href,accurateTrackBounce:true,trackLinks:true});
         `}</Script>
         <noscript>
           <div>
