@@ -798,150 +798,130 @@ function FullReport({ status, orderId, hasEmail, onEmailSubmitted }: { status: O
     if (!status.promo_code) return;
     navigator.clipboard.writeText(status.promo_code.toUpperCase()).then(() => {
       setPromoCopied(true);
-      setTimeout(() => setPromoCopied(false), 2000);
+      setTimeout(() => setPromoCopied(false), 1800);
     });
   };
 
+  const totalIndicators = status.claude_result_json?.meta?.total_indicators_count ?? 0;
+  const outOfRange = status.claude_result_json?.meta?.out_of_range_count ?? 0;
+  const orderIdShort = orderId.slice(-6).toUpperCase();
+
   return (
     <div className="pt-4 pb-8">
-      {/* ── Hero: celebration header ── */}
+      {/* ── Card A — Отчёт готов (PDF + AI-Chat inline) ── */}
       <motion.div
         initial={{ opacity: 0, y: 16 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
-        className="text-center mb-8"
+        className="relative overflow-hidden mb-4 rounded-2xl border p-6 md:p-8"
+        style={{
+          background:
+            "linear-gradient(160deg, color-mix(in oklab, var(--primary) 9%, var(--card)) 0%, var(--card) 100%)",
+          borderColor: "color-mix(in oklab, var(--primary) 18%, transparent)",
+          boxShadow: "var(--shadow-md-ma)",
+        }}
       >
-        <ReportHero />
-
-        <motion.h1
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.4, delay: 0.15, ease: "easeOut" }}
-          className="mt-5 text-2xl font-bold text-foreground tracking-tight"
-        >
-          Ваш отчёт готов
-        </motion.h1>
-
-        {status.email && (
-          <motion.p
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ duration: 0.4, delay: 0.25 }}
-            className="mt-1.5 text-sm text-muted-foreground"
-          >
-            {status.email_status === "sent" ? "Отправлен" : "Будет отправлен"} на{" "}
-            <span className="font-medium text-foreground/80">{status.email}</span>
-          </motion.p>
-        )}
-      </motion.div>
-
-      {/* ── Primary action: PDF download ── */}
-      <motion.div
-        initial={{ opacity: 0, y: 12 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.4, delay: 0.2, ease: "easeOut" }}
-        className="mb-3"
-      >
-        {status.pdf_download_url ? (
-          <a
-            href={status.pdf_download_url}
-            download
-            onClick={() => ymGoal("pdf_downloaded")}
-            className="group flex items-center justify-center gap-3 w-full py-4 px-6 rounded-2xl font-semibold text-white transition-all duration-200"
+        <div
+          aria-hidden
+          className="pointer-events-none absolute -right-16 -top-16 rounded-full"
+          style={{
+            width: 280,
+            height: 280,
+            background: "color-mix(in oklab, var(--primary) 14%, transparent)",
+            filter: "blur(50px)",
+          }}
+        />
+        <div className="relative">
+          {/* Status pill */}
+          <span
+            className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1"
             style={{
-              background: "linear-gradient(135deg, #00b4bc 0%, #008f96 100%)",
-              boxShadow: "0 4px 20px rgba(0,180,188,0.35)",
-            }}
-            onMouseEnter={e => {
-              (e.currentTarget as HTMLAnchorElement).style.boxShadow = "0 6px 28px rgba(0,180,188,0.45)";
-              (e.currentTarget as HTMLAnchorElement).style.transform = "translateY(-1px)";
-            }}
-            onMouseLeave={e => {
-              (e.currentTarget as HTMLAnchorElement).style.boxShadow = "0 4px 20px rgba(0,180,188,0.35)";
-              (e.currentTarget as HTMLAnchorElement).style.transform = "translateY(0)";
+              background: "color-mix(in oklab, var(--success) 10%, transparent)",
+              color: "var(--success)",
+              fontSize: 10,
+              fontWeight: 800,
+              letterSpacing: "0.12em",
+              textTransform: "uppercase",
             }}
           >
-            <Download className="w-5 h-5 shrink-0 transition-transform duration-200 group-hover:-translate-y-0.5" />
-            <span className="text-base">Скачать PDF-отчёт</span>
-          </a>
-        ) : (
-          <div
-            className="flex items-center justify-center gap-3 w-full py-4 px-6 rounded-2xl font-semibold text-white opacity-50 cursor-not-allowed"
-            style={{ background: "linear-gradient(135deg, #00b4bc 0%, #008f96 100%)" }}
-          >
-            <Download className="w-5 h-5 shrink-0" />
-            <span className="text-base">Скачать PDF-отчёт</span>
-          </div>
-        )}
+            <CheckCircle2 className="h-3 w-3" />
+            Готов · Отчёт #{orderIdShort}
+          </span>
 
-        {status.email_status === "sent" && (
-          <p className="mt-2 text-center text-xs text-muted-foreground/60">
-            Не пришло?{" "}
-            <a href="mailto:support@moyanaliz.ru" className="text-primary underline underline-offset-2">
-              Напишите нам
-            </a>{" "}
-            или проверьте папку «Спам»
-          </p>
-        )}
+          <h1
+            className="mt-3 font-extrabold tracking-[-0.025em] text-foreground"
+            style={{ fontSize: "clamp(22px, 3.6vw, 28px)", lineHeight: 1.15 }}
+          >
+            Ваш полный отчёт готов
+          </h1>
+
+          {totalIndicators > 0 && (
+            <p className="mt-2 max-w-[500px] text-[13.5px] leading-relaxed text-muted-foreground">
+              Мы проанализировали {totalIndicators} показателей · {outOfRange} вне нормы.
+              {hasEmail && status.email_status === "sent" && " Полный PDF отправлен на ваш email."}
+            </p>
+          )}
+          {status.email && (
+            <p className="mt-1 text-xs text-muted-foreground-2">
+              {status.email_status === "sent" ? "Отправлен" : "Будет отправлен"} на{" "}
+              <span className="font-medium text-foreground/80">{status.email}</span>
+            </p>
+          )}
+
+          {/* Two action buttons */}
+          <div className="mt-5 flex flex-col items-stretch gap-2.5 md:flex-row md:flex-wrap md:items-center">
+            {/* PDF button */}
+            {status.pdf_download_url ? (
+              <a
+                href={status.pdf_download_url}
+                download
+                onClick={() => ymGoal("pdf_downloaded")}
+                className="group inline-flex w-full items-center justify-center gap-2 rounded-md bg-primary px-5 py-3 text-sm font-bold text-primary-foreground transition-all md:w-auto"
+                style={{ boxShadow: "var(--shadow-md-ma)" }}
+              >
+                <Download className="h-4 w-4 shrink-0 transition-transform group-hover:-translate-y-0.5" />
+                Скачать PDF
+              </a>
+            ) : (
+              <span
+                className="inline-flex w-full cursor-not-allowed items-center justify-center gap-2 rounded-md bg-primary px-5 py-3 text-sm font-bold text-primary-foreground opacity-50 md:w-auto"
+                style={{ boxShadow: "var(--shadow-md-ma)" }}
+              >
+                <Download className="h-4 w-4 shrink-0" />
+                Скачать PDF
+              </span>
+            )}
+
+            {/* AI-Chat button — all 3 states */}
+            <ChatActionButton status={status} orderId={orderId} />
+          </div>
+
+          {/* Disclaimer under buttons — only when chat not yet purchased */}
+          {status.chat_payment_status !== "paid" && status.chat_payment_status !== "pending" && (
+            <p className="mt-3 max-w-[420px] text-[11px] leading-tight text-muted-foreground-2">
+              AI-Chat — до 10 вопросов по вашему отчёту в Telegram. Разовая покупка.
+            </p>
+          )}
+
+          {status.email_status === "sent" && (
+            <p className="mt-3 text-xs text-muted-foreground-2">
+              Не пришло?{" "}
+              <a href="mailto:support@moyanaliz.ru" className="text-primary underline underline-offset-2">
+                Напишите нам
+              </a>{" "}
+              или проверьте папку «Спам»
+            </p>
+          )}
+        </div>
       </motion.div>
 
-      {/* ── Five-reports pack: promo code block ── */}
-      {status.order_tier === "five_reports" && status.promo_code && (
-        <motion.div
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.4, delay: 0.25, ease: "easeOut" }}
-          className="mb-4"
-        >
-          <div className="rounded-2xl border-2 p-4" style={{ borderColor: "#86efac", background: "#f0fdf4" }}>
-            <div className="flex items-start gap-3">
-              <div
-                className="shrink-0 w-10 h-10 rounded-xl flex items-center justify-center mt-0.5"
-                style={{ background: "rgba(22,163,74,0.12)" }}
-              >
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#16a34a" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <polyline points="20 12 20 22 4 22 4 12" />
-                  <rect x="2" y="7" width="20" height="5" />
-                  <line x1="12" y1="22" x2="12" y2="7" />
-                  <path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z" />
-                  <path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z" />
-                </svg>
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-semibold" style={{ color: "#15803d" }}>
-                  {typeof status.promo_uses_left === "number"
-                    ? `Ваш промокод — осталось использований: ${status.promo_uses_left}`
-                    : "Ваш промокод на 4 бесплатных отчёта"}
-                </p>
-                <p className="text-xs text-muted-foreground mt-0.5 mb-2">Введите при следующей расшифровке на moyanaliz.ru</p>
-                <div className="flex items-center gap-2">
-                  <div
-                    className="flex-1 rounded-lg px-3 py-2 font-mono text-sm font-bold tracking-widest text-center uppercase"
-                    style={{ background: "#fff", border: "2px dashed #86efac", color: "#166534", letterSpacing: "0.1em" }}
-                  >
-                    {status.promo_code.toUpperCase()}
-                  </div>
-                  <button
-                    onClick={handleCopyPromo}
-                    className="shrink-0 rounded-lg px-3 py-2 text-xs font-semibold text-white transition-opacity hover:opacity-90"
-                    style={{ background: "#16a34a" }}
-                  >
-                    {promoCopied ? "Скопировано!" : "Копировать"}
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-        </motion.div>
-      )}
-
-      {/* ── Email capture (if no email yet) ── */}
+      {/* ── Email capture fallback (legacy — new flow uses EmailRequiredScreen before this) ── */}
       {!hasEmail && (
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ duration: 0.35, delay: 0.3 }}
-          className="mb-6"
+          className="mb-4"
         >
           <EmailCaptureCard
             orderId={orderId}
@@ -952,74 +932,116 @@ function FullReport({ status, orderId, hasEmail, onEmailSubmitted }: { status: O
         </motion.div>
       )}
 
-      {/* ── Secondary cards ── */}
-      <motion.div
-        initial={{ opacity: 0, y: 10 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.4, delay: 0.3, ease: "easeOut" }}
-        className="space-y-3 mb-6"
-      >
-        {/* Chat card — always shown; content differs by purchase status */}
-        <ChatUpsellButton status={status} orderId={orderId} />
-
-        {/* Cards below only for users WITH chat paid */}
-        {status.chat_payment_status === "paid" && (
-          <>
-            {/* Static 30% discount badge */}
-            <div className="rounded-2xl border border-border bg-card p-4 min-h-[72px] flex items-center gap-3">
-              <div
-                className="shrink-0 w-10 h-10 rounded-xl flex items-center justify-center"
-                style={{ background: "rgba(0,180,188,0.08)" }}
-              >
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#00b4bc" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <polyline points="20 12 20 22 4 22 4 12" />
-                  <rect x="2" y="7" width="20" height="5" />
-                  <line x1="12" y1="22" x2="12" y2="7" />
-                  <path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z" />
-                  <path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z" />
-                </svg>
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-semibold text-foreground">Скидка 30% на следующий анализ</p>
-                <p className="text-xs text-muted-foreground mt-0.5">Введите промокод «30%» при следующей оплате</p>
-              </div>
-            </div>
-
-            {/* Telegram channel */}
-            <a
-              href="https://t.me/moy_analiz"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center gap-3 rounded-2xl border border-border bg-card p-4 min-h-[72px] hover:border-[#0088cc]/25 hover:shadow-sm transition-all duration-200 group"
+      {/* ── Card B — Promo code (shown to ALL users with a promo_code) ── */}
+      {status.promo_code && (
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4, delay: 0.25, ease: "easeOut" }}
+          className="relative mb-4 flex flex-col items-stretch gap-4 overflow-hidden rounded-2xl border border-border bg-card p-5 md:flex-row md:items-center md:gap-5 md:p-6"
+          style={{ boxShadow: "var(--shadow-sm-ma)" }}
+        >
+          {/* Left 3px stripe */}
+          <span
+            aria-hidden
+            className="absolute inset-y-0 left-0"
+            style={{
+              width: 3,
+              background: "color-mix(in oklab, var(--primary) 35%, transparent)",
+            }}
+          />
+          <div className="flex-1 min-w-0">
+            <span
+              className="inline-flex items-center gap-1.5 font-bold uppercase text-primary"
+              style={{ fontSize: 10, letterSpacing: "0.12em" }}
             >
-              <div className="shrink-0 w-10 h-10 rounded-xl flex items-center justify-center" style={{ background: "rgba(0,136,204,0.08)" }}>
-                <MessageSquare className="w-5 h-5 text-[#0088cc]" />
-              </div>
-              <div className="flex-1 text-left min-w-0">
-                <p className="text-sm font-semibold text-foreground">Канал в Telegram</p>
-                <p className="text-xs text-muted-foreground mt-0.5 leading-snug">
-                  Советы и научные данные о здоровье
-                </p>
-              </div>
-              <div className="shrink-0 flex items-center gap-1 text-[#0088cc]">
-                <span className="text-xs font-medium hidden sm:block">@moy_analiz</span>
-                <ExternalLink className="w-3.5 h-3.5 opacity-60 group-hover:opacity-100 transition-opacity" />
-              </div>
-            </a>
-          </>
-        )}
-      </motion.div>
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M20.59 13.41 13.42 20.58a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/>
+                <line x1="7" y1="7" x2="7.01" y2="7"/>
+              </svg>
+              {typeof status.promo_uses_left === "number"
+                ? `Промокод · осталось ${status.promo_uses_left}`
+                : "Скидка на следующий отчёт"}
+            </span>
+            <p className="mt-1.5 text-[13.5px] leading-[1.5] text-muted-foreground">
+              Введите промокод при следующей загрузке анализа и получите отчёт со скидкой.
+            </p>
+          </div>
+          <div className="flex items-center gap-2">
+            <div
+              className="flex-1 rounded-md border border-dashed border-border bg-muted px-4 py-2.5 text-center font-mono text-[15px] font-bold tracking-[0.05em] uppercase text-foreground md:flex-initial"
+            >
+              {status.promo_code.toUpperCase()}
+            </div>
+            <button
+              onClick={handleCopyPromo}
+              className={`inline-flex items-center gap-1.5 rounded-md border px-4 py-2.5 text-[13px] font-semibold transition-colors ${
+                promoCopied
+                  ? "border-[color:var(--success)] text-[color:var(--success)]"
+                  : "border-border bg-card text-foreground hover:border-primary/40"
+              }`}
+              style={
+                promoCopied
+                  ? { background: "color-mix(in oklab, var(--success) 8%, var(--card))" }
+                  : undefined
+              }
+            >
+              {promoCopied ? (
+                <>
+                  <CheckCircle2 className="h-3.5 w-3.5" />
+                  Готово
+                </>
+              ) : (
+                "Копировать"
+              )}
+            </button>
+          </div>
+        </motion.div>
+      )}
+
+      {/* Legacy: Telegram channel link — kept for users who bought chat */}
+      {status.chat_payment_status === "paid" && (
+        <motion.div
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.35, delay: 0.35 }}
+        >
+          <a
+            href="https://t.me/moy_analiz"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="group flex min-h-[72px] items-center gap-3 rounded-2xl border border-border bg-card p-4 transition-all hover:border-[#0088cc]/25"
+            style={{ boxShadow: "var(--shadow-sm-ma)" }}
+          >
+            <div className="shrink-0 flex h-10 w-10 items-center justify-center rounded-xl" style={{ background: "rgba(0,136,204,0.08)" }}>
+              <MessageSquare className="h-5 w-5 text-[#0088cc]" />
+            </div>
+            <div className="flex-1 text-left min-w-0">
+              <p className="text-sm font-semibold text-foreground">Канал в Telegram</p>
+              <p className="mt-0.5 text-xs leading-snug text-muted-foreground">
+                Советы и научные данные о здоровье
+              </p>
+            </div>
+            <div className="flex shrink-0 items-center gap-1 text-[#0088cc]">
+              <span className="hidden text-xs font-medium sm:block">@moy_analiz</span>
+              <ExternalLink className="h-3.5 w-3.5 opacity-60 transition-opacity group-hover:opacity-100" />
+            </div>
+          </a>
+        </motion.div>
+      )}
     </div>
   );
 }
 
 /* ─── Chat upsell ─── */
 
-function ChatUpsellButton({ status, orderId }: { status: OrderStatus; orderId: string }) {
+const CHAT_PRICE = 49;
+
+function ChatActionButton({ status, orderId }: { status: OrderStatus; orderId: string }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  const chatPaid = status.chat_payment_status === "paid";
+  const chatPaid = status.chat_payment_status === "paid" || status.chat_status === "active";
   const chatPending = status.chat_payment_status === "pending";
   const chatToken = status.chat_token;
   const chatLink = chatPaid && chatToken
@@ -1040,76 +1062,52 @@ function ChatUpsellButton({ status, orderId }: { status: OrderStatus; orderId: s
     }
   };
 
+  // Purchased → open link
   if (chatPaid && chatLink) {
     return (
-      <div className="rounded-2xl border bg-card p-4 min-h-[72px] flex items-center" style={{ borderColor: "rgba(0,180,188,0.25)", background: "rgba(0,180,188,0.04)" }}>
-        <div className="flex items-center gap-3 w-full">
-          <div className="shrink-0 w-10 h-10 rounded-xl flex items-center justify-center" style={{ background: "rgba(52,211,153,0.12)" }}>
-            <CheckCircle2 className="w-5 h-5 text-emerald-500" />
-          </div>
-          <div className="flex-1 min-w-0">
-            <p className="text-sm font-semibold text-foreground">Чат активирован</p>
-            <p className="text-xs text-muted-foreground mt-0.5">До 10 вопросов по анализам · Сессия 24 ч</p>
-          </div>
-          <a
-            href={chatLink}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="shrink-0 inline-flex items-center gap-1.5 py-2 px-3.5 rounded-xl text-white text-xs font-semibold transition-opacity hover:opacity-90"
-            style={{ background: "#0088cc" }}
-          >
-            <MessageSquare className="w-3.5 h-3.5" />
-            Открыть
-          </a>
-        </div>
-      </div>
+      <a
+        href={chatLink}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="inline-flex w-full items-center justify-center gap-2 rounded-md border border-border bg-card px-[18px] py-3 text-sm font-semibold text-foreground transition-colors hover:border-primary/40 md:w-auto"
+      >
+        <MessageSquare className="h-4 w-4" />
+        Открыть AI-Chat
+        <ArrowRight className="h-4 w-4" />
+      </a>
     );
   }
 
+  // Pending — disabled, spinner
   if (chatPending) {
     return (
-      <div
-        className="w-full rounded-2xl border p-4 min-h-[72px] flex items-center"
-        style={{ borderColor: "rgba(0,180,188,0.25)", background: "rgba(0,180,188,0.04)" }}
+      <span
+        className="inline-flex w-full cursor-wait items-center justify-center gap-2 rounded-md border border-border bg-card px-[18px] py-3 text-sm font-semibold text-muted-foreground md:w-auto"
+        aria-disabled
       >
-        <div className="flex items-center gap-3 w-full">
-          <div className="shrink-0 w-10 h-10 rounded-xl flex items-center justify-center" style={{ background: "rgba(0,180,188,0.12)" }}>
-            <Loader2 className="w-5 h-5 text-primary animate-spin" />
-          </div>
-          <div className="flex-1 min-w-0">
-            <p className="text-sm font-semibold text-foreground">Подтверждаем оплату чата…</p>
-            <p className="text-xs text-muted-foreground mt-0.5">
-              Это занимает до минуты. Не оплачивайте повторно — если платёж прошёл, чат активируется автоматически.
-            </p>
-          </div>
-        </div>
-      </div>
+        <Loader2 className="h-4 w-4 animate-spin" />
+        Подтверждаем оплату…
+      </span>
     );
   }
 
+  // Not purchased — buy CTA with price pill
   return (
     <button
       onClick={handleBuy}
       disabled={loading}
-      className="w-full text-left rounded-2xl border border-border bg-card p-4 min-h-[72px] flex items-center cursor-pointer hover:border-primary/30 hover:shadow-sm transition-all duration-200 disabled:opacity-60 disabled:cursor-not-allowed"
+      className="inline-flex w-full items-center justify-center gap-2 rounded-md border border-border bg-card px-[18px] py-3 text-sm font-semibold text-foreground transition-colors hover:border-primary/40 disabled:cursor-not-allowed disabled:opacity-60 md:w-auto"
     >
-      <div className="flex items-center gap-3 w-full">
-        <div className="shrink-0 w-10 h-10 rounded-xl flex items-center justify-center" style={{ background: "rgba(0,180,188,0.08)" }}>
-          <MessageCircleQuestion className="w-5 h-5 text-primary" />
-        </div>
-        <div className="flex-1 min-w-0">
-          <p className="text-sm font-semibold text-foreground">Есть вопросы по анализам?</p>
-          <p className="text-xs text-muted-foreground mt-0.5">
-            {loading ? "Создаём ссылку..." : error ? error : "До 10 вопросов AI-ассистенту в Telegram"}
-          </p>
-        </div>
-        <div
-          className="shrink-0 inline-flex items-center gap-1.5 py-2 px-3.5 rounded-xl text-xs font-semibold"
-          style={{ background: "rgba(0,180,188,0.1)", color: "#008f96" }}
-        >
-          {loading ? "..." : "49 ₽"}
-        </div>
-      </div>
+      <MessageCircleQuestion className="h-4 w-4 text-primary" />
+      {loading ? "Создаём ссылку…" : "Открыть AI-Chat"}
+      {!loading && (
+        <span className="inline-flex items-center rounded-full bg-accent px-2.5 py-0.5 text-xs font-extrabold text-accent-foreground">
+          {CHAT_PRICE} ₽
+        </span>
+      )}
+      {error && (
+        <span className="ml-2 text-xs font-normal text-destructive">{error}</span>
+      )}
     </button>
   );
 }

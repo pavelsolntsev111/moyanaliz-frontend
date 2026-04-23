@@ -142,14 +142,28 @@ export function AnalysisScanner({ isReady, onComplete, preview }: AnalysisScanne
   return (
     <div className="w-full max-w-2xl mx-auto select-none px-4">
       <div
+        className="relative overflow-hidden"
         style={{
           background: 'var(--border)',
           borderRadius: 16,
           padding: '2px',
-          boxShadow: '0 4px 8px rgba(0,0,0,0.06), 0 20px 48px rgba(0,180,188,0.10), 0 0 0 1px rgba(0,0,0,0.04)',
+          boxShadow: 'var(--shadow-lg-ma)',
         }}
       >
+        {/* Animated horizontal scan line — sits above card content, below interactive elements */}
         <div
+          aria-hidden
+          className="animate-scanline pointer-events-none absolute inset-x-0 z-[1]"
+          style={{
+            top: 0,
+            height: 2,
+            background: 'var(--primary)',
+            opacity: 0.55,
+            boxShadow: '0 0 12px rgba(0,180,188,0.6)',
+          }}
+        />
+        <div
+          className="relative z-[2]"
           style={{
             background: 'linear-gradient(145deg, var(--card) 0%, var(--background) 100%)',
             borderRadius: '14px',
@@ -162,6 +176,25 @@ export function AnalysisScanner({ isReady, onComplete, preview }: AnalysisScanne
               <Activity size={18} style={{ color: PRIMARY }} />
               <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--foreground)', letterSpacing: '-0.01em' }}>
                 Мой Анализ
+              </span>
+              {/* LIVE pill */}
+              <span
+                className="ml-1 inline-flex items-center gap-1 rounded-full px-2 py-0.5"
+                style={{
+                  background: 'rgba(0,180,188,0.10)',
+                  color: PRIMARY,
+                  fontSize: 10,
+                  fontWeight: 800,
+                  letterSpacing: '0.12em',
+                  textTransform: 'uppercase',
+                }}
+              >
+                <motion.span
+                  style={{ width: 6, height: 6, borderRadius: '50%', background: PRIMARY, display: 'inline-block' }}
+                  animate={{ opacity: [0.3, 1, 0.3] }}
+                  transition={{ duration: 1.2, repeat: Infinity }}
+                />
+                Live
               </span>
             </div>
             <span style={{ fontSize: 11, color: 'var(--muted-foreground)', fontWeight: 500, textAlign: 'right' }}>
@@ -324,8 +357,8 @@ export function AnalysisScanner({ isReady, onComplete, preview }: AnalysisScanne
             </div>
             <div
               style={{
-                height: 6,
-                borderRadius: 3,
+                height: 3,
+                borderRadius: 2,
                 background: 'var(--muted)',
                 overflow: 'hidden',
               }}

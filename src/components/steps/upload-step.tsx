@@ -19,6 +19,7 @@ import {
   Users,
   Lock,
   FileDown,
+  ArrowRight,
 } from "lucide-react"
 
 /* ─── Inline range bar ─── */
@@ -210,7 +211,7 @@ export function UploadStep({ onFileSelected }: UploadStepProps) {
 
   return (
     <div className="flex flex-col">
-      {/* ─── Hero with gradient background ─── */}
+      {/* ─── Hero with gradient background + decorative blobs ─── */}
       <section
         className="relative overflow-hidden"
         style={{
@@ -218,16 +219,55 @@ export function UploadStep({ onFileSelected }: UploadStepProps) {
             "radial-gradient(ellipse 70% 50% at 60% 30%, rgba(0,180,188,0.08) 0%, transparent 70%), radial-gradient(ellipse 50% 40% at 30% 60%, rgba(0,180,188,0.05) 0%, transparent 60%)",
         }}
       >
-        <div className="mx-auto grid max-w-6xl gap-10 px-4 py-8 md:grid-cols-2 md:items-center md:py-10">
+        {/* Decorative blobs (desktop only, sit behind the grid) */}
+        <div
+          aria-hidden
+          className="pointer-events-none absolute inset-0 hidden md:block"
+        >
+          <div
+            className="absolute -right-32 -top-24 rounded-full"
+            style={{
+              width: 520,
+              height: 520,
+              background: "rgba(0, 180, 188, 0.4)",
+              filter: "blur(80px)",
+              opacity: 0.5,
+            }}
+          />
+          <div
+            className="absolute -bottom-24 -left-32 rounded-full"
+            style={{
+              width: 420,
+              height: 420,
+              background: "rgba(0, 180, 188, 0.25)",
+              filter: "blur(80px)",
+              opacity: 0.4,
+            }}
+          />
+        </div>
+
+        <div className="relative mx-auto grid max-w-6xl gap-10 px-4 py-8 md:grid-cols-2 md:items-center md:py-10">
           {/* Left */}
           <div className="relative z-10 min-w-0 animate-fade-up">
-            <h1 className="text-3xl font-extrabold leading-tight tracking-tight text-foreground sm:text-4xl lg:text-5xl">
+            {/* Pill badge */}
+            <div className="mb-5 inline-flex items-center gap-2 rounded-full bg-accent/60 px-3 py-1.5 text-xs font-semibold text-primary">
+              <span
+                className="inline-block h-1.5 w-1.5 rounded-full bg-primary animate-subtle-pulse"
+                aria-hidden
+              />
+              AI-расшифровка · 30 секунд
+            </div>
+            <h1
+              className="font-extrabold leading-[1.02] tracking-[-0.035em] text-foreground"
+              style={{ fontSize: "clamp(28px, 5vw, 60px)" }}
+            >
               Узнайте, что означают{" "}
-              <span className="text-primary">ваши анализы</span>
+              <span className="text-primary">ваши&nbsp;анализы</span>
             </h1>
             <p className="mt-4 max-w-lg text-base leading-relaxed text-muted-foreground sm:text-lg">
               Загрузите результаты из любой лаборатории — получите понятную
-              расшифровку с рекомендациями по питанию и образу жизни.
+              расшифровку каждого показателя с рекомендациями по питанию и
+              образу жизни.
             </p>
             <p className="mt-2 text-sm text-muted-foreground">
               Первые показатели — <span className="font-semibold text-foreground">бесплатно</span>. Полный отчёт — <span className="font-semibold text-primary">199 ₽</span>
@@ -267,15 +307,22 @@ export function UploadStep({ onFileSelected }: UploadStepProps) {
             <button
               type="button"
               onClick={() => inputRef.current?.click()}
-              className="cta-glow mt-7 inline-flex w-full md:w-auto items-center justify-center gap-2 rounded-full bg-primary px-7 py-4 md:py-3.5 text-base md:text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90"
+              className="cta-glow mt-7 inline-flex w-full md:w-auto items-center justify-center gap-2.5 rounded-full bg-primary px-7 py-4 md:py-3.5 text-base md:text-sm font-bold text-primary-foreground transition-colors hover:bg-primary/90"
             >
               <Upload className="h-4 w-4" />
               Загрузить анализ
+              <ArrowRight className="h-4 w-4" />
             </button>
 
-            {/* Lab logos — mobile only (inside hero) */}
+            {/* Security line under CTA (desktop: left column, mobile: moved to bottom of hero below marquee) */}
+            <p className="mt-3.5 hidden md:flex items-center gap-1.5 text-xs text-muted-foreground-2">
+              <Lock className="h-3 w-3" />
+              Данные зашифрованы. Без регистрации.
+            </p>
+
+            {/* Lab logos — mobile only (inside hero, under CTA) */}
             <div className="mt-6 overflow-hidden md:hidden">
-              <p className="mb-2 text-center text-xs font-medium uppercase tracking-wider text-muted-foreground/60">
+              <p className="mb-2 text-center text-[11px] font-bold uppercase tracking-[0.16em] text-muted-foreground-2">
                 Распознаём анализы из любой лаборатории
               </p>
               <div className="relative">
@@ -284,22 +331,27 @@ export function UploadStep({ onFileSelected }: UploadStepProps) {
                 <div className="animate-marquee flex w-max items-center gap-12">
                   {[...Array(2)].map((_, dup) => (
                     <div key={dup} className="flex items-center gap-12">
-                      <img src="/labs/invitro.png" alt="Инвитро" height={24} style={{maxHeight:24}} className="h-6 w-auto object-contain opacity-50 grayscale" />
-                      <img src="/labs/gemotest.png" alt="Гемотест" height={24} style={{maxHeight:24}} className="h-6 w-auto object-contain opacity-50 grayscale" />
-                      <img src="/labs/kdl.png" alt="KDL" height={24} style={{maxHeight:24}} className="h-6 w-auto object-contain opacity-50 grayscale" />
-                      <img src="/labs/helix.png" alt="Helix" height={48} style={{maxHeight:48}} className="h-12 w-auto object-contain opacity-50 grayscale" />
-                      <img src="/labs/citilab.png" alt="Ситилаб" height={24} style={{maxHeight:24}} className="h-6 w-auto object-contain opacity-50 grayscale" />
-                      <img src="/labs/cl.png" alt="CL" height={24} style={{maxHeight:24}} className="h-6 w-auto object-contain opacity-50 grayscale" />
-                      <img src="/labs/dnkom.png" alt="ДНКОМ" height={24} style={{maxHeight:24}} className="h-6 w-auto object-contain opacity-50 grayscale" />
-                      <img src="/labs/dialab.png" alt="Диалаб" height={24} style={{maxHeight:24}} className="h-6 w-auto object-contain opacity-50 grayscale" />
+                      <img src="/labs/invitro.png" alt="Инвитро" height={28} style={{maxHeight:28}} className="h-7 w-auto object-contain opacity-70 grayscale" />
+                      <img src="/labs/gemotest.png" alt="Гемотест" height={28} style={{maxHeight:28}} className="h-7 w-auto object-contain opacity-70 grayscale" />
+                      <img src="/labs/kdl.png" alt="KDL" height={28} style={{maxHeight:28}} className="h-7 w-auto object-contain opacity-70 grayscale" />
+                      <img src="/labs/helix.png" alt="Helix" height={56} style={{maxHeight:56}} className="h-14 w-auto object-contain opacity-70 grayscale" />
+                      <img src="/labs/citilab.png" alt="Ситилаб" height={28} style={{maxHeight:28}} className="h-7 w-auto object-contain opacity-70 grayscale" />
+                      <img src="/labs/cl.png" alt="CL" height={28} style={{maxHeight:28}} className="h-7 w-auto object-contain opacity-70 grayscale" />
+                      <img src="/labs/dnkom.png" alt="ДНКОМ" height={28} style={{maxHeight:28}} className="h-7 w-auto object-contain opacity-70 grayscale" />
+                      <img src="/labs/dialab.png" alt="Диалаб" height={28} style={{maxHeight:28}} className="h-7 w-auto object-contain opacity-70 grayscale" />
                     </div>
                   ))}
                 </div>
               </div>
+              {/* Mobile security line — bottom of hero */}
+              <p className="mt-4 flex items-center justify-center gap-1.5 text-xs text-muted-foreground-2">
+                <Lock className="h-3 w-3" />
+                Данные зашифрованы. Без регистрации.
+              </p>
             </div>
           </div>
 
-          {/* Right — Upload card (soft shadow) */}
+          {/* Right — Upload card (premium shadow) */}
           <div className="hidden md:block animate-fade-up delay-200">
             <div
               onDragOver={(e) => {
@@ -308,18 +360,25 @@ export function UploadStep({ onFileSelected }: UploadStepProps) {
               }}
               onDragLeave={() => setDragActive(false)}
               onDrop={handleDrop}
-              className={`rounded-2xl bg-card p-6 shadow-lg shadow-black/[0.04] transition-all hover:shadow-xl hover:shadow-black/[0.06] ${
+              className={`rounded-2xl border border-border bg-card p-8 transition-all ${
                 dragActive ? "ring-2 ring-primary ring-offset-2" : ""
               }`}
+              style={{ boxShadow: "var(--shadow-lg-ma)" }}
             >
-              <div className="flex flex-col items-center rounded-xl border-2 border-dashed border-border px-6 py-10 text-center transition-colors hover:border-primary/40">
+              <div
+                className={`flex flex-col items-center rounded-xl border-2 border-dashed p-10 text-center transition-colors ${
+                  dragActive
+                    ? "border-primary bg-accent/40"
+                    : "border-border hover:border-primary/40"
+                }`}
+              >
                 <div className="flex h-14 w-14 items-center justify-center rounded-full bg-primary/10">
                   <Upload className="h-6 w-6 text-primary" />
                 </div>
-                <p className="mt-4 text-sm font-semibold text-foreground">
-                  Перетащите файл сюда
+                <p className="mt-4 text-base font-extrabold tracking-tight text-foreground">
+                  Перетащите файл или выберите
                 </p>
-                <p className="mt-1 text-xs text-muted-foreground">
+                <p className="mt-1 text-sm text-muted-foreground">
                   PDF, JPEG, PNG, WebP, HEIC — до 20 МБ
                 </p>
                 <button
@@ -330,12 +389,7 @@ export function UploadStep({ onFileSelected }: UploadStepProps) {
                   <FileText className="h-4 w-4" />
                   Выбрать файл
                 </button>
-                <div className="mt-3 flex items-center justify-center gap-1.5 text-xs text-muted-foreground">
-                  <Lock className="h-3 w-3" />
-                  <span>Данные зашифрованы и защищены</span>
-                </div>
               </div>
-
             </div>
           </div>
         </div>
@@ -354,7 +408,7 @@ export function UploadStep({ onFileSelected }: UploadStepProps) {
 
       {/* ─── Lab logos marquee (desktop only) ─── */}
       <section className="hidden md:block overflow-hidden bg-muted/20 pb-4 pt-2">
-        <p className="mb-3 text-center text-xs font-medium uppercase tracking-wider text-muted-foreground/60">
+        <p className="mb-3 text-center text-[11px] font-bold uppercase tracking-[0.16em] text-muted-foreground-2">
           Распознаём анализы из любой лаборатории
         </p>
         <div className="relative">

@@ -6,42 +6,47 @@
 
 :root {
   --background: #f8fafb;
-  --foreground: #1a1a2e;
+  --foreground: #0a1f35;
   --card: #ffffff;
-  --card-foreground: #1a1a2e;
+  --card-foreground: #0a1f35;
   --popover: #ffffff;
-  --popover-foreground: #1a1a2e;
+  --popover-foreground: #0a1f35;
   --primary: #00b4bc;
   --primary-foreground: #ffffff;
   --secondary: #f1f5f9;
   --secondary-foreground: #1e293b;
   --muted: #f1f5f9;
-  --muted-foreground: #64748b;
-  --accent: #e0f7fa;
-  --accent-foreground: #00838f;
-  --destructive: #ef4444;
-  --destructive-foreground: #ef4444;
-  --border: #e2e8f0;
-  --input: #e2e8f0;
+  --muted-foreground: #3d5168;
+  --muted-foreground-2: #6b7f95;
+  --accent: #fef2f2;
+  --accent-foreground: #e03a3e;
+  --destructive: #e03a3e;
+  --destructive-foreground: #ffffff;
+  --border: rgba(10, 31, 53, 0.08);
+  --input: rgba(10, 31, 53, 0.08);
   --ring: #00b4bc;
   --chart-1: #00b4bc;
-  --chart-2: #22c55e;
-  --chart-3: #eab308;
-  --chart-4: #ef4444;
+  --chart-2: #12a85e;
+  --chart-3: #e08d1a;
+  --chart-4: #e03a3e;
   --chart-5: #8b5cf6;
   --radius: 0.75rem;
   --sidebar: #ffffff;
-  --sidebar-foreground: #1a1a2e;
+  --sidebar-foreground: #0a1f35;
   --sidebar-primary: #00b4bc;
   --sidebar-primary-foreground: #ffffff;
   --sidebar-accent: #f1f5f9;
   --sidebar-accent-foreground: #1e293b;
-  --sidebar-border: #e2e8f0;
+  --sidebar-border: rgba(10, 31, 53, 0.08);
   --sidebar-ring: #00b4bc;
-  --success: #22c55e;
+  --success: #12a85e;
   --success-foreground: #ffffff;
-  --warning: #eab308;
+  --warning: #e08d1a;
   --warning-foreground: #422006;
+  --shadow-sm-ma: 0 1px 2px rgba(10, 31, 53, 0.04), 0 1px 3px rgba(10, 31, 53, 0.03);
+  --shadow-md-ma: 0 4px 14px rgba(10, 31, 53, 0.06), 0 1px 3px rgba(10, 31, 53, 0.04);
+  --shadow-lg-ma: 0 12px 40px rgba(10, 31, 53, 0.08), 0 2px 6px rgba(10, 31, 53, 0.04);
+  --shadow-glow: 0 10px 30px rgba(0, 180, 188, 0.22);
 }
 
 .dark {
@@ -97,6 +102,7 @@
   --color-secondary-foreground: var(--secondary-foreground);
   --color-muted: var(--muted);
   --color-muted-foreground: var(--muted-foreground);
+  --color-muted-foreground-2: var(--muted-foreground-2);
   --color-accent: var(--accent);
   --color-accent-foreground: var(--accent-foreground);
   --color-destructive: var(--destructive);
@@ -189,22 +195,22 @@
 
 /* Premium card shadow */
 .card-elevated {
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04), 0 4px 12px rgba(0, 0, 0, 0.03);
-  border: 1px solid rgba(226, 232, 240, 0.6);
-  transition: box-shadow 0.25s ease, transform 0.25s ease;
+  box-shadow: var(--shadow-sm-ma);
+  border: 1px solid var(--border);
+  transition: box-shadow 0.25s cubic-bezier(.16,1,.3,1), transform 0.25s cubic-bezier(.16,1,.3,1);
 }
 .card-elevated:hover {
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06), 0 8px 24px rgba(0, 0, 0, 0.05);
+  box-shadow: var(--shadow-md-ma);
   transform: translateY(-1px);
 }
 
 /* CTA button glow */
 .cta-glow {
-  box-shadow: 0 2px 12px rgba(0, 180, 188, 0.25), 0 1px 3px rgba(0, 0, 0, 0.08);
-  transition: all 0.25s ease;
+  box-shadow: var(--shadow-glow), 0 1px 3px rgba(10, 31, 53, 0.08);
+  transition: all 0.25s cubic-bezier(.16,1,.3,1);
 }
 .cta-glow:hover {
-  box-shadow: 0 4px 20px rgba(0, 180, 188, 0.35), 0 2px 6px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 14px 38px rgba(0, 180, 188, 0.32), 0 2px 6px rgba(10, 31, 53, 0.1);
   transform: translateY(-1px);
 }
 .cta-glow:active {
@@ -231,3 +237,15 @@
 .animate-shake {
   animation: shake 0.5s ease-in-out;
 }
+
+/* Analyzing scanner scan line */
+@keyframes scanline {
+  0% { transform: translateY(-8%); }
+  100% { transform: translateY(108%); }
+}
+.animate-scanline {
+  animation: scanline 2.4s cubic-bezier(.16, 1, .3, 1) infinite;
+}
+
+/* Utility for tertiary text color */
+.text-muted-foreground-2 { color: var(--muted-foreground-2); }

@@ -365,24 +365,37 @@ function EmotionalSummary({
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
         style={{
-          background: "rgba(255,82,62,0.04)",
-          borderLeft: "4px solid #FF523E",
+          background: "color-mix(in oklab, var(--destructive) 5%, var(--card))",
+          borderLeft: "4px solid var(--destructive)",
+          border: "1px solid color-mix(in oklab, var(--destructive) 22%, transparent)",
+          borderLeftWidth: 4,
           borderRadius: "12px",
+          boxShadow: "var(--shadow-sm-ma)",
         }}
         className="p-4 sm:p-5"
       >
-        <div className="flex items-start gap-4">
-          <div
-            className="shrink-0 flex items-center justify-center rounded-full"
-            style={{ width: 44, height: 44, background: "rgba(255,82,62,0.10)" }}
-          >
-            <AlertTriangle className="h-5 w-5" style={{ color: "#FF523E" }} />
-          </div>
-          <div className="flex-1 min-w-0">
-            <h3 className="text-base font-bold text-card-foreground leading-snug">
+        <div>
+          {/* Inline icon + heading row (README: do not put icon in separate left column) */}
+          <div className="flex items-center gap-2.5">
+            <span
+              className="inline-flex shrink-0 items-center justify-center rounded-md"
+              style={{
+                width: 28,
+                height: 28,
+                background: "color-mix(in oklab, var(--destructive) 12%, transparent)",
+              }}
+            >
+              <AlertTriangle className="h-4 w-4" style={{ color: "var(--destructive)" }} />
+            </span>
+            <h3
+              className="text-base font-extrabold tracking-tight leading-tight"
+              style={{ color: "var(--destructive)" }}
+            >
               {outOfRangeCount === 1 ? "Обнаружено отклонение" : "Обнаружены отклонения"}
             </h3>
-            <p className="mt-1 text-sm text-muted-foreground leading-relaxed">
+          </div>
+          <div className="mt-2">
+            <p className="text-sm text-muted-foreground leading-relaxed">
               {summaryText}
             </p>
             <div className="mt-3 flex flex-wrap items-center gap-2">
