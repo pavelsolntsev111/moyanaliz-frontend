@@ -11,6 +11,15 @@ const nextConfig: NextConfig = {
       { source: "/admin/:path*", destination: `${api}/admin/:path*` },
     ];
   },
+  async redirects() {
+    return [
+      {
+        source: "/blog/kaltsiy-magniy-norma-kosti",
+        destination: "/blog/kaltsij-magnij-norma-kosti",
+        permanent: true,
+      },
+    ];
+  },
 };
 
 export default nextConfig;
