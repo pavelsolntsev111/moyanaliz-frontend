@@ -11,11 +11,11 @@ export default function PrivacyPage() {
 
       <div className="prose prose-sm max-w-none space-y-4 text-sm leading-relaxed text-foreground/80">
         <p>
-          Дата последнего обновления: 1 марта 2026 г.
+          Дата последнего обновления: 26 апреля 2026 г.
         </p>
         <p>
-          Оператор персональных данных — ООО «Настоящий Полет» (ОГРН 1247700663363,
-          ИНН 9701297934, КПП 770101001), управляющее сервисом «Мой Анализ» (moyanaliz.ru).
+          Оператор персональных данных — индивидуальный предприниматель Солнцев Павел Владимирович
+          (ОГРНИП 326774600300742, ИНН 501815177453), управляющий сервисом «Мой Анализ» (moyanaliz.ru).
         </p>
 
         <h2 className="text-lg font-semibold mt-6">1. Какие данные мы собираем</h2>
@@ -37,7 +37,7 @@ export default function PrivacyPage() {
         <p>
           Данные анализов обрабатываются с помощью API Anthropic (Claude) для формирования
           расшифровки. Мы не передаём персональные данные (email, IP) третьим лицам,
-          за исключением платёжного провайдера (Точка Банк) для обработки оплаты.
+          за исключением платёжного провайдера (ЮKassa) для обработки оплаты.
         </p>
 
         <h2 className="text-lg font-semibold mt-6">4. Хранение данных</h2>
@@ -61,10 +61,9 @@ export default function PrivacyPage() {
 
         <h2 className="text-lg font-semibold mt-6">7. Реквизиты оператора</h2>
         <p>
-          ООО «Настоящий Полет»<br />
-          ОГРН: 1247700663363<br />
-          ИНН: 9701297934<br />
-          КПП: 770101001<br />
+          ИП Солнцев Павел Владимирович<br />
+          ОГРНИП: 326774600300742<br />
+          ИНН: 501815177453<br />
           Email: <a href="mailto:support@moyanaliz.ru" className="text-primary underline">support@moyanaliz.ru</a>
         </p>
       </div>
