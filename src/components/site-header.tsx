@@ -38,6 +38,12 @@ export function SiteHeader() {
           >
             О сервисе
           </Link>
+          <Link
+            href="/abonement"
+            className="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground shadow-sm transition-colors hover:bg-primary/90"
+          >
+            Абонемент 799 ₽
+          </Link>
         </nav>
 
         <button
@@ -72,6 +78,13 @@ export function SiteHeader() {
               className="text-sm font-medium text-muted-foreground transition-colors hover:text-primary"
             >
               О сервисе
+            </Link>
+            <Link
+              href="/abonement"
+              onClick={() => setMenuOpen(false)}
+              className="mt-1 inline-block rounded-lg bg-primary px-4 py-2 text-center text-sm font-semibold text-primary-foreground shadow-sm transition-colors hover:bg-primary/90"
+            >
+              Абонемент 799 ₽
             </Link>
           </div>
         </nav>

@@ -96,6 +96,35 @@ export async function createPayment(
   });
 }
 
+export async function createAbonementPayment(
+  email: string
+): Promise<PaymentCreateResponse> {
+  const body: Record<string, unknown> = { email };
+  if (typeof window !== "undefined") {
+    try {
+      const utm = sessionStorage.getItem("utm_params");
+      if (utm) body.utm_params = JSON.parse(utm);
+    } catch {}
+  }
+  return request<PaymentCreateResponse>("/api/v1/abonement/create", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+}
+
+export interface AbonementStatus {
+  order_id: string;
+  payment_status: "pending" | "paid" | "failed";
+  promo_code: string | null;
+  email: string | null;
+  paid_at: string | null;
+}
+
+export async function getAbonementStatus(orderId: string): Promise<AbonementStatus> {
+  return request<AbonementStatus>(`/api/v1/abonement/status/${orderId}`);
+}
+
 export async function setOrderEmail(
   orderId: string,
   email: string
