@@ -9,6 +9,7 @@ import { UploadStep } from "@/components/steps/upload-step";
 import { AnalyzingStep } from "@/components/steps/analyzing-step";
 import { PaywallStep } from "@/components/steps/paywall-step";
 import { uploadFile, createPayment, applyPromo } from "@/lib/api";
+import { captureAttribution } from "@/lib/attribution";
 import { useRouter } from "next/navigation";
 
 export default function HomePage() {
@@ -17,18 +18,10 @@ export default function HomePage() {
 
   useEffect(() => {
     ymGoal("page_loaded");
-    // Save UTM params for payment attribution
-    if (typeof window !== "undefined") {
-      const sp = new URLSearchParams(window.location.search);
-      const utm: Record<string, string> = {};
-      for (const key of ["utm_source", "utm_medium", "utm_campaign", "utm_content", "utm_term"]) {
-        const v = sp.get(key);
-        if (v) utm[key] = v;
-      }
-      if (Object.keys(utm).length > 0) {
-        sessionStorage.setItem("utm_params", JSON.stringify(utm));
-      }
-    }
+    // First-touch ad attribution: snapshot UTM/yclid from URL into localStorage
+    // (30d TTL). Piggy-backed onto /upload via uploadFile(). Replaces legacy
+    // sessionStorage utm_params logic.
+    captureAttribution();
   }, []);
   const [orderId, setOrderId] = useState<string>("");
   const [preview, setPreview] = useState<PreviewData | null>(null);

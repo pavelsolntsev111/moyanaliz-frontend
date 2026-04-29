@@ -1,4 +1,5 @@
 import type { PreviewData } from "./types";
+import { getAttribution } from "./attribution";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "https://moyanaliz-backend-production.up.railway.app";
 
@@ -49,6 +50,18 @@ export async function detectPatient(file: File): Promise<DetectPatientResponse> 
 export async function uploadFile(file: File): Promise<UploadResponse> {
   const formData = new FormData();
   formData.append("file", file);
+  // Piggy-back ad attribution snapshot (captured on landing page).
+  const att = getAttribution();
+  if (att) {
+    if (att.utm_source) formData.append("utm_source", att.utm_source);
+    if (att.utm_medium) formData.append("utm_medium", att.utm_medium);
+    if (att.utm_campaign) formData.append("utm_campaign", att.utm_campaign);
+    if (att.utm_content) formData.append("utm_content", att.utm_content);
+    if (att.utm_term) formData.append("utm_term", att.utm_term);
+    if (att.yclid) formData.append("yclid", att.yclid);
+    if (att.referrer) formData.append("referrer", att.referrer);
+    if (att.landing_url) formData.append("landing_url", att.landing_url);
+  }
   return request<UploadResponse>("/api/v1/upload", {
     method: "POST",
     body: formData,
