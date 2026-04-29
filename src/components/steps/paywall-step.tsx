@@ -792,7 +792,11 @@ function InlinePaywall({
     try {
       const result = await validatePromo(promoCode.trim())
       if (result.valid && result.free) {
-        // Free promo flow — collect email before applying
+        // 100%-off promo (abonement, pack, hardcoded free codes) gives ONE
+        // single report — never combo or 3-pack. Force tier to single so
+        // user can't think they're getting a bundle for free.
+        setWithChat(false)
+        setWithFiveReports(false)
         setPromoResult(result)
         setPromoValidating(false)
         return
@@ -817,7 +821,9 @@ function InlinePaywall({
     >
       <GradientCard glowColor="rgba(0,180,188,0.16)">
         <div className="p-6 sm:p-7">
-          {/* Tier selector */}
+          {/* Tier selector — hidden when a 100%-off promo is active
+              (free promo always grants ONE single report regardless of UI tier) */}
+          {!promoResult?.free && (
           <div className="mb-4 space-y-2">
             <button
               onClick={() => { setWithChat(false); setWithFiveReports(false) }}
@@ -884,6 +890,7 @@ function InlinePaywall({
               <span className="text-sm font-bold shrink-0" style={{ color: "#16a34a" }}>299 ₽</span>
             </button>
           </div>
+          )}
 
           {/* 1. CTA Button */}
           {!promoResult?.free && (
