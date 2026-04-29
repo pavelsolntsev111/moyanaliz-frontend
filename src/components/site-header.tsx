@@ -40,9 +40,9 @@ export function SiteHeader() {
           </Link>
           <Link
             href="/abonement"
-            className="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground shadow-sm transition-colors hover:bg-primary/90"
+            className="text-sm font-medium text-muted-foreground transition-colors hover:text-primary"
           >
-            Абонемент 799 ₽
+            Абонемент
           </Link>
         </nav>
 
@@ -82,9 +82,9 @@ export function SiteHeader() {
             <Link
               href="/abonement"
               onClick={() => setMenuOpen(false)}
-              className="mt-1 inline-block rounded-lg bg-primary px-4 py-2 text-center text-sm font-semibold text-primary-foreground shadow-sm transition-colors hover:bg-primary/90"
+              className="text-sm font-medium text-muted-foreground transition-colors hover:text-primary"
             >
-              Абонемент 799 ₽
+              Абонемент
             </Link>
           </div>
         </nav>
