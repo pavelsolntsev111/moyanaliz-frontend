@@ -147,16 +147,6 @@ export default function AbonementPage() {
           </div>
         </section>
 
-        {/* Stats row */}
-        <section className="border-b border-border">
-          <div className="mx-auto grid max-w-6xl grid-cols-2 gap-y-8 px-4 py-12 md:grid-cols-4 md:py-14">
-            <Stat value="30+" label="типов анализов" />
-            <Stat value="33" label="показателя со справкой" />
-            <Stat value="1 800+" label="оплативших клиентов" />
-            <Stat value="2 минуты" label="среднее время разбора" />
-          </div>
-        </section>
-
         {/* What's included */}
         <section className="bg-muted/30 py-16 md:py-20">
           <div className="mx-auto max-w-5xl px-4">
@@ -291,15 +281,6 @@ function Bullet({ children }: { children: React.ReactNode }) {
       <Check className="mt-0.5 h-5 w-5 flex-shrink-0 text-primary" />
       <span>{children}</span>
     </li>
-  );
-}
-
-function Stat({ value, label }: { value: string; label: string }) {
-  return (
-    <div className="text-center">
-      <div className="text-3xl font-bold text-primary md:text-4xl">{value}</div>
-      <div className="mt-1 text-sm text-muted-foreground">{label}</div>
-    </div>
   );
 }
 
