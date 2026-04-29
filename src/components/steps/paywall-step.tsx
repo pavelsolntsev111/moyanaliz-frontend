@@ -792,11 +792,14 @@ function InlinePaywall({
     try {
       const result = await validatePromo(promoCode.trim())
       if (result.valid && result.free) {
-        // 100%-off promo (abonement, pack, hardcoded free codes) gives ONE
-        // single report — never combo or 3-pack. Force tier to single so
-        // user can't think they're getting a bundle for free.
-        setWithChat(false)
-        setWithFiveReports(false)
+        // Pack/abonement codes (is_pack=true) always grant ONE single report.
+        // Reset combo/3-pack selection so user doesn't think they're getting
+        // a bundle for free. Admin codes ("111", VALID_PROMO_CODES) don't set
+        // is_pack — for them we keep the user's tier choice (combo allowed).
+        if (result.is_pack) {
+          setWithChat(false)
+          setWithFiveReports(false)
+        }
         setPromoResult(result)
         setPromoValidating(false)
         return
@@ -821,9 +824,10 @@ function InlinePaywall({
     >
       <GradientCard glowColor="rgba(0,180,188,0.16)">
         <div className="p-6 sm:p-7">
-          {/* Tier selector — hidden when a 100%-off promo is active
-              (free promo always grants ONE single report regardless of UI tier) */}
-          {!promoResult?.free && (
+          {/* Tier selector — hidden for pack/abonement promos (they always
+              redeem as ONE single report). Admin free codes ("111") keep the
+              selector so the user can still pick combo with chat. */}
+          {!promoResult?.is_pack && (
           <div className="mb-4 space-y-2">
             <button
               onClick={() => { setWithChat(false); setWithFiveReports(false) }}
@@ -1007,14 +1011,14 @@ function InlinePaywall({
                       onChange={(e) => setFreePromoEmail(e.target.value)}
                       onKeyDown={(e) => {
                         if (e.key === "Enter" && isValidEmail(freePromoEmail)) {
-                          onPromo(freePromoEmail.trim(), promoCode.trim(), false)
+                          onPromo(freePromoEmail.trim(), promoCode.trim(), withChat)
                         }
                       }}
                       className="w-full rounded-xl border-2 border-border bg-background py-2.5 pl-11 pr-4 text-sm text-foreground outline-none transition-colors placeholder:text-muted-foreground focus:border-primary"
                     />
                   </div>
                   <button
-                    onClick={() => onPromo(freePromoEmail.trim(), promoCode.trim(), false)}
+                    onClick={() => onPromo(freePromoEmail.trim(), promoCode.trim(), withChat)}
                     disabled={!isValidEmail(freePromoEmail) || loading}
                     className="mt-2 w-full rounded-xl px-4 py-3 text-sm font-bold text-white transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
                     style={{ background: "linear-gradient(135deg, #16a34a 0%, #15803d 100%)" }}

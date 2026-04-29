@@ -157,6 +157,7 @@ export async function applyPromo(
 export interface PromoValidateResponse {
   valid: boolean;
   free?: boolean;
+  is_pack?: boolean;
   discount_percent?: number;
   discounted_price?: number;
   original_price?: number;
