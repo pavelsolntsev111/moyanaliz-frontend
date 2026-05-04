@@ -906,7 +906,7 @@ function InlinePaywall({
               } ${loading ? "opacity-50 pointer-events-none" : ""}`}
             >
               <span className="absolute -top-2 right-3 rounded-full px-2 py-0.5 text-[10px] font-bold text-white" style={{ background: "#d97706" }}>
-                −60%
+                −70%
               </span>
               <div className={`h-4 w-4 shrink-0 rounded-full border-2 flex items-center justify-center ${
                 withAbonement ? "border-amber-600" : "border-muted-foreground/40"
@@ -917,7 +917,7 @@ function InlinePaywall({
                 <p className="text-sm font-semibold text-foreground">10 отчётов</p>
                 <p className="text-xs text-muted-foreground mt-0.5">ещё дешевле! можете использовать для других членов семьи, друзей или любимых</p>
               </div>
-              <span className="text-sm font-bold shrink-0" style={{ color: "#d97706" }}>799 ₽</span>
+              <span className="text-sm font-bold shrink-0" style={{ color: "#d97706" }}>599 ₽</span>
             </button>
           </div>
           )}
@@ -957,7 +957,7 @@ function InlinePaywall({
             ) : (
               <>
                 {withAbonement
-                  ? "Купить 10 отчётов — 799 ₽"
+                  ? "Купить 10 отчётов — 599 ₽"
                   : withFiveReports
                   ? "Купить 3 отчёта — 299 ₽"
                   : withChat
@@ -1110,7 +1110,7 @@ function BottomCTA({ onPay, loading, withChat, withFiveReports, withAbonement }:
           >
             <span className="flex items-center gap-2 text-sm font-bold">
               {withAbonement
-                ? "Купить 10 отчётов — 799 ₽"
+                ? "Купить 10 отчётов — 599 ₽"
                 : withFiveReports
                 ? "Купить 3 отчёта — 299 ₽"
                 : withChat
