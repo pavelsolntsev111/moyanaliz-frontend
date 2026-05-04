@@ -914,8 +914,8 @@ function InlinePaywall({
                 {withAbonement && <div className="h-2 w-2 rounded-full bg-amber-600" />}
               </div>
               <div className="flex-1">
-                <p className="text-sm font-semibold text-foreground">Абонемент: 10 расшифровок</p>
-                <p className="text-xs text-muted-foreground mt-0.5">текущий отчёт + 9 промо-расшифровок · 80&nbsp;₽ за анализ</p>
+                <p className="text-sm font-semibold text-foreground">10 отчётов</p>
+                <p className="text-xs text-muted-foreground mt-0.5">ещё дешевле! можете использовать для других членов семьи, друзей или любимых</p>
               </div>
               <span className="text-sm font-bold shrink-0" style={{ color: "#d97706" }}>799 ₽</span>
             </button>
@@ -957,7 +957,7 @@ function InlinePaywall({
             ) : (
               <>
                 {withAbonement
-                  ? "Купить абонемент — 799 ₽"
+                  ? "Купить 10 отчётов — 799 ₽"
                   : withFiveReports
                   ? "Купить 3 отчёта — 299 ₽"
                   : withChat
@@ -1110,7 +1110,7 @@ function BottomCTA({ onPay, loading, withChat, withFiveReports, withAbonement }:
           >
             <span className="flex items-center gap-2 text-sm font-bold">
               {withAbonement
-                ? "Купить абонемент — 799 ₽"
+                ? "Купить 10 отчётов — 799 ₽"
                 : withFiveReports
                 ? "Купить 3 отчёта — 299 ₽"
                 : withChat
