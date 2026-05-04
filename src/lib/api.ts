@@ -76,12 +76,14 @@ export async function createPayment(
   orderId: string,
   promoCode?: string,
   withChat?: boolean,
-  withFiveReports?: boolean
+  withFiveReports?: boolean,
+  withAbonement?: boolean
 ): Promise<PaymentCreateResponse> {
   const body: Record<string, unknown> = { order_id: orderId };
   if (promoCode) body.promo_code = promoCode;
   if (withChat) body.with_chat = true;
   if (withFiveReports) body.with_five_reports = true;
+  if (withAbonement) body.with_abonement = true;
   // Pass UTM params for payment attribution
   if (typeof window !== "undefined") {
     try {
