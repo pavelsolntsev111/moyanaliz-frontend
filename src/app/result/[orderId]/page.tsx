@@ -252,10 +252,16 @@ function EmailCaptureCard({
   );
 }
 
+// Step durations tuned to real prod p50 latency. Full analysis takes ~15s via
+// Gemini Flash-Lite when it's healthy and ~110s via Haiku fallback (peak hours
+// when Gemini degrades). Animation now stretches to ~75s, so the progress bar
+// keeps moving for the typical case and only "stalls" at 90% on the slow ~30%
+// of orders that hit Haiku — no more "all green checks at 18s, then 90s of
+// silence" UX.
 const PROCESSING_STEPS = [
-  { id: 0, label: "Читаем анализ", duration: 4000 },
-  { id: 1, label: "Расшифровываем показатели", duration: 8000 },
-  { id: 2, label: "Сравниваем с нормами", duration: 6000 },
+  { id: 0, label: "Читаем анализ", duration: 8000 },
+  { id: 1, label: "Расшифровываем показатели", duration: 40000 },
+  { id: 2, label: "Сравниваем с нормами", duration: 27000 },
   { id: 3, label: "Формируем отчёт", duration: 0 },
 ];
 
@@ -333,7 +339,7 @@ function ProcessingScreen({ orderId, hasEmail, onEmailSubmitted, chatPaid }: { o
         animate={{ opacity: 1 }}
         transition={{ duration: 0.4, delay: 0.2 }}
       >
-        Обычно это занимает 30–60 секунд
+        Обычно 30 секунд — 2 минуты, в зависимости от объёма анализа
       </motion.p>
 
       {/* Progress bar */}
