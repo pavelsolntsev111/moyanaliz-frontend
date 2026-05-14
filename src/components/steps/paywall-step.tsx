@@ -746,6 +746,7 @@ function InlinePaywall({
   loading, abnormalIndicators, totalCount, onPay, onPromo,
   withChat, setWithChat, withFiveReports, setWithFiveReports,
   withAbonement, setWithAbonement,
+  abEmailBeforePay, prepayEmail, setPrepayEmail,
 }: {
   promoVisible: boolean
   setPromoVisible: (v: boolean) => void
@@ -754,7 +755,7 @@ function InlinePaywall({
   loading: boolean
   abnormalIndicators: AnalysisIndicator[]
   totalCount: number
-  onPay: (promoCode?: string, withChat?: boolean, withFiveReports?: boolean, withAbonement?: boolean) => Promise<void>
+  onPay: (promoCode?: string, withChat?: boolean, withFiveReports?: boolean, withAbonement?: boolean, email?: string) => Promise<void>
   onPromo: (email: string, promoCode: string, withChat?: boolean) => Promise<void>
   withChat: boolean
   setWithChat: (v: boolean) => void
@@ -762,6 +763,13 @@ function InlinePaywall({
   setWithFiveReports: (v: boolean) => void
   withAbonement: boolean
   setWithAbonement: (v: boolean) => void
+  // A/B test: when true, render an email field between tier selector and CTA;
+  // CTA stays disabled until the email passes regex validation. Email is then
+  // sent in the createPayment body and persisted on order.email BEFORE the
+  // YooKassa redirect — closes the orphan-payment window.
+  abEmailBeforePay: boolean
+  prepayEmail: string
+  setPrepayEmail: (v: string) => void
 }) {
   const [promoValidating, setPromoValidating] = useState(false)
   const [promoResult, setPromoResult] = useState<PromoValidateResponse | null>(null)
@@ -922,22 +930,59 @@ function InlinePaywall({
           </div>
           )}
 
+          {/* A/B group B: required email field above the CTA. Hidden when the
+              free-promo flow is active (it has its own email input below). */}
+          {abEmailBeforePay && !promoResult?.free && (
+            <div className="mb-3">
+              <label htmlFor="paywall-email" className="text-xs font-medium text-card-foreground">
+                Куда отправить отчёт?
+              </label>
+              <div className="relative mt-1">
+                <Mail className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                <input
+                  id="paywall-email"
+                  type="email"
+                  inputMode="email"
+                  autoComplete="email"
+                  placeholder="example@mail.ru"
+                  value={prepayEmail}
+                  onChange={(e) => setPrepayEmail(e.target.value)}
+                  disabled={loading}
+                  className="w-full rounded-xl border-2 border-border bg-background py-2.5 pl-11 pr-4 text-sm text-foreground outline-none transition-colors placeholder:text-muted-foreground focus:border-primary disabled:opacity-50"
+                />
+              </div>
+              <p className="mt-1.5 text-[11px] text-muted-foreground leading-relaxed">
+                На этот email придёт PDF-отчёт и промокод -30% на следующий анализ
+              </p>
+            </div>
+          )}
+
           {/* 1. CTA Button */}
-          {!promoResult?.free && (
+          {!promoResult?.free && (() => {
+            const prepayEmailValid = !abEmailBeforePay || isValidEmail(prepayEmail)
+            const ctaDisabled = loading || !prepayEmailValid
+            return (
           <button
             onClick={() => {
+              if (!prepayEmailValid) {
+                // Defensive: button is also `disabled`, but click can still
+                // fire on some edge cases (e.g. enter key). Focus the field.
+                document.getElementById("paywall-email")?.focus()
+                return
+              }
+              const emailArg = abEmailBeforePay ? prepayEmail.trim() : undefined
               if (withAbonement) {
                 ymGoal("click_pay_abonement")
-                onPay(undefined, false, false, true)
+                onPay(undefined, false, false, true, emailArg)
               } else if (withFiveReports) {
                 ymGoal("click_pay_five_reports")
-                onPay(undefined, false, true, false)
+                onPay(undefined, false, true, false, emailArg)
               } else {
                 ymGoal("click_get_report")
-                onPay(hasDiscount ? promoCode.trim() : undefined, withChat, false, false)
+                onPay(hasDiscount ? promoCode.trim() : undefined, withChat, false, false, emailArg)
               }
             }}
-            disabled={loading}
+            disabled={ctaDisabled}
             className="flex w-full items-center justify-center gap-2 rounded-xl px-4 py-4 text-sm font-bold text-white transition-opacity hover:opacity-90 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
             style={withAbonement
               ? { background: "linear-gradient(135deg, #d97706 0%, #b45309 100%)", boxShadow: "0 4px 16px rgba(217,119,6,0.35)" }
@@ -954,6 +999,8 @@ function InlinePaywall({
                 </svg>
                 Переход к оплате...
               </>
+            ) : !prepayEmailValid ? (
+              <>Введите email, чтобы продолжить</>
             ) : (
               <>
                 {withAbonement
@@ -967,7 +1014,8 @@ function InlinePaywall({
               </>
             )}
           </button>
-          )}
+            )
+          })()}
 
           {/* 2–4. Guarantee + YooMoney + Promo — unified block */}
           <div className="mt-3 flex flex-col items-center gap-2">
@@ -1184,17 +1232,22 @@ function TestimonialsBlock() {
 interface PaywallStepProps {
   orderId: string
   preview: PreviewData | null
-  onPay: (promoCode?: string, withChat?: boolean, withFiveReports?: boolean, withAbonement?: boolean) => Promise<void>
+  onPay: (promoCode?: string, withChat?: boolean, withFiveReports?: boolean, withAbonement?: boolean, email?: string) => Promise<void>
   onPromo: (email: string, promoCode: string, withChat?: boolean) => Promise<void>
   loading: boolean
+  // A/B test bucket: when true, show required email field before payment.
+  // Defaults to false so old callers (and pre-bucket sessions) keep current flow.
+  abEmailBeforePay?: boolean
 }
 
-export function PaywallStep({ onPay, onPromo, loading, preview }: PaywallStepProps) {
+export function PaywallStep({ onPay, onPromo, loading, preview, abEmailBeforePay = false }: PaywallStepProps) {
   const [promoVisible, setPromoVisible] = useState(false)
   const [promoCode, setPromoCode] = useState("")
   const [withChat, setWithChat] = useState(false)
   const [withFiveReports, setWithFiveReports] = useState(false)
   const [withAbonement, setWithAbonement] = useState(false)
+  const [prepayEmail, setPrepayEmail] = useState("")
+  const prepayEmailValid = isValidEmail(prepayEmail)
 
   const allIndicators = useMemo(() => {
     if (preview?.indicators?.length) {
@@ -1292,6 +1345,8 @@ export function PaywallStep({ onPay, onPromo, loading, preview }: PaywallStepPro
           withChat={withChat} setWithChat={setWithChat}
           withFiveReports={withFiveReports} setWithFiveReports={setWithFiveReports}
           withAbonement={withAbonement} setWithAbonement={setWithAbonement}
+          abEmailBeforePay={abEmailBeforePay}
+          prepayEmail={prepayEmail} setPrepayEmail={setPrepayEmail}
         />
       </div>
 
@@ -1308,13 +1363,26 @@ export function PaywallStep({ onPay, onPromo, loading, preview }: PaywallStepPro
         <ChatConsultationTeasers />
       </div>
 
-      {/* ── 7. Bottom CTA + sticky mobile ── */}
+      {/* ── 7. Bottom CTA + sticky mobile ──
+          For group B, if email is missing/invalid we cannot start payment;
+          instead scroll the user up to the paywall block and focus the input.
+          For group A this branch is unreachable (abEmailBeforePay=false). */}
       <BottomCTA
-        onPay={() => withAbonement
-          ? onPay(undefined, false, false, true)
-          : withFiveReports
-          ? onPay(undefined, false, true, false)
-          : onPay(undefined, withChat, false, false)}
+        onPay={() => {
+          if (abEmailBeforePay && !prepayEmailValid) {
+            document.getElementById("paywall-block")?.scrollIntoView({ behavior: "smooth", block: "center" })
+            setTimeout(() => document.getElementById("paywall-email")?.focus(), 400)
+            return
+          }
+          const emailArg = abEmailBeforePay ? prepayEmail.trim() : undefined
+          if (withAbonement) {
+            onPay(undefined, false, false, true, emailArg)
+          } else if (withFiveReports) {
+            onPay(undefined, false, true, false, emailArg)
+          } else {
+            onPay(undefined, withChat, false, false, emailArg)
+          }
+        }}
         loading={loading}
         withChat={withChat}
         withFiveReports={withFiveReports}

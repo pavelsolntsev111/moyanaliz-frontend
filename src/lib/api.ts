@@ -31,6 +31,8 @@ async function request<T>(path: string, options?: RequestInit, retries = 2): Pro
 export interface UploadResponse {
   order_id: string;
   preview: PreviewData | null;
+  // A/B test bucket: true → group B (email on paywall before pay), false/null → group A (control)
+  ab_email_before_pay?: boolean | null;
 }
 
 export interface DetectPatientResponse {
@@ -77,13 +79,15 @@ export async function createPayment(
   promoCode?: string,
   withChat?: boolean,
   withFiveReports?: boolean,
-  withAbonement?: boolean
+  withAbonement?: boolean,
+  email?: string
 ): Promise<PaymentCreateResponse> {
   const body: Record<string, unknown> = { order_id: orderId };
   if (promoCode) body.promo_code = promoCode;
   if (withChat) body.with_chat = true;
   if (withFiveReports) body.with_five_reports = true;
   if (withAbonement) body.with_abonement = true;
+  if (email) body.email = email;
   // Pass UTM params for payment attribution
   if (typeof window !== "undefined") {
     try {
@@ -204,6 +208,8 @@ export interface OrderStatus {
   chat_status?: string;
   chat_telegram_link?: string | null;
   chat_token?: string | null;
+  // A/B test bucket — same value as returned from /upload, persisted on order
+  ab_email_before_pay?: boolean | null;
   claude_result_json?: {
     meta: {
       detected_analysis_types: string[];
