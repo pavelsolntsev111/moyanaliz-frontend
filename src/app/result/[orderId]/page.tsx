@@ -54,6 +54,11 @@ export default function ResultPage({ params }: Props) {
     }
   }, [orderId]);
 
+  // A/B bucket tag for goals fired on the result page. Pulled from the order
+  // status response so a paid customer who clicks the email-link to /result/{id}
+  // (separate visit, no in-memory state) is still tagged correctly.
+  const abParams = status?.ab_email_before_pay ? { ab: "B" } : { ab: "A" };
+
   // payment_done metric with localStorage deduplication
   useEffect(() => {
     if (
@@ -61,9 +66,10 @@ export default function ResultPage({ params }: Props) {
       typeof window !== "undefined" &&
       !localStorage.getItem(`payment_done_${orderId}`)
     ) {
-      ymGoal("payment_done");
+      ymGoal("payment_done", abParams);
       localStorage.setItem(`payment_done_${orderId}`, "1");
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [status?.payment_status, orderId]);
 
   // Re-fetch status when returning from chat payment (?chat=activated)
@@ -104,7 +110,7 @@ export default function ResultPage({ params }: Props) {
         if ((s.payment_status === "paid" || s.processing_status === "completed") && !goalFired.current) {
           goalFired.current = true;
           localStorage.setItem(goalKey, "1");
-          ymGoal("payment_done");
+          ymGoal("payment_done", s.ab_email_before_pay ? { ab: "B" } : { ab: "A" });
         }
         if (!terminal) {
           setTimeout(run, 3000);
@@ -643,7 +649,7 @@ function StatusScreen({ status, orderId }: { status: OrderStatus; orderId: strin
           <a
             href={status.pdf_download_url}
             download
-            onClick={() => ymGoal("pdf_downloaded")}
+            onClick={() => ymGoal("pdf_downloaded", status.ab_email_before_pay ? { ab: "B" } : { ab: "A" })}
             className="mt-5 inline-flex items-center gap-2 py-3 px-8 rounded-xl bg-primary text-primary-foreground font-semibold hover:opacity-90 transition"
           >
             <Download className="w-5 h-5" />
@@ -852,7 +858,7 @@ function FullReport({ status, orderId, hasEmail, onEmailSubmitted }: { status: O
           <a
             href={status.pdf_download_url}
             download
-            onClick={() => ymGoal("pdf_downloaded")}
+            onClick={() => ymGoal("pdf_downloaded", status.ab_email_before_pay ? { ab: "B" } : { ab: "A" })}
             className="group flex items-center justify-center gap-3 w-full py-4 px-6 rounded-2xl font-semibold text-white transition-all duration-200"
             style={{
               background: "linear-gradient(135deg, #00b4bc 0%, #008f96 100%)",

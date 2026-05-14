@@ -25,9 +25,18 @@ export default function HomePage() {
   }, []);
   const [orderId, setOrderId] = useState<string>("");
   const [preview, setPreview] = useState<PreviewData | null>(null);
+  // A/B bucket. Defaults to false (group A) so any goal fired before /upload
+  // resolves stays in the safe control bucket. Overwritten with the real value
+  // from the /upload response in handleFileSelected.
+  const [abEmailBeforePay, setAbEmailBeforePay] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const [payLoading, setPayLoading] = useState(false);
   const uploadDone = useRef(false);
+
+  // Stable tag attached to every YM goal once we know the order's bucket.
+  // Goals fired before /upload completes (page_loaded, file_selected) carry no
+  // ab tag — they're per-visitor, not per-order, so splitting them is meaningless.
+  const abParams = (group: boolean) => ({ ab: group ? "B" : "A" });
 
   const handleFileSelected = useCallback(async (f: File) => {
     ymGoal("file_selected");
@@ -37,8 +46,10 @@ export default function HomePage() {
       const res = await uploadFile(f);
       setOrderId(res.order_id);
       setPreview(res.preview);
+      const ab = !!res.ab_email_before_pay;
+      setAbEmailBeforePay(ab);
       uploadDone.current = true;
-      ymGoal("file_uploaded");
+      ymGoal("file_uploaded", abParams(ab));
     } catch (e) {
       setError(e instanceof Error ? e.message : "Ошибка загрузки");
       setStep("upload");
@@ -47,15 +58,18 @@ export default function HomePage() {
 
   const handleAnalyzingComplete = useCallback(() => {
     setStep("paywall");
-    ymGoal("free_report_shown");
-  }, []);
+    ymGoal("free_report_shown", abParams(abEmailBeforePay));
+  }, [abEmailBeforePay]);
 
   const handlePay = useCallback(
-    async (promoCode?: string, withChat?: boolean, withFiveReports?: boolean, withAbonement?: boolean) => {
-      ymGoal("click_pay");
+    async (promoCode?: string, withChat?: boolean, withFiveReports?: boolean, withAbonement?: boolean, email?: string) => {
+      // Fire BEFORE network call — preserves current Yandex.Direct optimization
+      // semantics (click_pay = click on CTA). For group B the CTA is disabled
+      // until email is valid, so click_pay still implicitly means "validated".
+      ymGoal("click_pay", abParams(abEmailBeforePay));
       setPayLoading(true);
       try {
-        const res = await createPayment(orderId, promoCode, withChat, withFiveReports, withAbonement);
+        const res = await createPayment(orderId, promoCode, withChat, withFiveReports, withAbonement, email);
         if (res.redirect_url.startsWith("http")) {
           window.location.href = res.redirect_url;
         } else {
@@ -66,7 +80,7 @@ export default function HomePage() {
         setPayLoading(false);
       }
     },
-    [orderId, router]
+    [orderId, router, abEmailBeforePay]
   );
 
   const handlePromo = useCallback(
@@ -125,6 +139,7 @@ export default function HomePage() {
             onPay={handlePay}
             onPromo={handlePromo}
             loading={payLoading}
+            abEmailBeforePay={abEmailBeforePay}
           />
         )}
       </main>
