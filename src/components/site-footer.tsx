@@ -59,9 +59,46 @@ export function SiteFooter() {
           Сервис носит исключительно информационный характер и не является
           медицинской услугой. Результаты не заменяют консультацию врача.
         </p>
-        <p className="mt-2 text-center text-[11px] text-muted-foreground/70">
-          ИП Солнцев Павел Владимирович · ИНН 501815177453 · ОГРНИП 326774600300742 · +7 993 551 38 16
-        </p>
+
+        <div className="mt-6 border-t border-border/60 pt-5">
+          <div className="grid gap-4 text-center md:grid-cols-2 md:text-left">
+            <div className="flex flex-col gap-1">
+              <p className="text-[10px] uppercase tracking-wider text-muted-foreground/60">
+                Оператор сервиса
+              </p>
+              <p className="text-xs font-medium text-foreground">
+                ИП Солнцев Павел Владимирович
+              </p>
+              <p className="text-[11px] text-muted-foreground/80">
+                ИНН 501815177453 · ОГРНИП 326774600300742
+              </p>
+              <p className="text-[11px] text-muted-foreground/80">
+                +7 993 551 38 16
+              </p>
+              <p className="text-[11px] text-muted-foreground/80">
+                support@moyanaliz.ru
+              </p>
+            </div>
+
+            <div className="flex flex-col gap-1">
+              <p className="text-[10px] uppercase tracking-wider text-muted-foreground/60">
+                Медицинская клиника
+              </p>
+              <p className="text-xs font-medium text-foreground">
+                ООО «Оренбургская Неотложка»
+              </p>
+              <p className="text-[11px] text-muted-foreground/80">
+                ИНН 5610096165 · ОГРН 1065610073385
+              </p>
+              <p className="text-[11px] text-muted-foreground/80">
+                460048, г. Оренбург, проезд Автоматики, д. 30
+              </p>
+              <p className="text-[11px] text-muted-foreground/80">
+                Лицензия № ЛО-56-01-002714 от 25.03.2020
+              </p>
+            </div>
+          </div>
+        </div>
       </div>
     </footer>
   );
