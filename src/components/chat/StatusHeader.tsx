@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useEffect, useState } from "react";
 import { ArrowLeft, Sparkles } from "lucide-react";
 
 import type { OrderMeta } from "@/lib/chat-api";
@@ -95,15 +96,38 @@ function formatDate(raw: string): string {
   return raw;
 }
 
+/**
+ * Client-only relative time. Returns null on SSR so the server-rendered HTML
+ * has no time string (which would differ from client by 1+ minutes and trigger
+ * React hydration error #418). After mount, computes and updates every 30s.
+ *
+ * Hydration matters: on mismatch, React 18 unmounts the surrounding subtree
+ * and re-renders client-only — which in our case wiped the message list.
+ */
 function useRelativeTime(iso: string | null): string | null {
-  if (!iso) return null;
-  const expiry = new Date(iso).getTime();
-  const now = Date.now();
-  const diff = expiry - now;
-  if (diff <= 0) return "истекла";
-  const hours = Math.floor(diff / (1000 * 60 * 60));
-  const minutes = Math.floor((diff / (1000 * 60)) % 60);
-  if (hours >= 1) return `ещё ${hours}ч ${minutes}м`;
-  if (minutes >= 1) return `ещё ${minutes}м`;
-  return "истекает";
+  const [text, setText] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!iso) {
+      setText(null);
+      return;
+    }
+    const compute = () => {
+      const diff = new Date(iso).getTime() - Date.now();
+      if (diff <= 0) {
+        setText("истекла");
+        return;
+      }
+      const hours = Math.floor(diff / (1000 * 60 * 60));
+      const minutes = Math.floor((diff / (1000 * 60)) % 60);
+      if (hours >= 1) setText(`ещё ${hours}ч ${minutes}м`);
+      else if (minutes >= 1) setText(`ещё ${minutes}м`);
+      else setText("истекает");
+    };
+    compute();
+    const id = setInterval(compute, 30_000);
+    return () => clearInterval(id);
+  }, [iso]);
+
+  return text;
 }

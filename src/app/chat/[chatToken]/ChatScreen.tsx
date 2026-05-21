@@ -64,19 +64,26 @@ export default function ChatScreen({ chatToken, initialState }: ChatScreenProps)
 
   // ─── State refresh: light polling for countdown + payment confirmation ──
   //
-  // - Always poll every 30s for accurate "ещё 22ч" countdown.
-  // - When we expect a pending state change (just returned from YK payment),
-  //   poll aggressively (every 2s up to 60s) to catch webhook delivery.
+  // - Default: poll every 30s for accurate "ещё 22ч" countdown.
+  // - Aggressive (every 2s) when one of:
+  //     (a) we returned from a YK payment (?chat= / ?extended= in URL)
+  //     (b) chat is paid+ready but messages=[] — backend is generating the
+  //         greeting, we want it on screen ASAP.
   useEffect(() => {
     let interval: number | null = null;
     let aggressivePollUntil = 0;
 
-    // Detect return from YK payment via URL query (set BEFORE the cleanup above)
+    // Detect return from YK payment via URL query
     if (typeof window !== "undefined") {
       const params = new URLSearchParams(window.location.search);
       if (params.has("chat") || params.has("extended")) {
         aggressivePollUntil = Date.now() + 60_000;
       }
+    }
+
+    // Greeting-pending case: messages still empty on initial mount
+    if (messages.length === 0 && state.paid && state.report_ready) {
+      aggressivePollUntil = Math.max(aggressivePollUntil, Date.now() + 30_000);
     }
 
     const tick = async () => {
@@ -107,7 +114,9 @@ export default function ChatScreen({ chatToken, initialState }: ChatScreenProps)
     return () => {
       if (interval) clearTimeout(interval);
     };
-  }, [chatToken, streaming, inflight]);
+    // We deliberately re-subscribe when messages.length flips from 0 → 1+
+    // so aggressive polling stops as soon as the greeting arrives.
+  }, [chatToken, streaming, inflight, messages.length, state.paid, state.report_ready]);
 
   // ─── Send a message ──────────────────────────────────────────────────────
   const sendMessage = useCallback(
