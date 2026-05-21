@@ -877,7 +877,7 @@ function InlinePaywall({
                 {withChat && !withFiveReports && !withAbonement && <div className="h-2 w-2 rounded-full bg-primary" />}
               </div>
               <div className="flex-1">
-                <p className="text-sm font-semibold text-foreground">Полный отчет + консультация с ИИ в Telegram</p>
+                <p className="text-sm font-semibold text-foreground">Полный отчёт + консультация с AI-ассистентом</p>
               </div>
               <span className="text-sm font-bold text-foreground shrink-0">
                 {promoResult?.free ? "бесплатно" : `${comboDisplayPrice} ₽`}
