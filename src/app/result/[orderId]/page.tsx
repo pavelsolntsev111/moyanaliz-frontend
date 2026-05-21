@@ -1034,9 +1034,8 @@ function ChatUpsellButton({ status, orderId }: { status: OrderStatus; orderId: s
   const chatPaid = status.chat_payment_status === "paid";
   const chatPending = status.chat_payment_status === "pending";
   const chatToken = status.chat_token;
-  const chatLink = chatPaid && chatToken
-    ? `https://t.me/MoyAnaliz_consultant_bot?start=${chatToken}`
-    : (status.chat_telegram_link ?? null);
+  // Web chat: token-keyed page on our own domain (replaced Telegram deep link).
+  const chatLink = chatPaid && chatToken ? `/chat/${chatToken}` : null;
 
   const handleBuy = async () => {
     setLoading(true);
@@ -1060,19 +1059,17 @@ function ChatUpsellButton({ status, orderId }: { status: OrderStatus; orderId: s
             <CheckCircle2 className="w-5 h-5 text-emerald-500" />
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-sm font-semibold text-foreground">Чат активирован</p>
+            <p className="text-sm font-semibold text-foreground">AI-консультант готов</p>
             <p className="text-xs text-muted-foreground mt-0.5">До 10 вопросов по анализам · Сессия 24 ч</p>
           </div>
-          <a
+          <Link
             href={chatLink}
-            target="_blank"
-            rel="noopener noreferrer"
             className="shrink-0 inline-flex items-center gap-1.5 py-2 px-3.5 rounded-xl text-white text-xs font-semibold transition-opacity hover:opacity-90"
-            style={{ background: "#0088cc" }}
+            style={{ background: "#00b4bc" }}
           >
             <MessageSquare className="w-3.5 h-3.5" />
-            Открыть
-          </a>
+            Открыть чат
+          </Link>
         </div>
       </div>
     );
@@ -1112,7 +1109,7 @@ function ChatUpsellButton({ status, orderId }: { status: OrderStatus; orderId: s
         <div className="flex-1 min-w-0">
           <p className="text-sm font-semibold text-foreground">Есть вопросы по анализам?</p>
           <p className="text-xs text-muted-foreground mt-0.5">
-            {loading ? "Создаём ссылку..." : error ? error : "До 10 вопросов AI-ассистенту в Telegram"}
+            {loading ? "Создаём ссылку..." : error ? error : "До 10 вопросов AI-ассистенту прямо в браузере"}
           </p>
         </div>
         <div
