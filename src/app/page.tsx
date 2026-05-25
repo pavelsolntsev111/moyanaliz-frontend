@@ -8,9 +8,19 @@ import { SiteFooter } from "@/components/site-footer";
 import { UploadStep } from "@/components/steps/upload-step";
 import { AnalyzingStep } from "@/components/steps/analyzing-step";
 import { PaywallStep } from "@/components/steps/paywall-step";
-import { uploadFile, createPayment, applyPromo } from "@/lib/api";
+import { uploadFile, createPayment, applyPromo, type PriceBundle } from "@/lib/api";
 import { captureAttribution } from "@/lib/attribution";
 import { useRouter } from "next/navigation";
+
+// Fallback prices: only used while /upload is still in flight or if the
+// backend response is missing `prices` (old build during a partial deploy).
+const FALLBACK_PRICES: PriceBundle = {
+  single: 199,
+  combo: 248,
+  chat_upsell: 49,
+  five_reports: 299,
+  abonement: 599,
+};
 
 export default function HomePage() {
   const router = useRouter();
@@ -29,6 +39,9 @@ export default function HomePage() {
   // resolves stays in the safe control bucket. Overwritten with the real value
   // from the /upload response in handleFileSelected.
   const [abEmailBeforePay, setAbEmailBeforePay] = useState<boolean>(false);
+  // A/B price test bucket. "control"|"test"|null (null = pre-upload, treated as control).
+  const [abPriceV1, setAbPriceV1] = useState<string | null>(null);
+  const [prices, setPrices] = useState<PriceBundle>(FALLBACK_PRICES);
   const [error, setError] = useState<string | null>(null);
   const [payLoading, setPayLoading] = useState(false);
   const uploadDone = useRef(false);
@@ -36,7 +49,11 @@ export default function HomePage() {
   // Stable tag attached to every YM goal once we know the order's bucket.
   // Goals fired before /upload completes (page_loaded, file_selected) carry no
   // ab tag — they're per-visitor, not per-order, so splitting them is meaningless.
-  const abParams = (group: boolean) => ({ ab: group ? "B" : "A" });
+  // `price` parameter splits the price-test cohort for ARPU analysis in Metrika.
+  const abParams = (group: boolean, priceGroup: string | null) => ({
+    ab: group ? "B" : "A",
+    price: priceGroup === "test" ? "test" : "control",
+  });
 
   const handleFileSelected = useCallback(async (f: File) => {
     ymGoal("file_selected");
@@ -47,9 +64,12 @@ export default function HomePage() {
       setOrderId(res.order_id);
       setPreview(res.preview);
       const ab = !!res.ab_email_before_pay;
+      const priceGroup = res.ab_price_v1 ?? null;
       setAbEmailBeforePay(ab);
+      setAbPriceV1(priceGroup);
+      if (res.prices) setPrices(res.prices);
       uploadDone.current = true;
-      ymGoal("file_uploaded", abParams(ab));
+      ymGoal("file_uploaded", abParams(ab, priceGroup));
     } catch (e) {
       setError(e instanceof Error ? e.message : "Ошибка загрузки");
       setStep("upload");
@@ -58,15 +78,15 @@ export default function HomePage() {
 
   const handleAnalyzingComplete = useCallback(() => {
     setStep("paywall");
-    ymGoal("free_report_shown", abParams(abEmailBeforePay));
-  }, [abEmailBeforePay]);
+    ymGoal("free_report_shown", abParams(abEmailBeforePay, abPriceV1));
+  }, [abEmailBeforePay, abPriceV1]);
 
   const handlePay = useCallback(
     async (promoCode?: string, withChat?: boolean, withFiveReports?: boolean, withAbonement?: boolean, email?: string) => {
       // Fire BEFORE network call — preserves current Yandex.Direct optimization
       // semantics (click_pay = click on CTA). For group B the CTA is disabled
       // until email is valid, so click_pay still implicitly means "validated".
-      ymGoal("click_pay", abParams(abEmailBeforePay));
+      ymGoal("click_pay", abParams(abEmailBeforePay, abPriceV1));
       setPayLoading(true);
       try {
         const res = await createPayment(orderId, promoCode, withChat, withFiveReports, withAbonement, email);
@@ -80,7 +100,7 @@ export default function HomePage() {
         setPayLoading(false);
       }
     },
-    [orderId, router, abEmailBeforePay]
+    [orderId, router, abEmailBeforePay, abPriceV1]
   );
 
   const handlePromo = useCallback(
@@ -140,6 +160,8 @@ export default function HomePage() {
             onPromo={handlePromo}
             loading={payLoading}
             abEmailBeforePay={abEmailBeforePay}
+            prices={prices}
+            abPriceV1={abPriceV1}
           />
         )}
       </main>

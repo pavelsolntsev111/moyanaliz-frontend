@@ -57,7 +57,11 @@ export default function ResultPage({ params }: Props) {
   // A/B bucket tag for goals fired on the result page. Pulled from the order
   // status response so a paid customer who clicks the email-link to /result/{id}
   // (separate visit, no in-memory state) is still tagged correctly.
-  const abParams = status?.ab_email_before_pay ? { ab: "B" } : { ab: "A" };
+  // `price` parameter tracks the ab_price_v1 cohort for ARPU analysis in Metrika.
+  const abParams = {
+    ab: status?.ab_email_before_pay ? "B" : "A",
+    price: status?.ab_price_v1 === "test" ? "test" : "control",
+  };
 
   // payment_done metric with localStorage deduplication
   useEffect(() => {
@@ -110,7 +114,10 @@ export default function ResultPage({ params }: Props) {
         if ((s.payment_status === "paid" || s.processing_status === "completed") && !goalFired.current) {
           goalFired.current = true;
           localStorage.setItem(goalKey, "1");
-          ymGoal("payment_done", s.ab_email_before_pay ? { ab: "B" } : { ab: "A" });
+          ymGoal("payment_done", {
+            ab: s.ab_email_before_pay ? "B" : "A",
+            price: s.ab_price_v1 === "test" ? "test" : "control",
+          });
         }
         if (!terminal) {
           setTimeout(run, 3000);
@@ -649,7 +656,10 @@ function StatusScreen({ status, orderId }: { status: OrderStatus; orderId: strin
           <a
             href={status.pdf_download_url}
             download
-            onClick={() => ymGoal("pdf_downloaded", status.ab_email_before_pay ? { ab: "B" } : { ab: "A" })}
+            onClick={() => ymGoal("pdf_downloaded", {
+              ab: status.ab_email_before_pay ? "B" : "A",
+              price: status.ab_price_v1 === "test" ? "test" : "control",
+            })}
             className="mt-5 inline-flex items-center gap-2 py-3 px-8 rounded-xl bg-primary text-primary-foreground font-semibold hover:opacity-90 transition"
           >
             <Download className="w-5 h-5" />
@@ -858,7 +868,10 @@ function FullReport({ status, orderId, hasEmail, onEmailSubmitted }: { status: O
           <a
             href={status.pdf_download_url}
             download
-            onClick={() => ymGoal("pdf_downloaded", status.ab_email_before_pay ? { ab: "B" } : { ab: "A" })}
+            onClick={() => ymGoal("pdf_downloaded", {
+              ab: status.ab_email_before_pay ? "B" : "A",
+              price: status.ab_price_v1 === "test" ? "test" : "control",
+            })}
             className="group flex items-center justify-center gap-3 w-full py-4 px-6 rounded-2xl font-semibold text-white transition-all duration-200"
             style={{
               background: "linear-gradient(135deg, #00b4bc 0%, #008f96 100%)",
@@ -1116,7 +1129,7 @@ function ChatUpsellButton({ status, orderId }: { status: OrderStatus; orderId: s
           className="shrink-0 inline-flex items-center gap-1.5 py-2 px-3.5 rounded-xl text-xs font-semibold"
           style={{ background: "rgba(0,180,188,0.1)", color: "#008f96" }}
         >
-          {loading ? "..." : "49 ₽"}
+          {loading ? "..." : `${status.prices?.chat_upsell ?? 49} ₽`}
         </div>
       </div>
     </button>

@@ -28,11 +28,23 @@ async function request<T>(path: string, options?: RequestInit, retries = 2): Pro
   throw lastError;
 }
 
+export interface PriceBundle {
+  single: number;        // base report (199 control / 249 test)
+  combo: number;         // report + chat (248 control / 348 test)
+  chat_upsell: number;   // chat purchased standalone (49 control / 99 test)
+  five_reports: number;  // 3-report pack (299, A/B-invariant)
+  abonement: number;     // 10-report abonement (599, A/B-invariant)
+}
+
 export interface UploadResponse {
   order_id: string;
   preview: PreviewData | null;
   // A/B test bucket: true → group B (email on paywall before pay), false/null → group A (control)
   ab_email_before_pay?: boolean | null;
+  // A/B test ab_price_v1: "control" | "test" | null. Drives `prices` below.
+  ab_price_v1?: string | null;
+  // Resolved prices for this bucket. UI MUST render these, not hardcoded values.
+  prices?: PriceBundle;
 }
 
 export interface DetectPatientResponse {
@@ -210,6 +222,9 @@ export interface OrderStatus {
   chat_token?: string | null;
   // A/B test bucket — same value as returned from /upload, persisted on order
   ab_email_before_pay?: boolean | null;
+  // A/B test ab_price_v1 — drives chat upsell price on the result page.
+  ab_price_v1?: string | null;
+  prices?: PriceBundle;
   claude_result_json?: {
     meta: {
       detected_analysis_types: string[];

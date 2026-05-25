@@ -27,7 +27,7 @@ import type { PreviewData, AnalysisIndicator, LightIndicator } from "@/lib/types
 import { IndicatorCard } from "@/components/indicator-card"
 import { mockIndicators } from "@/lib/mock-data"
 import { validatePromo } from "@/lib/api"
-import type { PromoValidateResponse } from "@/lib/api"
+import type { PromoValidateResponse, PriceBundle } from "@/lib/api"
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
@@ -747,6 +747,7 @@ function InlinePaywall({
   withChat, setWithChat, withFiveReports, setWithFiveReports,
   withAbonement, setWithAbonement,
   abEmailBeforePay, prepayEmail, setPrepayEmail,
+  prices, abPriceV1,
 }: {
   promoVisible: boolean
   setPromoVisible: (v: boolean) => void
@@ -770,7 +771,12 @@ function InlinePaywall({
   abEmailBeforePay: boolean
   prepayEmail: string
   setPrepayEmail: (v: string) => void
+  // Prices resolved per A/B bucket (ab_price_v1). Hardcoded fallback in page.tsx.
+  prices: PriceBundle
+  // A/B price bucket for YM goal tagging.
+  abPriceV1: string | null
 }) {
+  const priceTag = abPriceV1 === "test" ? "test" : "control"
   const [promoValidating, setPromoValidating] = useState(false)
   const [promoResult, setPromoResult] = useState<PromoValidateResponse | null>(null)
   const [promoError, setPromoError] = useState<string | null>(null)
@@ -787,12 +793,12 @@ function InlinePaywall({
   )
 
   const baseDisplayPrice = promoResult?.valid && !promoResult.free && promoResult.discount_percent
-    ? Math.max(1, Math.round(199 * (100 - promoResult.discount_percent) / 100))
-    : 199
+    ? Math.max(1, Math.round(prices.single * (100 - promoResult.discount_percent) / 100))
+    : prices.single
   const comboDisplayPrice = promoResult?.valid && !promoResult.free && promoResult.discount_percent
-    ? Math.max(1, Math.round(248 * (100 - promoResult.discount_percent) / 100))
-    : 248
-  const displayPrice = withFiveReports ? 499 : withChat ? comboDisplayPrice : baseDisplayPrice
+    ? Math.max(1, Math.round(prices.combo * (100 - promoResult.discount_percent) / 100))
+    : prices.combo
+  const displayPrice = withFiveReports ? prices.five_reports : withChat ? comboDisplayPrice : baseDisplayPrice
   const hasDiscount = promoResult?.valid && !promoResult.free && promoResult.discount_percent
 
   const handleValidatePromo = async () => {
@@ -903,7 +909,7 @@ function InlinePaywall({
                 <p className="text-sm font-semibold text-foreground">3 отчёта</p>
                 <p className="text-xs text-muted-foreground mt-0.5">в два раза дешевле, чем при покупке одного отчёта</p>
               </div>
-              <span className="text-sm font-bold shrink-0" style={{ color: "#16a34a" }}>299 ₽</span>
+              <span className="text-sm font-bold shrink-0" style={{ color: "#16a34a" }}>{prices.five_reports} ₽</span>
             </button>
 
             <button
@@ -925,7 +931,7 @@ function InlinePaywall({
                 <p className="text-sm font-semibold text-foreground">10 отчётов</p>
                 <p className="text-xs text-muted-foreground mt-0.5">ещё дешевле! можете использовать для других членов семьи, друзей или любимых</p>
               </div>
-              <span className="text-sm font-bold shrink-0" style={{ color: "#d97706" }}>599 ₽</span>
+              <span className="text-sm font-bold shrink-0" style={{ color: "#d97706" }}>{prices.abonement} ₽</span>
             </button>
           </div>
           )}
@@ -972,13 +978,13 @@ function InlinePaywall({
               }
               const emailArg = abEmailBeforePay ? prepayEmail.trim() : undefined
               if (withAbonement) {
-                ymGoal("click_pay_abonement")
+                ymGoal("click_pay_abonement", { price: priceTag })
                 onPay(undefined, false, false, true, emailArg)
               } else if (withFiveReports) {
-                ymGoal("click_pay_five_reports")
+                ymGoal("click_pay_five_reports", { price: priceTag })
                 onPay(undefined, false, true, false, emailArg)
               } else {
-                ymGoal("click_get_report")
+                ymGoal("click_get_report", { price: priceTag, tier: withChat ? "combo" : "single" })
                 onPay(hasDiscount ? promoCode.trim() : undefined, withChat, false, false, emailArg)
               }
             }}
@@ -1004,9 +1010,9 @@ function InlinePaywall({
             ) : (
               <>
                 {withAbonement
-                  ? "Купить 10 отчётов — 599 ₽"
+                  ? `Купить 10 отчётов — ${prices.abonement} ₽`
                   : withFiveReports
-                  ? "Купить 3 отчёта — 299 ₽"
+                  ? `Купить 3 отчёта — ${prices.five_reports} ₽`
                   : withChat
                   ? `С консультацией — ${displayPrice} ₽`
                   : `Получить полный отчёт — ${displayPrice} ₽`}
@@ -1124,12 +1130,13 @@ function InlinePaywall({
 }
 
 /** Bottom CTA card + sticky mobile button */
-function BottomCTA({ onPay, loading, withChat, withFiveReports, withAbonement }: {
+function BottomCTA({ onPay, loading, withChat, withFiveReports, withAbonement, prices }: {
   onPay: () => void
   loading: boolean
   withChat: boolean
   withFiveReports?: boolean
   withAbonement?: boolean
+  prices: PriceBundle
 }) {
   const [showSticky, setShowSticky] = useState(false)
 
@@ -1158,12 +1165,12 @@ function BottomCTA({ onPay, loading, withChat, withFiveReports, withAbonement }:
           >
             <span className="flex items-center gap-2 text-sm font-bold">
               {withAbonement
-                ? "Купить 10 отчётов — 599 ₽"
+                ? `Купить 10 отчётов — ${prices.abonement} ₽`
                 : withFiveReports
-                ? "Купить 3 отчёта — 299 ₽"
+                ? `Купить 3 отчёта — ${prices.five_reports} ₽`
                 : withChat
-                ? "С консультацией — 248 ₽"
-                : "Получить полный отчёт — 199 ₽"}
+                ? `С консультацией — ${prices.combo} ₽`
+                : `Получить полный отчёт — ${prices.single} ₽`}
               <ChevronRight className="h-4 w-4" />
             </span>
             <span className="mt-0.5 text-[10px] font-normal opacity-80">
@@ -1238,9 +1245,15 @@ interface PaywallStepProps {
   // A/B test bucket: when true, show required email field before payment.
   // Defaults to false so old callers (and pre-bucket sessions) keep current flow.
   abEmailBeforePay?: boolean
+  // Prices resolved per ab_price_v1 bucket. Required so all renderers use the
+  // same numbers (paywall, CTA, sticky mobile button, promo discount display).
+  prices: PriceBundle
+  // A/B price bucket — used to tag click_get_report / click_pay_five_reports /
+  // click_pay_abonement sub-goals so tier choice is splittable by bucket in YM.
+  abPriceV1?: string | null
 }
 
-export function PaywallStep({ onPay, onPromo, loading, preview, abEmailBeforePay = false }: PaywallStepProps) {
+export function PaywallStep({ onPay, onPromo, loading, preview, abEmailBeforePay = false, prices, abPriceV1 = null }: PaywallStepProps) {
   const [promoVisible, setPromoVisible] = useState(false)
   const [promoCode, setPromoCode] = useState("")
   const [withChat, setWithChat] = useState(false)
@@ -1347,6 +1360,8 @@ export function PaywallStep({ onPay, onPromo, loading, preview, abEmailBeforePay
           withAbonement={withAbonement} setWithAbonement={setWithAbonement}
           abEmailBeforePay={abEmailBeforePay}
           prepayEmail={prepayEmail} setPrepayEmail={setPrepayEmail}
+          prices={prices}
+          abPriceV1={abPriceV1}
         />
       </div>
 
@@ -1387,6 +1402,7 @@ export function PaywallStep({ onPay, onPromo, loading, preview, abEmailBeforePay
         withChat={withChat}
         withFiveReports={withFiveReports}
         withAbonement={withAbonement}
+        prices={prices}
       />
     </div>
   )
