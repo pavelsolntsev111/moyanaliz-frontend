@@ -1,11 +1,16 @@
 "use client";
 
-import { useEffect, useState, useCallback, useRef, use } from "react";
+import { useEffect, useState, useCallback, useRef, use, Suspense } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
 import { ymGoal } from "@/lib/ym";
-import { getOrderStatus, setOrderEmail, createChatPayment, type OrderStatus } from "@/lib/api";
+import { getOrderStatus, setOrderEmail, createChatPayment, validatePromo, type OrderStatus } from "@/lib/api";
+import { useSearchParams } from "next/navigation";
+
+// Active chat upsell promo from `?promo=CHAT-XXX` URL param, validated server-side.
+// Shape: discount percent and code; price is computed locally from status.prices.chat_upsell.
+type ChatPromoOffer = { code: string; discountPercent: number };
 import {
   CheckCircle2,
   AlertTriangle,
@@ -161,7 +166,11 @@ export default function ResultPage({ params }: Props) {
         <div className="mx-auto max-w-3xl px-4 py-16">
           {error && <ErrorScreen message={error} />}
           {!error && !status && <LoadingScreen />}
-          {!error && status && <StatusScreen status={status} orderId={orderId} />}
+          {!error && status && (
+            <Suspense fallback={<LoadingScreen />}>
+              <StatusScreen status={status} orderId={orderId} />
+            </Suspense>
+          )}
         </div>
       </main>
       <SiteFooter />
@@ -582,6 +591,39 @@ function StatusScreen({ status, orderId }: { status: OrderStatus; orderId: strin
   const [emailSubmitted, setEmailSubmitted] = useState(false);
   const hasEmail = !!status.email || emailSubmitted;
 
+  // Chat-upsell email campaign: `?promo=CHAT-XXX` URL param.
+  // Validate once on mount via /payment/validate-promo with context=chat,
+  // then pass the offer down to FullReport → ChatUpsellButton.
+  const searchParams = useSearchParams();
+  const rawPromo = searchParams?.get("promo") || "";
+  const [chatPromoOffer, setChatPromoOffer] = useState<ChatPromoOffer | null>(null);
+  const [chatPromoError, setChatPromoError] = useState<string>("");
+  const promoCheckedRef = useRef<string>("");
+
+  useEffect(() => {
+    const normalized = rawPromo.trim().toLowerCase();
+    if (!normalized || promoCheckedRef.current === normalized) return;
+    if (!/^chat-[a-z0-9]+$/i.test(normalized)) return;
+    promoCheckedRef.current = normalized;
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await validatePromo(normalized, "chat");
+        if (cancelled) return;
+        if (res.valid && res.discount_percent) {
+          setChatPromoOffer({ code: normalized, discountPercent: res.discount_percent });
+          setChatPromoError("");
+        } else {
+          setChatPromoOffer(null);
+          setChatPromoError(res.reason || "Промокод недействителен");
+        }
+      } catch {
+        if (!cancelled) setChatPromoError("Не удалось проверить промокод");
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [rawPromo]);
+
   if (
     status.payment_status === "awaiting" ||
     status.payment_status === "pending"
@@ -640,7 +682,7 @@ function StatusScreen({ status, orderId }: { status: OrderStatus; orderId: strin
   }
 
   if (status.processing_status === "completed" && status.claude_result_json) {
-    return <FullReport status={status} orderId={orderId} hasEmail={hasEmail} onEmailSubmitted={() => setEmailSubmitted(true)} />;
+    return <FullReport status={status} orderId={orderId} hasEmail={hasEmail} onEmailSubmitted={() => setEmailSubmitted(true)} chatPromoOffer={chatPromoOffer} chatPromoError={chatPromoError} />;
   }
 
   if (status.processing_status === "completed") {
@@ -812,7 +854,7 @@ function ReportHero() {
   );
 }
 
-function FullReport({ status, orderId, hasEmail, onEmailSubmitted }: { status: OrderStatus; orderId: string; hasEmail: boolean; onEmailSubmitted?: () => void }) {
+function FullReport({ status, orderId, hasEmail, onEmailSubmitted, chatPromoOffer, chatPromoError }: { status: OrderStatus; orderId: string; hasEmail: boolean; onEmailSubmitted?: () => void; chatPromoOffer?: ChatPromoOffer | null; chatPromoError?: string }) {
   const [promoCopied, setPromoCopied] = useState(false);
   useEffect(() => { ymGoal("analysis_viewed"); }, []);
 
@@ -985,7 +1027,7 @@ function FullReport({ status, orderId, hasEmail, onEmailSubmitted }: { status: O
         className="space-y-3 mb-6"
       >
         {/* Chat card — always shown; content differs by purchase status */}
-        <ChatUpsellButton status={status} orderId={orderId} />
+        <ChatUpsellButton status={status} orderId={orderId} chatPromoOffer={chatPromoOffer ?? null} chatPromoError={chatPromoError ?? ""} />
 
         {/* Cards below only for users WITH chat paid */}
         {status.chat_payment_status === "paid" && (
@@ -1040,7 +1082,7 @@ function FullReport({ status, orderId, hasEmail, onEmailSubmitted }: { status: O
 
 /* ─── Chat upsell ─── */
 
-function ChatUpsellButton({ status, orderId }: { status: OrderStatus; orderId: string }) {
+function ChatUpsellButton({ status, orderId, chatPromoOffer, chatPromoError }: { status: OrderStatus; orderId: string; chatPromoOffer?: ChatPromoOffer | null; chatPromoError?: string }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -1050,11 +1092,26 @@ function ChatUpsellButton({ status, orderId }: { status: OrderStatus; orderId: s
   // Web chat: token-keyed page on our own domain (replaced Telegram deep link).
   const chatLink = chatPaid && chatToken ? `/chat/${chatToken}` : null;
 
+  // Chat-upsell email campaign: if user came from email with ?promo=CHAT-XXX,
+  // show discounted price + auto-apply promo on click.
+  const basePrice = status.prices?.chat_upsell ?? 49;
+  const offerActive = !!chatPromoOffer && !chatPaid && !chatPending;
+  const discountedPrice = offerActive
+    ? Math.max(1, Math.floor(basePrice * (100 - chatPromoOffer!.discountPercent) / 100))
+    : basePrice;
+
   const handleBuy = async () => {
     setLoading(true);
     setError("");
     try {
-      const res = await createChatPayment(orderId);
+      // Tag Metrika goal with promo source so we can segment email-driven purchases
+      try {
+        ymGoal("click_pay_chat", offerActive
+          ? { from_email: true, promo: "chat_upsell_v1" }
+          : {}
+        );
+      } catch { /* analytics best-effort */ }
+      const res = await createChatPayment(orderId, offerActive ? chatPromoOffer!.code : undefined);
       if (res.redirect_url) {
         window.location.href = res.redirect_url;
       }
@@ -1109,28 +1166,55 @@ function ChatUpsellButton({ status, orderId }: { status: OrderStatus; orderId: s
     );
   }
 
+  const subtitleText = loading
+    ? "Создаём ссылку..."
+    : error
+      ? error
+      : chatPromoError
+        ? chatPromoError
+        : offerActive
+          ? `Скидка ${chatPromoOffer!.discountPercent}% по промокоду`
+          : "До 10 вопросов AI-ассистенту прямо в браузере";
+
   return (
     <button
       onClick={handleBuy}
       disabled={loading}
-      className="w-full text-left rounded-2xl border border-border bg-card p-4 min-h-[72px] flex items-center cursor-pointer hover:border-primary/30 hover:shadow-sm transition-all duration-200 disabled:opacity-60 disabled:cursor-not-allowed"
+      className="w-full text-left rounded-2xl border bg-card p-4 min-h-[72px] flex items-center cursor-pointer hover:shadow-sm transition-all duration-200 disabled:opacity-60 disabled:cursor-not-allowed"
+      style={offerActive ? { borderColor: "rgba(15, 118, 110, 0.4)", background: "rgba(15, 118, 110, 0.04)" } : undefined}
     >
       <div className="flex items-center gap-3 w-full">
         <div className="shrink-0 w-10 h-10 rounded-xl flex items-center justify-center" style={{ background: "rgba(0,180,188,0.08)" }}>
           <MessageCircleQuestion className="w-5 h-5 text-primary" />
         </div>
         <div className="flex-1 min-w-0">
-          <p className="text-sm font-semibold text-foreground">Есть вопросы по анализам?</p>
+          <p className="text-sm font-semibold text-foreground">
+            {offerActive ? "Консультация по вашему анализу" : "Есть вопросы по анализам?"}
+          </p>
           <p className="text-xs text-muted-foreground mt-0.5">
-            {loading ? "Создаём ссылку..." : error ? error : "До 10 вопросов AI-ассистенту прямо в браузере"}
+            {subtitleText}
           </p>
         </div>
-        <div
-          className="shrink-0 inline-flex items-center gap-1.5 py-2 px-3.5 rounded-xl text-xs font-semibold"
-          style={{ background: "rgba(0,180,188,0.1)", color: "#008f96" }}
-        >
-          {loading ? "..." : `${status.prices?.chat_upsell ?? 49} ₽`}
-        </div>
+        {offerActive ? (
+          <div className="shrink-0 flex flex-col items-end gap-0.5">
+            <div className="flex items-center gap-1.5">
+              <span className="text-xs text-muted-foreground line-through">{basePrice} ₽</span>
+              <span className="inline-flex items-center py-1.5 px-3 rounded-xl text-xs font-bold text-white" style={{ background: "#0f766e" }}>
+                {loading ? "..." : `${discountedPrice} ₽`}
+              </span>
+            </div>
+            <span className="text-[10px] font-bold uppercase tracking-wide" style={{ color: "#0f766e" }}>
+              −{chatPromoOffer!.discountPercent}%
+            </span>
+          </div>
+        ) : (
+          <div
+            className="shrink-0 inline-flex items-center gap-1.5 py-2 px-3.5 rounded-xl text-xs font-semibold"
+            style={{ background: "rgba(0,180,188,0.1)", color: "#008f96" }}
+          >
+            {loading ? "..." : `${basePrice} ₽`}
+          </div>
+        )}
       </div>
     </button>
   );

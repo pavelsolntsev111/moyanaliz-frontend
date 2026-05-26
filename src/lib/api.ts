@@ -184,12 +184,13 @@ export interface PromoValidateResponse {
 }
 
 export async function validatePromo(
-  promoCode: string
+  promoCode: string,
+  context: "report" | "chat" = "report"
 ): Promise<PromoValidateResponse> {
   return request<PromoValidateResponse>("/api/v1/payment/validate-promo", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ promo_code: promoCode }),
+    body: JSON.stringify({ promo_code: promoCode, context }),
   });
 }
 
@@ -198,11 +199,17 @@ export interface ChatPaymentResponse {
   chat_token?: string;
 }
 
-export async function createChatPayment(orderId: string): Promise<ChatPaymentResponse> {
+export async function createChatPayment(
+  orderId: string,
+  promoCode?: string,
+): Promise<ChatPaymentResponse> {
   return request<ChatPaymentResponse>("/api/v1/payment/create-chat", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ order_id: orderId }),
+    body: JSON.stringify({
+      order_id: orderId,
+      ...(promoCode ? { promo_code: promoCode } : {}),
+    }),
   });
 }
 
