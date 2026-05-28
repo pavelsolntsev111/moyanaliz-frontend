@@ -35,6 +35,43 @@ function isValidEmail(email: string) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
 }
 
+/**
+ * Instrumental form of «показатель» for «с N показателем/показателями».
+ * Russian instr-case only needs a 2-form helper (sg/pl):
+ *   1, 21, 31 (m10=1 & m100≠11)  → "показателем" (instr sg)
+ *   2, 5, 11, 23, 100 (everything else) → "показателями" (instr pl)
+ *
+ * AB test ab_cta_v1: drives the test-variant copy on the single-tier CTA
+ * ("Узнать, что с N показателем/показателями — N ₽"). Combo/pack/abonement
+ * keep control copy in both buckets.
+ */
+function ruInstrIndicator(n: number): string {
+  const m10 = Math.abs(n) % 10
+  const m100 = Math.abs(n) % 100
+  if (m100 >= 11 && m100 <= 14) return "показателями"
+  if (m10 === 1) return "показателем"
+  return "показателями"
+}
+
+/**
+ * Single-tier CTA copy resolver. Test variant only fires when:
+ *   - bucket = "test"
+ *   - outOfRangeCount > 0 (we have something concrete to hook onto)
+ * For outOfRangeCount=0 (all-normal results) test falls back to control copy
+ * — we deliberately don't try to monetize "all is fine" with a different
+ * frame; that's a separate experiment if anyone wants to run it.
+ */
+function getSingleCtaText(
+  abCtaV1: string | null,
+  outOfRangeCount: number,
+  displayPrice: number,
+): string {
+  if (abCtaV1 === "test" && outOfRangeCount > 0) {
+    return `Узнать, что с ${outOfRangeCount} ${ruInstrIndicator(outOfRangeCount)} — ${displayPrice} ₽`
+  }
+  return `Получить полный отчёт — ${displayPrice} ₽`
+}
+
 /** Health impact descriptions by indicator name (lowercase key) */
 const HEALTH_IMPACT: Record<string, string> = {
   // Витамины
@@ -743,11 +780,11 @@ function LockedAbnormalCard({ indicator }: { indicator: AnalysisIndicator }) {
 /** Inline paywall — personalized copy */
 function InlinePaywall({
   promoVisible, setPromoVisible, promoCode, setPromoCode,
-  loading, abnormalIndicators, totalCount, onPay, onPromo,
+  loading, abnormalIndicators, totalCount, outOfRangeCount, onPay, onPromo,
   withChat, setWithChat, withFiveReports, setWithFiveReports,
   withAbonement, setWithAbonement,
   abEmailBeforePay, prepayEmail, setPrepayEmail,
-  prices, abPriceV1,
+  prices, abPriceV1, abCtaV1,
 }: {
   promoVisible: boolean
   setPromoVisible: (v: boolean) => void
@@ -756,6 +793,9 @@ function InlinePaywall({
   loading: boolean
   abnormalIndicators: AnalysisIndicator[]
   totalCount: number
+  // Out-of-range indicator count visible in header («X из Y вне нормы»).
+  // Drives the test-variant single-CTA copy via getSingleCtaText().
+  outOfRangeCount: number
   onPay: (promoCode?: string, withChat?: boolean, withFiveReports?: boolean, withAbonement?: boolean, email?: string) => Promise<void>
   onPromo: (email: string, promoCode: string, withChat?: boolean) => Promise<void>
   withChat: boolean
@@ -775,8 +815,11 @@ function InlinePaywall({
   prices: PriceBundle
   // A/B price bucket for YM goal tagging.
   abPriceV1: string | null
+  // A/B CTA copy bucket (ab_cta_v1). "test" → personalized single-CTA copy.
+  abCtaV1: string | null
 }) {
   const priceTag = abPriceV1 === "test" ? "test" : "control"
+  const ctaTag = abCtaV1 === "test" ? "test" : "control"
   const [promoValidating, setPromoValidating] = useState(false)
   const [promoResult, setPromoResult] = useState<PromoValidateResponse | null>(null)
   const [promoError, setPromoError] = useState<string | null>(null)
@@ -978,13 +1021,13 @@ function InlinePaywall({
               }
               const emailArg = abEmailBeforePay ? prepayEmail.trim() : undefined
               if (withAbonement) {
-                ymGoal("click_pay_abonement", { price: priceTag })
+                ymGoal("click_pay_abonement", { price: priceTag, cta: ctaTag })
                 onPay(undefined, false, false, true, emailArg)
               } else if (withFiveReports) {
-                ymGoal("click_pay_five_reports", { price: priceTag })
+                ymGoal("click_pay_five_reports", { price: priceTag, cta: ctaTag })
                 onPay(undefined, false, true, false, emailArg)
               } else {
-                ymGoal("click_get_report", { price: priceTag, tier: withChat ? "combo" : "single" })
+                ymGoal("click_get_report", { price: priceTag, cta: ctaTag, tier: withChat ? "combo" : "single" })
                 onPay(hasDiscount ? promoCode.trim() : undefined, withChat, false, false, emailArg)
               }
             }}
@@ -1015,7 +1058,9 @@ function InlinePaywall({
                   ? `Купить 3 отчёта — ${prices.five_reports} ₽`
                   : withChat
                   ? `С консультацией — ${displayPrice} ₽`
-                  : `Получить полный отчёт — ${displayPrice} ₽`}
+                  /* AB ab_cta_v1: test → "Узнать, что с N показателем/показателями — N ₽"
+                     when outOfRangeCount > 0. Control or all-normal → current copy. */
+                  : getSingleCtaText(abCtaV1, outOfRangeCount, displayPrice)}
                 <ChevronRight className="h-4 w-4" />
               </>
             )}
@@ -1130,13 +1175,17 @@ function InlinePaywall({
 }
 
 /** Bottom CTA card + sticky mobile button */
-function BottomCTA({ onPay, loading, withChat, withFiveReports, withAbonement, prices }: {
+function BottomCTA({ onPay, loading, withChat, withFiveReports, withAbonement, prices, abCtaV1, outOfRangeCount }: {
   onPay: () => void
   loading: boolean
   withChat: boolean
   withFiveReports?: boolean
   withAbonement?: boolean
   prices: PriceBundle
+  // A/B CTA bucket — single-tier sticky CTA mirrors the main InlinePaywall CTA
+  // copy so the user sees the same message above and below the fold.
+  abCtaV1: string | null
+  outOfRangeCount: number
 }) {
   const [showSticky, setShowSticky] = useState(false)
 
@@ -1170,7 +1219,8 @@ function BottomCTA({ onPay, loading, withChat, withFiveReports, withAbonement, p
                 ? `Купить 3 отчёта — ${prices.five_reports} ₽`
                 : withChat
                 ? `С консультацией — ${prices.combo} ₽`
-                : `Получить полный отчёт — ${prices.single} ₽`}
+                /* AB ab_cta_v1: same logic as InlinePaywall — mirror on mobile. */
+                : getSingleCtaText(abCtaV1, outOfRangeCount, prices.single)}
               <ChevronRight className="h-4 w-4" />
             </span>
             <span className="mt-0.5 text-[10px] font-normal opacity-80">
@@ -1251,9 +1301,13 @@ interface PaywallStepProps {
   // A/B price bucket — used to tag click_get_report / click_pay_five_reports /
   // click_pay_abonement sub-goals so tier choice is splittable by bucket in YM.
   abPriceV1?: string | null
+  // A/B CTA bucket (ab_cta_v1, started 2026-05-28). "test" → personalized single
+  // CTA copy via getSingleCtaText(); combo/pack/abonement stay control in both
+  // buckets. Independent from abPriceV1 (MD5+salt on backend).
+  abCtaV1?: string | null
 }
 
-export function PaywallStep({ onPay, onPromo, loading, preview, abEmailBeforePay = false, prices, abPriceV1 = null }: PaywallStepProps) {
+export function PaywallStep({ onPay, onPromo, loading, preview, abEmailBeforePay = false, prices, abPriceV1 = null, abCtaV1 = null }: PaywallStepProps) {
   const [promoVisible, setPromoVisible] = useState(false)
   const [promoCode, setPromoCode] = useState("")
   const [withChat, setWithChat] = useState(false)
@@ -1354,7 +1408,9 @@ export function PaywallStep({ onPay, onPromo, loading, preview, abEmailBeforePay
         <InlinePaywall
           promoVisible={promoVisible} setPromoVisible={setPromoVisible}
           promoCode={promoCode} setPromoCode={setPromoCode} loading={loading}
-          abnormalIndicators={abnormalIndicators} totalCount={totalCount} onPay={onPay} onPromo={onPromo}
+          abnormalIndicators={abnormalIndicators} totalCount={totalCount}
+          outOfRangeCount={outOfRangeCount}
+          onPay={onPay} onPromo={onPromo}
           withChat={withChat} setWithChat={setWithChat}
           withFiveReports={withFiveReports} setWithFiveReports={setWithFiveReports}
           withAbonement={withAbonement} setWithAbonement={setWithAbonement}
@@ -1362,6 +1418,7 @@ export function PaywallStep({ onPay, onPromo, loading, preview, abEmailBeforePay
           prepayEmail={prepayEmail} setPrepayEmail={setPrepayEmail}
           prices={prices}
           abPriceV1={abPriceV1}
+          abCtaV1={abCtaV1}
         />
       </div>
 
@@ -1403,6 +1460,8 @@ export function PaywallStep({ onPay, onPromo, loading, preview, abEmailBeforePay
         withFiveReports={withFiveReports}
         withAbonement={withAbonement}
         prices={prices}
+        abCtaV1={abCtaV1}
+        outOfRangeCount={outOfRangeCount}
       />
     </div>
   )

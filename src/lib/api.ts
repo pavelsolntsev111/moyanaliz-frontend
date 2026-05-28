@@ -43,6 +43,9 @@ export interface UploadResponse {
   ab_email_before_pay?: boolean | null;
   // A/B test ab_price_v1: "control" | "test" | null. Drives `prices` below.
   ab_price_v1?: string | null;
+  // A/B test ab_cta_v1: "control" | "test" | null. Drives paywall CTA copy
+  // (single tier only — combo/pack/abonement stay at control copy in both buckets).
+  ab_cta_v1?: string | null;
   // Resolved prices for this bucket. UI MUST render these, not hardcoded values.
   prices?: PriceBundle;
 }
@@ -184,12 +187,13 @@ export interface PromoValidateResponse {
 }
 
 export async function validatePromo(
-  promoCode: string
+  promoCode: string,
+  context: "report" | "chat" = "report"
 ): Promise<PromoValidateResponse> {
   return request<PromoValidateResponse>("/api/v1/payment/validate-promo", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ promo_code: promoCode }),
+    body: JSON.stringify({ promo_code: promoCode, context }),
   });
 }
 
@@ -198,11 +202,17 @@ export interface ChatPaymentResponse {
   chat_token?: string;
 }
 
-export async function createChatPayment(orderId: string): Promise<ChatPaymentResponse> {
+export async function createChatPayment(
+  orderId: string,
+  promoCode?: string,
+): Promise<ChatPaymentResponse> {
   return request<ChatPaymentResponse>("/api/v1/payment/create-chat", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ order_id: orderId }),
+    body: JSON.stringify({
+      order_id: orderId,
+      ...(promoCode ? { promo_code: promoCode } : {}),
+    }),
   });
 }
 
@@ -224,6 +234,9 @@ export interface OrderStatus {
   ab_email_before_pay?: boolean | null;
   // A/B test ab_price_v1 — drives chat upsell price on the result page.
   ab_price_v1?: string | null;
+  // A/B test ab_cta_v1 — surfaced on status for YM tagging on result-page goals
+  // (e.g. pdf_downloaded). No CTA-copy rendering happens on the result page.
+  ab_cta_v1?: string | null;
   prices?: PriceBundle;
   claude_result_json?: {
     meta: {

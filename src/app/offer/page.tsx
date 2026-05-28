@@ -11,7 +11,7 @@ export default function OfferPage() {
 
       <div className="prose prose-sm max-w-none space-y-4 text-sm leading-relaxed text-foreground/80">
         <p>
-          Дата последнего обновления: 29 апреля 2026 г.
+          Дата последнего обновления: 26 мая 2026 г.
         </p>
 
         <h2 className="text-lg font-semibold mt-6">1. Предмет оферты</h2>
@@ -77,7 +77,19 @@ export default function OfferPage() {
           <li>Исполнитель формирует расшифровку и направляет PDF-отчёт на email</li>
         </ol>
 
-        <h2 className="text-lg font-semibold mt-6">6. Возврат средств</h2>
+        <h2 className="text-lg font-semibold mt-6">6. Информационные рассылки</h2>
+        <p>
+          Помимо PDF-отчёта, Исполнитель вправе направлять на указанный
+          Заказчиком email информационные сообщения о связанных услугах сервиса
+          (консультации, акции, новости платформы). Заказчик в любой момент может
+          отказаться от получения таких сообщений по ссылке внизу любого письма
+          или направив запрос на{" "}
+          <a href="mailto:support@moyanaliz.ru" className="text-primary underline">support@moyanaliz.ru</a>.
+          Отказ от информационных рассылок не влияет на доставку транзакционных
+          писем (PDF-отчётов, чеков, ответов поддержки).
+        </p>
+
+        <h2 className="text-lg font-semibold mt-6">7. Возврат средств</h2>
         <p>
           Возврат денежных средств не предусмотрен после оказания услуги
           (генерации и отправки PDF-отчёта). В случае технической невозможности
@@ -86,14 +98,14 @@ export default function OfferPage() {
           <a href="/guarantee" className="text-primary underline">Гарантия качества</a>.
         </p>
 
-        <h2 className="text-lg font-semibold mt-6">7. Ограничение ответственности</h2>
+        <h2 className="text-lg font-semibold mt-6">8. Ограничение ответственности</h2>
         <p>
           Исполнитель не несёт ответственности за действия или решения Заказчика,
           принятые на основании полученной информации. Расшифровка не заменяет
           консультацию квалифицированного медицинского специалиста.
         </p>
 
-        <h2 className="text-lg font-semibold mt-6">8. Реквизиты Исполнителя</h2>
+        <h2 className="text-lg font-semibold mt-6">9. Реквизиты Исполнителя</h2>
         <p>
           ИП Солнцев Павел Владимирович<br />
           ОГРНИП: 326774600300742<br />

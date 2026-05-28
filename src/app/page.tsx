@@ -41,6 +41,9 @@ export default function HomePage() {
   const [abEmailBeforePay, setAbEmailBeforePay] = useState<boolean>(false);
   // A/B price test bucket. "control"|"test"|null (null = pre-upload, treated as control).
   const [abPriceV1, setAbPriceV1] = useState<string | null>(null);
+  // A/B CTA test bucket. "control"|"test"|null. Independent from ab_price_v1
+  // (assigned via MD5+salt on backend).
+  const [abCtaV1, setAbCtaV1] = useState<string | null>(null);
   const [prices, setPrices] = useState<PriceBundle>(FALLBACK_PRICES);
   const [error, setError] = useState<string | null>(null);
   const [payLoading, setPayLoading] = useState(false);
@@ -49,10 +52,13 @@ export default function HomePage() {
   // Stable tag attached to every YM goal once we know the order's bucket.
   // Goals fired before /upload completes (page_loaded, file_selected) carry no
   // ab tag — they're per-visitor, not per-order, so splitting them is meaningless.
-  // `price` parameter splits the price-test cohort for ARPU analysis in Metrika.
-  const abParams = (group: boolean, priceGroup: string | null) => ({
+  // `price` and `cta` parameters split the cohorts for independent analysis.
+  // Both live on the same goal hit — Метрика отчёт «Параметры визитов» умеет
+  // двойную группировку (2×2 ячейки).
+  const abParams = (group: boolean, priceGroup: string | null, ctaGroup: string | null) => ({
     ab: group ? "B" : "A",
     price: priceGroup === "test" ? "test" : "control",
+    cta: ctaGroup === "test" ? "test" : "control",
   });
 
   const handleFileSelected = useCallback(async (f: File) => {
@@ -65,11 +71,13 @@ export default function HomePage() {
       setPreview(res.preview);
       const ab = !!res.ab_email_before_pay;
       const priceGroup = res.ab_price_v1 ?? null;
+      const ctaGroup = res.ab_cta_v1 ?? null;
       setAbEmailBeforePay(ab);
       setAbPriceV1(priceGroup);
+      setAbCtaV1(ctaGroup);
       if (res.prices) setPrices(res.prices);
       uploadDone.current = true;
-      ymGoal("file_uploaded", abParams(ab, priceGroup));
+      ymGoal("file_uploaded", abParams(ab, priceGroup, ctaGroup));
     } catch (e) {
       setError(e instanceof Error ? e.message : "Ошибка загрузки");
       setStep("upload");
@@ -78,15 +86,15 @@ export default function HomePage() {
 
   const handleAnalyzingComplete = useCallback(() => {
     setStep("paywall");
-    ymGoal("free_report_shown", abParams(abEmailBeforePay, abPriceV1));
-  }, [abEmailBeforePay, abPriceV1]);
+    ymGoal("free_report_shown", abParams(abEmailBeforePay, abPriceV1, abCtaV1));
+  }, [abEmailBeforePay, abPriceV1, abCtaV1]);
 
   const handlePay = useCallback(
     async (promoCode?: string, withChat?: boolean, withFiveReports?: boolean, withAbonement?: boolean, email?: string) => {
       // Fire BEFORE network call — preserves current Yandex.Direct optimization
       // semantics (click_pay = click on CTA). For group B the CTA is disabled
       // until email is valid, so click_pay still implicitly means "validated".
-      ymGoal("click_pay", abParams(abEmailBeforePay, abPriceV1));
+      ymGoal("click_pay", abParams(abEmailBeforePay, abPriceV1, abCtaV1));
       setPayLoading(true);
       try {
         const res = await createPayment(orderId, promoCode, withChat, withFiveReports, withAbonement, email);
@@ -100,7 +108,7 @@ export default function HomePage() {
         setPayLoading(false);
       }
     },
-    [orderId, router, abEmailBeforePay, abPriceV1]
+    [orderId, router, abEmailBeforePay, abPriceV1, abCtaV1]
   );
 
   const handlePromo = useCallback(
@@ -162,6 +170,7 @@ export default function HomePage() {
             abEmailBeforePay={abEmailBeforePay}
             prices={prices}
             abPriceV1={abPriceV1}
+            abCtaV1={abCtaV1}
           />
         )}
       </main>
