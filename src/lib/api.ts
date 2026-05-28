@@ -43,6 +43,9 @@ export interface UploadResponse {
   ab_email_before_pay?: boolean | null;
   // A/B test ab_price_v1: "control" | "test" | null. Drives `prices` below.
   ab_price_v1?: string | null;
+  // A/B test ab_cta_v1: "control" | "test" | null. Drives paywall CTA copy
+  // (single tier only — combo/pack/abonement stay at control copy in both buckets).
+  ab_cta_v1?: string | null;
   // Resolved prices for this bucket. UI MUST render these, not hardcoded values.
   prices?: PriceBundle;
 }
@@ -231,6 +234,9 @@ export interface OrderStatus {
   ab_email_before_pay?: boolean | null;
   // A/B test ab_price_v1 — drives chat upsell price on the result page.
   ab_price_v1?: string | null;
+  // A/B test ab_cta_v1 — surfaced on status for YM tagging on result-page goals
+  // (e.g. pdf_downloaded). No CTA-copy rendering happens on the result page.
+  ab_cta_v1?: string | null;
   prices?: PriceBundle;
   claude_result_json?: {
     meta: {

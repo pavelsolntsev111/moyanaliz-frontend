@@ -62,10 +62,12 @@ export default function ResultPage({ params }: Props) {
   // A/B bucket tag for goals fired on the result page. Pulled from the order
   // status response so a paid customer who clicks the email-link to /result/{id}
   // (separate visit, no in-memory state) is still tagged correctly.
-  // `price` parameter tracks the ab_price_v1 cohort for ARPU analysis in Metrika.
+  // `price` tracks ab_price_v1 cohort, `cta` tracks ab_cta_v1 cohort — both
+  // independent fields persisted on the order, surfaced via /order/{id}/status.
   const abParams = {
     ab: status?.ab_email_before_pay ? "B" : "A",
     price: status?.ab_price_v1 === "test" ? "test" : "control",
+    cta: status?.ab_cta_v1 === "test" ? "test" : "control",
   };
 
   // payment_done metric with localStorage deduplication
@@ -122,6 +124,7 @@ export default function ResultPage({ params }: Props) {
           ymGoal("payment_done", {
             ab: s.ab_email_before_pay ? "B" : "A",
             price: s.ab_price_v1 === "test" ? "test" : "control",
+            cta: s.ab_cta_v1 === "test" ? "test" : "control",
           });
         }
         if (!terminal) {
@@ -701,6 +704,7 @@ function StatusScreen({ status, orderId }: { status: OrderStatus; orderId: strin
             onClick={() => ymGoal("pdf_downloaded", {
               ab: status.ab_email_before_pay ? "B" : "A",
               price: status.ab_price_v1 === "test" ? "test" : "control",
+              cta: status.ab_cta_v1 === "test" ? "test" : "control",
             })}
             className="mt-5 inline-flex items-center gap-2 py-3 px-8 rounded-xl bg-primary text-primary-foreground font-semibold hover:opacity-90 transition"
           >
@@ -913,6 +917,7 @@ function FullReport({ status, orderId, hasEmail, onEmailSubmitted, chatPromoOffe
             onClick={() => ymGoal("pdf_downloaded", {
               ab: status.ab_email_before_pay ? "B" : "A",
               price: status.ab_price_v1 === "test" ? "test" : "control",
+              cta: status.ab_cta_v1 === "test" ? "test" : "control",
             })}
             className="group flex items-center justify-center gap-3 w-full py-4 px-6 rounded-2xl font-semibold text-white transition-all duration-200"
             style={{
