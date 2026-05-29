@@ -1,6 +1,7 @@
 import type { MetadataRoute } from "next";
 import { articles } from "@/lib/blog-data";
 import { indicators } from "@/lib/indicators-data";
+import { landings } from "@/lib/landings-data";
 
 export default function sitemap(): MetadataRoute.Sitemap {
   const base = "https://moyanaliz.ru";
@@ -29,5 +30,12 @@ export default function sitemap(): MetadataRoute.Sitemap {
     priority: 0.6,
   }));
 
-  return [...staticPages, ...blogPages, ...indicatorPages];
+  const landingPages: MetadataRoute.Sitemap = landings.map((l) => ({
+    url: `${base}/${l.slug}`,
+    lastModified: new Date(l.updated),
+    changeFrequency: "weekly" as const,
+    priority: 0.9,
+  }));
+
+  return [...staticPages, ...landingPages, ...blogPages, ...indicatorPages];
 }

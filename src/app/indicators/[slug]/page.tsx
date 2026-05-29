@@ -90,18 +90,43 @@ export default async function IndicatorPage({ params }: Props) {
     .map((s) => indicators.find((i) => i.slug === s))
     .filter(Boolean);
 
-  const jsonLd = {
-    "@context": "https://schema.org",
-    "@type": "MedicalWebPage",
-    name: ind.name,
-    description: ind.metaDescription,
-    url: `https://moyanaliz.ru/indicators/${slug}`,
-    mainEntity: {
-      "@type": "MedicalTest",
+  const jsonLd = [
+    {
+      "@context": "https://schema.org",
+      "@type": "MedicalWebPage",
       name: ind.name,
-      normalRange: `${ind.referenceRange.male} (${ind.unit})`,
+      description: ind.metaDescription,
+      url: `https://moyanaliz.ru/indicators/${slug}`,
+      inLanguage: "ru-RU",
+      mainEntity: {
+        "@type": "MedicalTest",
+        name: ind.name,
+        normalRange: `${ind.referenceRange.male} (${ind.unit})`,
+      },
     },
-  };
+    {
+      "@context": "https://schema.org",
+      "@type": "BreadcrumbList",
+      itemListElement: [
+        { "@type": "ListItem", position: 1, name: "Главная", item: "https://moyanaliz.ru/" },
+        { "@type": "ListItem", position: 2, name: "Показатели", item: "https://moyanaliz.ru/indicators" },
+        { "@type": "ListItem", position: 3, name: ind.name, item: `https://moyanaliz.ru/indicators/${slug}` },
+      ],
+    },
+    ...(ind.content.faq.length > 0
+      ? [
+          {
+            "@context": "https://schema.org",
+            "@type": "FAQPage",
+            mainEntity: ind.content.faq.map((f) => ({
+              "@type": "Question",
+              name: f.question,
+              acceptedAnswer: { "@type": "Answer", text: f.answer },
+            })),
+          },
+        ]
+      : []),
+  ];
 
   return (
     <div className="flex min-h-screen flex-col">
