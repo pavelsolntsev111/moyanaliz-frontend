@@ -957,8 +957,8 @@ function FullReport({ status, orderId, hasEmail, onEmailSubmitted, chatPromoOffe
         )}
       </motion.div>
 
-      {/* ── Five-reports pack: promo code block ── */}
-      {status.order_tier === "five_reports" && status.promo_code && (
+      {/* ── 3-report pack: promo code block (legacy tier name "five_reports") ── */}
+      {(status.order_tier === "three_reports" || status.order_tier === "five_reports") && status.promo_code && (
         <motion.div
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}

@@ -29,11 +29,12 @@ async function request<T>(path: string, options?: RequestInit, retries = 2): Pro
 }
 
 export interface PriceBundle {
-  single: number;        // base report (199 control / 249 test)
-  combo: number;         // report + chat (248 control / 348 test)
-  chat_upsell: number;   // chat purchased standalone (49 control / 99 test)
-  five_reports: number;  // 3-report pack (299, A/B-invariant)
-  abonement: number;     // 10-report abonement (599, A/B-invariant)
+  single: number;          // base report (199 control / 249 test)
+  combo: number;           // report + chat (248 control / 298 test)
+  chat_upsell: number;     // chat purchased standalone (49 both)
+  three_reports: number;   // 3-report pack (299 control / 375 test)
+  abonement: number;       // 10-report abonement paywall (599 control / 750 test)
+  five_reports?: number;   // legacy alias for three_reports (backend sends both during transition)
 }
 
 export interface UploadResponse {
@@ -93,14 +94,14 @@ export async function createPayment(
   orderId: string,
   promoCode?: string,
   withChat?: boolean,
-  withFiveReports?: boolean,
+  withThreeReports?: boolean,
   withAbonement?: boolean,
   email?: string
 ): Promise<PaymentCreateResponse> {
   const body: Record<string, unknown> = { order_id: orderId };
   if (promoCode) body.promo_code = promoCode;
   if (withChat) body.with_chat = true;
-  if (withFiveReports) body.with_five_reports = true;
+  if (withThreeReports) body.with_three_reports = true;
   if (withAbonement) body.with_abonement = true;
   if (email) body.email = email;
   // Pass UTM params for payment attribution

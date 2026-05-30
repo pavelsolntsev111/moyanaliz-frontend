@@ -18,7 +18,7 @@ const FALLBACK_PRICES: PriceBundle = {
   single: 199,
   combo: 248,
   chat_upsell: 49,
-  five_reports: 299,
+  three_reports: 299,
   abonement: 599,
 };
 
@@ -90,14 +90,14 @@ export default function HomePage() {
   }, [abEmailBeforePay, abPriceV1, abCtaV1]);
 
   const handlePay = useCallback(
-    async (promoCode?: string, withChat?: boolean, withFiveReports?: boolean, withAbonement?: boolean, email?: string) => {
+    async (promoCode?: string, withChat?: boolean, withThreeReports?: boolean, withAbonement?: boolean, email?: string) => {
       // Fire BEFORE network call — preserves current Yandex.Direct optimization
       // semantics (click_pay = click on CTA). For group B the CTA is disabled
       // until email is valid, so click_pay still implicitly means "validated".
       ymGoal("click_pay", abParams(abEmailBeforePay, abPriceV1, abCtaV1));
       setPayLoading(true);
       try {
-        const res = await createPayment(orderId, promoCode, withChat, withFiveReports, withAbonement, email);
+        const res = await createPayment(orderId, promoCode, withChat, withThreeReports, withAbonement, email);
         if (res.redirect_url.startsWith("http")) {
           window.location.href = res.redirect_url;
         } else {

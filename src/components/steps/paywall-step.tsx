@@ -781,7 +781,7 @@ function LockedAbnormalCard({ indicator }: { indicator: AnalysisIndicator }) {
 function InlinePaywall({
   promoVisible, setPromoVisible, promoCode, setPromoCode,
   loading, abnormalIndicators, totalCount, outOfRangeCount, onPay, onPromo,
-  withChat, setWithChat, withFiveReports, setWithFiveReports,
+  withChat, setWithChat, withThreeReports, setWithThreeReports,
   withAbonement, setWithAbonement,
   abEmailBeforePay, prepayEmail, setPrepayEmail,
   prices, abPriceV1, abCtaV1,
@@ -796,12 +796,12 @@ function InlinePaywall({
   // Out-of-range indicator count visible in header («X из Y вне нормы»).
   // Drives the test-variant single-CTA copy via getSingleCtaText().
   outOfRangeCount: number
-  onPay: (promoCode?: string, withChat?: boolean, withFiveReports?: boolean, withAbonement?: boolean, email?: string) => Promise<void>
+  onPay: (promoCode?: string, withChat?: boolean, withThreeReports?: boolean, withAbonement?: boolean, email?: string) => Promise<void>
   onPromo: (email: string, promoCode: string, withChat?: boolean) => Promise<void>
   withChat: boolean
   setWithChat: (v: boolean) => void
-  withFiveReports: boolean
-  setWithFiveReports: (v: boolean) => void
+  withThreeReports: boolean
+  setWithThreeReports: (v: boolean) => void
   withAbonement: boolean
   setWithAbonement: (v: boolean) => void
   // A/B test: when true, render an email field between tier selector and CTA;
@@ -841,7 +841,7 @@ function InlinePaywall({
   const comboDisplayPrice = promoResult?.valid && !promoResult.free && promoResult.discount_percent
     ? Math.max(1, Math.round(prices.combo * (100 - promoResult.discount_percent) / 100))
     : prices.combo
-  const displayPrice = withFiveReports ? prices.five_reports : withChat ? comboDisplayPrice : baseDisplayPrice
+  const displayPrice = withThreeReports ? prices.three_reports : withChat ? comboDisplayPrice : baseDisplayPrice
   const hasDiscount = promoResult?.valid && !promoResult.free && promoResult.discount_percent
 
   const handleValidatePromo = async () => {
@@ -858,7 +858,7 @@ function InlinePaywall({
         // is_pack — for them we keep the user's tier choice (combo allowed).
         if (result.is_pack) {
           setWithChat(false)
-          setWithFiveReports(false)
+          setWithThreeReports(false)
           setWithAbonement(false)
         }
         setPromoResult(result)
@@ -891,16 +891,16 @@ function InlinePaywall({
           {!promoResult?.is_pack && (
           <div className="mb-4 space-y-2">
             <button
-              onClick={() => { setWithChat(false); setWithFiveReports(false); setWithAbonement(false) }}
+              onClick={() => { setWithChat(false); setWithThreeReports(false); setWithAbonement(false) }}
               disabled={loading}
               className={`flex w-full min-h-[56px] items-center gap-3 rounded-xl border-2 p-3 text-left transition-colors ${
-                !withChat && !withFiveReports && !withAbonement ? "border-primary bg-primary/5" : "border-border hover:border-muted-foreground/30"
+                !withChat && !withThreeReports && !withAbonement ? "border-primary bg-primary/5" : "border-border hover:border-muted-foreground/30"
               } ${loading ? "opacity-50 pointer-events-none" : ""}`}
             >
               <div className={`h-4 w-4 shrink-0 rounded-full border-2 flex items-center justify-center ${
-                !withChat && !withFiveReports && !withAbonement ? "border-primary" : "border-muted-foreground/40"
+                !withChat && !withThreeReports && !withAbonement ? "border-primary" : "border-muted-foreground/40"
               }`}>
-                {!withChat && !withFiveReports && !withAbonement && <div className="h-2 w-2 rounded-full bg-primary" />}
+                {!withChat && !withThreeReports && !withAbonement && <div className="h-2 w-2 rounded-full bg-primary" />}
               </div>
               <div className="flex-1">
                 <p className="text-sm font-semibold text-foreground">Полный отчет</p>
@@ -911,19 +911,19 @@ function InlinePaywall({
             </button>
 
             <button
-              onClick={() => { setWithChat(true); setWithFiveReports(false); setWithAbonement(false) }}
+              onClick={() => { setWithChat(true); setWithThreeReports(false); setWithAbonement(false) }}
               disabled={loading}
               className={`relative flex w-full min-h-[56px] items-center gap-3 rounded-xl border-2 p-3 text-left transition-colors ${
-                withChat && !withFiveReports && !withAbonement ? "border-primary bg-primary/5" : "border-border hover:border-muted-foreground/30"
+                withChat && !withThreeReports && !withAbonement ? "border-primary bg-primary/5" : "border-border hover:border-muted-foreground/30"
               } ${loading ? "opacity-50 pointer-events-none" : ""}`}
             >
               <span className="absolute -top-2 right-3 rounded-full bg-primary px-2 py-0.5 text-[10px] font-bold text-white">
                 популярный
               </span>
               <div className={`h-4 w-4 shrink-0 rounded-full border-2 flex items-center justify-center ${
-                withChat && !withFiveReports && !withAbonement ? "border-primary" : "border-muted-foreground/40"
+                withChat && !withThreeReports && !withAbonement ? "border-primary" : "border-muted-foreground/40"
               }`}>
-                {withChat && !withFiveReports && !withAbonement && <div className="h-2 w-2 rounded-full bg-primary" />}
+                {withChat && !withThreeReports && !withAbonement && <div className="h-2 w-2 rounded-full bg-primary" />}
               </div>
               <div className="flex-1">
                 <p className="text-sm font-semibold text-foreground">Полный отчёт + консультация с AI-ассистентом</p>
@@ -934,29 +934,29 @@ function InlinePaywall({
             </button>
 
             <button
-              onClick={() => { setWithFiveReports(true); setWithChat(false); setWithAbonement(false) }}
+              onClick={() => { setWithThreeReports(true); setWithChat(false); setWithAbonement(false) }}
               disabled={loading}
               className={`relative flex w-full min-h-[56px] items-center gap-3 rounded-xl border-2 p-3 text-left transition-colors ${
-                withFiveReports ? "border-emerald-500 bg-emerald-50/50 dark:bg-emerald-950/20" : "border-border hover:border-muted-foreground/30"
+                withThreeReports ? "border-emerald-500 bg-emerald-50/50 dark:bg-emerald-950/20" : "border-border hover:border-muted-foreground/30"
               } ${loading ? "opacity-50 pointer-events-none" : ""}`}
             >
               <span className="absolute -top-2 right-3 rounded-full px-2 py-0.5 text-[10px] font-bold text-white" style={{ background: "#16a34a" }}>
                 −50%
               </span>
               <div className={`h-4 w-4 shrink-0 rounded-full border-2 flex items-center justify-center ${
-                withFiveReports ? "border-emerald-600" : "border-muted-foreground/40"
+                withThreeReports ? "border-emerald-600" : "border-muted-foreground/40"
               }`}>
-                {withFiveReports && <div className="h-2 w-2 rounded-full bg-emerald-600" />}
+                {withThreeReports && <div className="h-2 w-2 rounded-full bg-emerald-600" />}
               </div>
               <div className="flex-1">
                 <p className="text-sm font-semibold text-foreground">3 отчёта</p>
                 <p className="text-xs text-muted-foreground mt-0.5">в два раза дешевле, чем при покупке одного отчёта</p>
               </div>
-              <span className="text-sm font-bold shrink-0" style={{ color: "#16a34a" }}>{prices.five_reports} ₽</span>
+              <span className="text-sm font-bold shrink-0" style={{ color: "#16a34a" }}>{prices.three_reports} ₽</span>
             </button>
 
             <button
-              onClick={() => { setWithAbonement(true); setWithChat(false); setWithFiveReports(false) }}
+              onClick={() => { setWithAbonement(true); setWithChat(false); setWithThreeReports(false) }}
               disabled={loading}
               className={`relative flex w-full min-h-[56px] items-center gap-3 rounded-xl border-2 p-3 text-left transition-colors ${
                 withAbonement ? "border-amber-500 bg-amber-50/60 dark:bg-amber-950/20" : "border-border hover:border-muted-foreground/30"
@@ -1023,7 +1023,7 @@ function InlinePaywall({
               if (withAbonement) {
                 ymGoal("click_pay_abonement", { price: priceTag, cta: ctaTag })
                 onPay(undefined, false, false, true, emailArg)
-              } else if (withFiveReports) {
+              } else if (withThreeReports) {
                 ymGoal("click_pay_five_reports", { price: priceTag, cta: ctaTag })
                 onPay(undefined, false, true, false, emailArg)
               } else {
@@ -1035,7 +1035,7 @@ function InlinePaywall({
             className="flex w-full items-center justify-center gap-2 rounded-xl px-4 py-4 text-sm font-bold text-white transition-opacity hover:opacity-90 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
             style={withAbonement
               ? { background: "linear-gradient(135deg, #d97706 0%, #b45309 100%)", boxShadow: "0 4px 16px rgba(217,119,6,0.35)" }
-              : withFiveReports
+              : withThreeReports
               ? { background: "linear-gradient(135deg, #16a34a 0%, #15803d 100%)", boxShadow: "0 4px 16px rgba(22,163,74,0.35)" }
               : { background: "linear-gradient(135deg, #00b4bc 0%, #00a0a8 100%)", boxShadow: "0 4px 16px rgba(0,180,188,0.35)" }
             }
@@ -1054,8 +1054,8 @@ function InlinePaywall({
               <>
                 {withAbonement
                   ? `Купить 10 отчётов — ${prices.abonement} ₽`
-                  : withFiveReports
-                  ? `Купить 3 отчёта — ${prices.five_reports} ₽`
+                  : withThreeReports
+                  ? `Купить 3 отчёта — ${prices.three_reports} ₽`
                   : withChat
                   ? `С консультацией — ${displayPrice} ₽`
                   /* AB ab_cta_v1: test → "Узнать, что с N показателем/показателями — N ₽"
@@ -1175,11 +1175,11 @@ function InlinePaywall({
 }
 
 /** Bottom CTA card + sticky mobile button */
-function BottomCTA({ onPay, loading, withChat, withFiveReports, withAbonement, prices, abCtaV1, outOfRangeCount }: {
+function BottomCTA({ onPay, loading, withChat, withThreeReports, withAbonement, prices, abCtaV1, outOfRangeCount }: {
   onPay: () => void
   loading: boolean
   withChat: boolean
-  withFiveReports?: boolean
+  withThreeReports?: boolean
   withAbonement?: boolean
   prices: PriceBundle
   // A/B CTA bucket — single-tier sticky CTA mirrors the main InlinePaywall CTA
@@ -1207,7 +1207,7 @@ function BottomCTA({ onPay, loading, withChat, withFiveReports, withAbonement, p
             className="flex w-full flex-col items-center justify-center rounded-xl px-4 py-4 text-white disabled:opacity-50"
             style={withAbonement
               ? { background: "linear-gradient(135deg, #d97706 0%, #b45309 100%)" }
-              : withFiveReports
+              : withThreeReports
               ? { background: "linear-gradient(135deg, #16a34a 0%, #15803d 100%)" }
               : { background: "linear-gradient(135deg, #00b4bc 0%, #00a0a8 100%)" }
             }
@@ -1215,8 +1215,8 @@ function BottomCTA({ onPay, loading, withChat, withFiveReports, withAbonement, p
             <span className="flex items-center gap-2 text-sm font-bold">
               {withAbonement
                 ? `Купить 10 отчётов — ${prices.abonement} ₽`
-                : withFiveReports
-                ? `Купить 3 отчёта — ${prices.five_reports} ₽`
+                : withThreeReports
+                ? `Купить 3 отчёта — ${prices.three_reports} ₽`
                 : withChat
                 ? `С консультацией — ${prices.combo} ₽`
                 /* AB ab_cta_v1: same logic as InlinePaywall — mirror on mobile. */
@@ -1289,7 +1289,7 @@ function TestimonialsBlock() {
 interface PaywallStepProps {
   orderId: string
   preview: PreviewData | null
-  onPay: (promoCode?: string, withChat?: boolean, withFiveReports?: boolean, withAbonement?: boolean, email?: string) => Promise<void>
+  onPay: (promoCode?: string, withChat?: boolean, withThreeReports?: boolean, withAbonement?: boolean, email?: string) => Promise<void>
   onPromo: (email: string, promoCode: string, withChat?: boolean) => Promise<void>
   loading: boolean
   // A/B test bucket: when true, show required email field before payment.
@@ -1311,7 +1311,7 @@ export function PaywallStep({ onPay, onPromo, loading, preview, abEmailBeforePay
   const [promoVisible, setPromoVisible] = useState(false)
   const [promoCode, setPromoCode] = useState("")
   const [withChat, setWithChat] = useState(false)
-  const [withFiveReports, setWithFiveReports] = useState(false)
+  const [withThreeReports, setWithThreeReports] = useState(false)
   const [withAbonement, setWithAbonement] = useState(false)
   const [prepayEmail, setPrepayEmail] = useState("")
   const prepayEmailValid = isValidEmail(prepayEmail)
@@ -1412,7 +1412,7 @@ export function PaywallStep({ onPay, onPromo, loading, preview, abEmailBeforePay
           outOfRangeCount={outOfRangeCount}
           onPay={onPay} onPromo={onPromo}
           withChat={withChat} setWithChat={setWithChat}
-          withFiveReports={withFiveReports} setWithFiveReports={setWithFiveReports}
+          withThreeReports={withThreeReports} setWithThreeReports={setWithThreeReports}
           withAbonement={withAbonement} setWithAbonement={setWithAbonement}
           abEmailBeforePay={abEmailBeforePay}
           prepayEmail={prepayEmail} setPrepayEmail={setPrepayEmail}
@@ -1449,7 +1449,7 @@ export function PaywallStep({ onPay, onPromo, loading, preview, abEmailBeforePay
           const emailArg = abEmailBeforePay ? prepayEmail.trim() : undefined
           if (withAbonement) {
             onPay(undefined, false, false, true, emailArg)
-          } else if (withFiveReports) {
+          } else if (withThreeReports) {
             onPay(undefined, false, true, false, emailArg)
           } else {
             onPay(undefined, withChat, false, false, emailArg)
@@ -1457,7 +1457,7 @@ export function PaywallStep({ onPay, onPromo, loading, preview, abEmailBeforePay
         }}
         loading={loading}
         withChat={withChat}
-        withFiveReports={withFiveReports}
+        withThreeReports={withThreeReports}
         withAbonement={withAbonement}
         prices={prices}
         abCtaV1={abCtaV1}
