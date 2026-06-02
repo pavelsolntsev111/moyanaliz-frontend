@@ -47,6 +47,9 @@ export interface UploadResponse {
   // A/B test ab_cta_v1: "control" | "test" | null. Drives paywall CTA copy
   // (single tier only — combo/pack/abonement stay at control copy in both buckets).
   ab_cta_v1?: string | null;
+  // A/B test ab_skip_preview: "control" | "test" | null. Echo of the client-sent
+  // bucket — "test" means light was skipped, preview is null, show no-freemium paywall.
+  ab_skip_preview?: string | null;
   // Resolved prices for this bucket. UI MUST render these, not hardcoded values.
   prices?: PriceBundle;
 }
@@ -65,9 +68,11 @@ export async function detectPatient(file: File): Promise<DetectPatientResponse> 
   });
 }
 
-export async function uploadFile(file: File): Promise<UploadResponse> {
+export async function uploadFile(file: File, skipPreview?: string): Promise<UploadResponse> {
   const formData = new FormData();
   formData.append("file", file);
+  // A/B ab_skip_preview bucket, decided client-side before upload (see page.tsx).
+  if (skipPreview) formData.append("skip_preview", skipPreview);
   // Piggy-back ad attribution snapshot (captured on landing page).
   const att = getAttribution();
   if (att) {
@@ -238,6 +243,9 @@ export interface OrderStatus {
   // A/B test ab_cta_v1 — surfaced on status for YM tagging on result-page goals
   // (e.g. pdf_downloaded). No CTA-copy rendering happens on the result page.
   ab_cta_v1?: string | null;
+  // A/B test ab_skip_preview — surfaced for YM tagging of result-page goals
+  // (payment_done, pdf_downloaded) so the no-freemium arm is splittable.
+  ab_skip_preview?: string | null;
   prices?: PriceBundle;
   claude_result_json?: {
     meta: {

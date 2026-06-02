@@ -44,40 +44,65 @@ export default function HomePage() {
   // A/B CTA test bucket. "control"|"test"|null. Independent from ab_price_v1
   // (assigned via MD5+salt on backend).
   const [abCtaV1, setAbCtaV1] = useState<string | null>(null);
+  // A/B skip-preview test bucket. "control"|"test"|null. Decided CLIENT-SIDE
+  // (see handleFileSelected) so file_selected can carry it — the whole point is
+  // the front-funnel (file_selected→file_uploaded). Ref keeps it stable across
+  // re-selects within a session.
+  const [abSkipPreview, setAbSkipPreview] = useState<string | null>(null);
+  const abSkipRef = useRef<string | null>(null);
   const [prices, setPrices] = useState<PriceBundle>(FALLBACK_PRICES);
   const [error, setError] = useState<string | null>(null);
   const [payLoading, setPayLoading] = useState(false);
   const uploadDone = useRef(false);
 
   // Stable tag attached to every YM goal once we know the order's bucket.
-  // Goals fired before /upload completes (page_loaded, file_selected) carry no
-  // ab tag — they're per-visitor, not per-order, so splitting them is meaningless.
-  // `price` and `cta` parameters split the cohorts for independent analysis.
-  // Both live on the same goal hit — Метрика отчёт «Параметры визитов» умеет
-  // двойную группировку (2×2 ячейки).
-  const abParams = (group: boolean, priceGroup: string | null, ctaGroup: string | null) => ({
+  // Goals fired before /upload completes (page_loaded) carry no ab tag — they're
+  // per-visitor. EXCEPTION: file_selected carries `skip_preview` (client-decided
+  // before upload) so the front-funnel is splittable.
+  // `price`/`cta` tests are closed (everyone control) but kept for continuity.
+  // All params live on the same goal hit — Метрика «Параметры визитов» делит по любому.
+  const abParams = (group: boolean, priceGroup: string | null, ctaGroup: string | null, skipGroup: string | null) => ({
     ab: group ? "B" : "A",
     price: priceGroup === "test" ? "test" : "control",
     cta: ctaGroup === "test" ? "test" : "control",
+    skip_preview: skipGroup === "test" ? "test" : "control",
   });
 
   const handleFileSelected = useCallback(async (f: File) => {
-    ymGoal("file_selected");
+    // Roll the skip-preview bucket BEFORE file_selected so the goal carries it
+    // → file_selected→file_uploaded becomes splittable per arm (the hypothesis
+    // is specifically front-funnel: recover the ~5.8% lost on the light wait).
+    let skip = abSkipRef.current;
+    if (skip === null) {
+      skip = Math.random() < 0.5 ? "test" : "control";
+      abSkipRef.current = skip;
+      setAbSkipPreview(skip);
+    }
+    ymGoal("file_selected", { skip_preview: skip });
     setStep("analyzing");
     uploadDone.current = false;
     try {
-      const res = await uploadFile(f);
+      const res = await uploadFile(f, skip);
       setOrderId(res.order_id);
       setPreview(res.preview);
       const ab = !!res.ab_email_before_pay;
       const priceGroup = res.ab_price_v1 ?? null;
       const ctaGroup = res.ab_cta_v1 ?? null;
+      // Trust the bucket the backend echoes (it stored this on the order).
+      const skipGroup = res.ab_skip_preview ?? skip;
       setAbEmailBeforePay(ab);
       setAbPriceV1(priceGroup);
       setAbCtaV1(ctaGroup);
+      setAbSkipPreview(skipGroup);
       if (res.prices) setPrices(res.prices);
-      uploadDone.current = true;
-      ymGoal("file_uploaded", abParams(ab, priceGroup, ctaGroup));
+      ymGoal("file_uploaded", abParams(ab, priceGroup, ctaGroup, skipGroup));
+      if (skipGroup === "test") {
+        // No-freemium arm: straight to paywall, skip the analyzing animation.
+        setStep("paywall");
+        ymGoal("free_report_shown", abParams(ab, priceGroup, ctaGroup, skipGroup));
+      } else {
+        uploadDone.current = true;  // analyzing animation finishes → handleAnalyzingComplete
+      }
     } catch (e) {
       setError(e instanceof Error ? e.message : "Ошибка загрузки");
       setStep("upload");
@@ -86,15 +111,15 @@ export default function HomePage() {
 
   const handleAnalyzingComplete = useCallback(() => {
     setStep("paywall");
-    ymGoal("free_report_shown", abParams(abEmailBeforePay, abPriceV1, abCtaV1));
-  }, [abEmailBeforePay, abPriceV1, abCtaV1]);
+    ymGoal("free_report_shown", abParams(abEmailBeforePay, abPriceV1, abCtaV1, abSkipPreview));
+  }, [abEmailBeforePay, abPriceV1, abCtaV1, abSkipPreview]);
 
   const handlePay = useCallback(
     async (promoCode?: string, withChat?: boolean, withThreeReports?: boolean, withAbonement?: boolean, email?: string) => {
       // Fire BEFORE network call — preserves current Yandex.Direct optimization
       // semantics (click_pay = click on CTA). For group B the CTA is disabled
       // until email is valid, so click_pay still implicitly means "validated".
-      ymGoal("click_pay", abParams(abEmailBeforePay, abPriceV1, abCtaV1));
+      ymGoal("click_pay", abParams(abEmailBeforePay, abPriceV1, abCtaV1, abSkipPreview));
       setPayLoading(true);
       try {
         const res = await createPayment(orderId, promoCode, withChat, withThreeReports, withAbonement, email);
@@ -108,7 +133,7 @@ export default function HomePage() {
         setPayLoading(false);
       }
     },
-    [orderId, router, abEmailBeforePay, abPriceV1, abCtaV1]
+    [orderId, router, abEmailBeforePay, abPriceV1, abCtaV1, abSkipPreview]
   );
 
   const handlePromo = useCallback(
@@ -171,6 +196,7 @@ export default function HomePage() {
             prices={prices}
             abPriceV1={abPriceV1}
             abCtaV1={abCtaV1}
+            skipPreview={abSkipPreview === "test"}
           />
         )}
       </main>

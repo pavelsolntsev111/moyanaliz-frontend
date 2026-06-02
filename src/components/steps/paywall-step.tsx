@@ -1305,9 +1305,14 @@ interface PaywallStepProps {
   // CTA copy via getSingleCtaText(); combo/pack/abonement stay control in both
   // buckets. Independent from abPriceV1 (MD5+salt on backend).
   abCtaV1?: string | null
+  // A/B skip-preview bucket (ab_skip_preview, started 2026-06-02). true → no
+  // freemium preview: hide results header / summary / indicator cards, show a
+  // "Ваш анализ загружен — выберите тип отчёта" header with tiers pulled up.
+  // preview prop is null in this arm (light analysis was skipped on the backend).
+  skipPreview?: boolean
 }
 
-export function PaywallStep({ onPay, onPromo, loading, preview, abEmailBeforePay = false, prices, abPriceV1 = null, abCtaV1 = null }: PaywallStepProps) {
+export function PaywallStep({ onPay, onPromo, loading, preview, abEmailBeforePay = false, prices, abPriceV1 = null, abCtaV1 = null, skipPreview = false }: PaywallStepProps) {
   const [promoVisible, setPromoVisible] = useState(false)
   const [promoCode, setPromoCode] = useState("")
   const [withChat, setWithChat] = useState(false)
@@ -1344,64 +1349,78 @@ export function PaywallStep({ onPay, onPromo, loading, preview, abEmailBeforePay
         transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
         className="text-center"
       >
-        <h2 className="text-2xl font-bold text-foreground sm:text-3xl">Результаты анализа</h2>
-        {outOfRangeCount > 0 && (
-          <p className="mt-1.5 text-sm text-muted-foreground">
-            <span className="font-medium" style={{ color: "#dc2626" }}>{outOfRangeCount} из {totalCount} вне нормы</span>
-          </p>
+        {skipPreview ? (
+          <>
+            <h2 className="text-2xl font-bold text-foreground sm:text-3xl">Ваш анализ загружен</h2>
+            <p className="mt-2 text-sm text-muted-foreground">Готов к расшифровке. Для продолжения выберите тип отчёта.</p>
+          </>
+        ) : (
+          <>
+            <h2 className="text-2xl font-bold text-foreground sm:text-3xl">Результаты анализа</h2>
+            {outOfRangeCount > 0 && (
+              <p className="mt-1.5 text-sm text-muted-foreground">
+                <span className="font-medium" style={{ color: "#dc2626" }}>{outOfRangeCount} из {totalCount} вне нормы</span>
+              </p>
+            )}
+          </>
         )}
       </motion.div>
 
-      {/* ── 1. Emotional summary ── */}
-      <div className="mt-6">
-        <EmotionalSummary outOfRangeCount={outOfRangeCount} totalCount={totalCount} abnormalIndicators={abnormalIndicators} />
-      </div>
-
-      {/* ── 2. Open cards (1 normal, expanded) ── */}
-      {open.length > 0 && (
-        <motion.div
-          initial={{ opacity: 0, y: 16 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.4, delay: 0.08, ease: [0.16, 1, 0.3, 1] }}
-          className="mt-8"
-        >
-          <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-primary">Предварительные результаты</p>
-          <div className="grid gap-4">
-            {open.map((ind) => (
-              <IndicatorCard key={ind.id} indicator={ind} />
-            ))}
+      {/* ── Preview blocks (control arm only — hidden in no-freemium test) ── */}
+      {!skipPreview && (
+        <>
+          {/* ── 1. Emotional summary ── */}
+          <div className="mt-6">
+            <EmotionalSummary outOfRangeCount={outOfRangeCount} totalCount={totalCount} abnormalIndicators={abnormalIndicators} />
           </div>
-        </motion.div>
-      )}
 
-      {/* ── 3. Locked indicator cards (max 3, abnormal first) ── */}
-      {(lockedAbnormal.length > 0 || lockedNormal.length > 0) && (() => {
-        const allLocked = [...lockedAbnormal, ...lockedNormal]
-        const isSingle = totalCount === 1
-        const shown = allLocked.slice(0, 3)
-        const remaining = allLocked.length - shown.length
-        return (
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.5, delay: 0.15 }} className="mt-8">
-            {!isSingle && (
-              <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                Остальные показатели — {allLocked.length}
-              </p>
-            )}
-            <div className="grid gap-3">
-              {shown.map((ind) =>
-                ind.status !== "normal"
-                  ? <LockedAbnormalCard key={ind.id} indicator={ind} />
-                  : <LockedNormalCard key={ind.id} indicator={ind} />
-              )}
-            </div>
-            {remaining > 0 && (
-              <p className="mt-3 text-center text-sm text-muted-foreground">
-                …а также ещё {pluralIndicators(remaining)}
-              </p>
-            )}
-          </motion.div>
-        )
-      })()}
+          {/* ── 2. Open cards (1 normal, expanded) ── */}
+          {open.length > 0 && (
+            <motion.div
+              initial={{ opacity: 0, y: 16 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.4, delay: 0.08, ease: [0.16, 1, 0.3, 1] }}
+              className="mt-8"
+            >
+              <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-primary">Предварительные результаты</p>
+              <div className="grid gap-4">
+                {open.map((ind) => (
+                  <IndicatorCard key={ind.id} indicator={ind} />
+                ))}
+              </div>
+            </motion.div>
+          )}
+
+          {/* ── 3. Locked indicator cards (max 3, abnormal first) ── */}
+          {(lockedAbnormal.length > 0 || lockedNormal.length > 0) && (() => {
+            const allLocked = [...lockedAbnormal, ...lockedNormal]
+            const isSingle = totalCount === 1
+            const shown = allLocked.slice(0, 3)
+            const remaining = allLocked.length - shown.length
+            return (
+              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.5, delay: 0.15 }} className="mt-8">
+                {!isSingle && (
+                  <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                    Остальные показатели — {allLocked.length}
+                  </p>
+                )}
+                <div className="grid gap-3">
+                  {shown.map((ind) =>
+                    ind.status !== "normal"
+                      ? <LockedAbnormalCard key={ind.id} indicator={ind} />
+                      : <LockedNormalCard key={ind.id} indicator={ind} />
+                  )}
+                </div>
+                {remaining > 0 && (
+                  <p className="mt-3 text-center text-sm text-muted-foreground">
+                    …а также ещё {pluralIndicators(remaining)}
+                  </p>
+                )}
+              </motion.div>
+            )
+          })()}
+        </>
+      )}
 
       {/* ── 4. Inline Paywall ── */}
       <div className="mt-8">
