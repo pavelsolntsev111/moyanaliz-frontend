@@ -52,11 +52,11 @@ const jsonLd = {
   url: "https://moyanaliz.ru",
   description:
     "Сервис расшифровки лабораторных анализов с помощью ИИ. Загрузите PDF или фото — получите понятный отчёт с рекомендациями.",
-  applicationCategory: "HealthApplication",
+  applicationCategory: "UtilitiesApplication",
   operatingSystem: "Web",
   offers: {
     "@type": "Offer",
-    price: "199",
+    price: "249",
     priceCurrency: "RUB",
   },
   inLanguage: "ru",

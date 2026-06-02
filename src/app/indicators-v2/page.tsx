@@ -136,7 +136,7 @@ export default function IndicatorsV2Page() {
               href="/"
               className="inline-flex items-center gap-2 py-3 px-8 rounded-xl bg-primary text-primary-foreground font-semibold hover:opacity-90 transition shadow-sm"
             >
-              Расшифровать анализ за 199 &#8381;
+              Расшифровать анализ за 249 &#8381;
             </Link>
           </div>
         </div>
