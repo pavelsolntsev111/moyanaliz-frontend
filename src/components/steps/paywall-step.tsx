@@ -1441,18 +1441,18 @@ export function PaywallStep({ onPay, onPromo, loading, preview, abEmailBeforePay
         />
       </div>
 
-      {/* ── 5. Testimonials ── */}
-      <TestimonialsBlock />
-
-      {/* ── 6. Report section teasers ── */}
+      {/* ── 5. Report section teasers ── */}
       <div className="mt-8">
         <ReportSectionTeasers />
       </div>
 
-      {/* ── 6b. Chat consultation teasers ── */}
+      {/* ── 6. Chat consultation teasers ── */}
       <div className="mt-4">
         <ChatConsultationTeasers />
       </div>
+
+      {/* ── 7. Testimonials (after the report/chat composition) ── */}
+      <TestimonialsBlock />
 
       {/* ── 7. Bottom CTA + sticky mobile ──
           For group B, if email is missing/invalid we cannot start payment;
