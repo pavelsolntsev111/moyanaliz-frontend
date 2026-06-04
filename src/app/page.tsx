@@ -73,12 +73,16 @@ export default function HomePage() {
   });
 
   const handleFileSelected = useCallback(async (f: File) => {
-    // Roll the skip-preview bucket BEFORE file_selected so the goal carries it
-    // → file_selected→file_uploaded becomes splittable per arm (the hypothesis
-    // is specifically front-funnel: recover the ~5.8% lost on the light wait).
+    // A/B ab_skip_preview — CLOSED 2026-06-04 after ~51h. Primary paid/selected
+    // neutral (+0.3 п.п., p=0.88); preview proven a qualifier (no-preview gave
+    // +8.1 п.п. clicks but click→paid 66% vs 89%, net wash). Light saving only
+    // ~5000₽/мес (1.58₽/paid) — dwarfed by click_pay-signal degradation for
+    // Direct. Everyone control now. Re-run: restore Math.random() below.
+    // See memory/project_ab_skip_preview.md. Instant-paywall + section reorder
+    // machinery kept (reorder applies to all; instant path is dormant).
     let skip = abSkipRef.current;
     if (skip === null) {
-      skip = Math.random() < 0.5 ? "test" : "control";
+      skip = "control";
       abSkipRef.current = skip;
       setAbSkipPreview(skip);
     }
