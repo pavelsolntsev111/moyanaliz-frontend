@@ -230,7 +230,7 @@ export function UploadStep({ onFileSelected }: UploadStepProps) {
               расшифровку с рекомендациями по питанию и образу жизни.
             </p>
             <p className="mt-2 text-sm text-muted-foreground">
-              Первые показатели — <span className="font-semibold text-foreground">бесплатно</span>. Полный отчёт — <span className="font-semibold text-primary">249 ₽</span>
+              Первые показатели — <span className="font-semibold text-foreground">бесплатно</span>. Полный отчёт — <span className="font-semibold text-foreground">разовая оплата, без подписки</span>
             </p>
 
             {/* Analysis types chips */}
@@ -614,8 +614,8 @@ export function UploadStep({ onFileSelected }: UploadStepProps) {
             Готовы расшифровать свои анализы?
           </h2>
           <p className="animate-fade-up delay-100 mt-3 text-sm text-muted-foreground">
-            Загрузите результаты — первые показатели бесплатно. Полный отчёт
-            всего 249 рублей.
+            Загрузите результаты — первые показатели бесплатно. Полный отчёт —
+            разовая оплата, без подписки.
           </p>
           <button
             type="button"
