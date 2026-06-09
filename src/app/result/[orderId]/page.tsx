@@ -59,29 +59,38 @@ export default function ResultPage({ params }: Props) {
     }
   }, [orderId]);
 
-  // A/B bucket tag for goals fired on the result page. Pulled from the order
-  // status response so a paid customer who clicks the email-link to /result/{id}
-  // (separate visit, no in-memory state) is still tagged correctly.
-  // `price` tracks ab_price_v1 cohort, `cta` tracks ab_cta_v1 cohort — both
-  // independent fields persisted on the order, surfaced via /order/{id}/status.
-  const abParams = {
-    ab: status?.ab_email_before_pay ? "B" : "A",
-    price: status?.ab_price_v1 === "test" ? "test" : "control",
-    cta: status?.ab_cta_v1 === "test" ? "test" : "control",
-    skip_preview: status?.ab_skip_preview === "test" ? "test" : "control",
-    premium: status?.ab_premium_v1 === "test" ? "test" : "control",
-  };
+  // Fire payment_done EXACTLY once per order. The guard is the goalFired ref,
+  // set SYNCHRONOUSLY before ymGoal so two concurrent callers (the status effect
+  // below + the poll loop) can't double-fire within one load, and backed by
+  // localStorage so it survives remount and the return-visit from the YooKassa
+  // redirect in the same browser. Both call sites route through here. Previously
+  // they used SEPARATE guards (the status effect checked live localStorage; the
+  // poll loop checked this ref) that fell out of sync — the status effect set
+  // localStorage but not the ref, so the poll loop fired payment_done a second
+  // time, inflating the goal in Метрика above the real order count.
+  // A/B bucket tags are pulled from the order status so a paid customer who opens
+  // the email-link to /result/{id} (separate visit, no in-memory state) is still
+  // tagged correctly.
+  const firePaymentDone = useCallback((s: OrderStatus | null) => {
+    if (!s || s.payment_status !== "paid") return;
+    if (typeof window === "undefined") return;
+    if (goalFired.current || localStorage.getItem(goalKey) === "1") return;
+    goalFired.current = true;
+    localStorage.setItem(goalKey, "1");
+    ymGoal("payment_done", {
+      ab: s.ab_email_before_pay ? "B" : "A",
+      price: s.ab_price_v1 === "test" ? "test" : "control",
+      cta: s.ab_cta_v1 === "test" ? "test" : "control",
+      skip_preview: s.ab_skip_preview === "test" ? "test" : "control",
+      premium: s.ab_premium_v1 === "test" ? "test" : "control",
+    });
+  }, [goalKey]);
 
-  // payment_done metric with localStorage deduplication
+  // payment_done — single idempotent emitter (see firePaymentDone). Fires as soon
+  // as the order is observed paid; the poll loop calls firePaymentDone with its
+  // fresh result too, but the shared synchronous guard guarantees one hit/order.
   useEffect(() => {
-    if (
-      status?.payment_status === "paid" &&
-      typeof window !== "undefined" &&
-      !localStorage.getItem(`payment_done_${orderId}`)
-    ) {
-      ymGoal("payment_done", abParams);
-      localStorage.setItem(`payment_done_${orderId}`, "1");
-    }
+    firePaymentDone(status);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [status?.payment_status, orderId]);
 
@@ -120,17 +129,7 @@ export default function ResultPage({ params }: Props) {
       if (!active) return;
       if (s) {
         const terminal = s.processing_status === "completed" || s.processing_status === "error" || s.payment_status === "failed";
-        if ((s.payment_status === "paid" || s.processing_status === "completed") && !goalFired.current) {
-          goalFired.current = true;
-          localStorage.setItem(goalKey, "1");
-          ymGoal("payment_done", {
-            ab: s.ab_email_before_pay ? "B" : "A",
-            price: s.ab_price_v1 === "test" ? "test" : "control",
-            cta: s.ab_cta_v1 === "test" ? "test" : "control",
-            skip_preview: s.ab_skip_preview === "test" ? "test" : "control",
-            premium: s.ab_premium_v1 === "test" ? "test" : "control",
-          });
-        }
+        firePaymentDone(s);
         if (!terminal) {
           setTimeout(run, 3000);
         } else if (s.processing_status === "completed" && !s.pdf_download_url && pdfRetries < 6) {
@@ -143,7 +142,7 @@ export default function ResultPage({ params }: Props) {
     return () => {
       active = false;
     };
-  }, [poll]);
+  }, [poll, firePaymentDone]);
 
   // Keep polling while chat payment is pending so the UI flips to "activated"
   // as soon as YooKassa confirms (or our fallback poll resolves a missed webhook).
