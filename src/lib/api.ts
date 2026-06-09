@@ -234,6 +234,10 @@ export interface OrderStatus {
   promo_code?: string | null;
   promo_uses_left?: number | null;
   order_tier?: string | null;
+  // True only when real money was received via YooKassa for this order. Gates the
+  // payment_done goal so it counts real sales only (100%-promo / pack-redemption /
+  // support-comp orders reach "paid" without a YooKassa txn → is_real_sale=false).
+  is_real_sale?: boolean | null;
   pdf_download_url: string | null;
   chat_payment_status?: string;
   chat_status?: string;

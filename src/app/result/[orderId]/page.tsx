@@ -72,7 +72,13 @@ export default function ResultPage({ params }: Props) {
   // the email-link to /result/{id} (separate visit, no in-memory state) is still
   // tagged correctly.
   const firePaymentDone = useCallback((s: OrderStatus | null) => {
-    if (!s || s.payment_status !== "paid") return;
+    if (!s) return;
+    // Real sale only: actual money received via YooKassa for THIS order. Excludes
+    // 100%-promo / pack-redemption / support-comp (paid status, no YooKassa txn).
+    // Fallback to payment_status for the brief window before the backend ships
+    // is_real_sale — degrades to the old "any paid" behaviour, never zero-fires.
+    const realSale = s.is_real_sale ?? (s.payment_status === "paid");
+    if (!realSale) return;
     if (typeof window === "undefined") return;
     if (goalFired.current || localStorage.getItem(goalKey) === "1") return;
     goalFired.current = true;
