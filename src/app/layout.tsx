@@ -56,7 +56,7 @@ const jsonLd = {
   operatingSystem: "Web",
   offers: {
     "@type": "Offer",
-    price: "249",
+    price: "299",
     priceCurrency: "RUB",
   },
   inLanguage: "ru",
