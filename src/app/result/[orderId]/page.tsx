@@ -69,6 +69,7 @@ export default function ResultPage({ params }: Props) {
     price: status?.ab_price_v1 === "test" ? "test" : "control",
     cta: status?.ab_cta_v1 === "test" ? "test" : "control",
     skip_preview: status?.ab_skip_preview === "test" ? "test" : "control",
+    premium: status?.ab_premium_v1 === "test" ? "test" : "control",
   };
 
   // payment_done metric with localStorage deduplication
@@ -127,6 +128,7 @@ export default function ResultPage({ params }: Props) {
             price: s.ab_price_v1 === "test" ? "test" : "control",
             cta: s.ab_cta_v1 === "test" ? "test" : "control",
             skip_preview: s.ab_skip_preview === "test" ? "test" : "control",
+            premium: s.ab_premium_v1 === "test" ? "test" : "control",
           });
         }
         if (!terminal) {
@@ -708,6 +710,7 @@ function StatusScreen({ status, orderId }: { status: OrderStatus; orderId: strin
               price: status.ab_price_v1 === "test" ? "test" : "control",
               cta: status.ab_cta_v1 === "test" ? "test" : "control",
               skip_preview: status.ab_skip_preview === "test" ? "test" : "control",
+              premium: status.ab_premium_v1 === "test" ? "test" : "control",
             })}
             className="mt-5 inline-flex items-center gap-2 py-3 px-8 rounded-xl bg-primary text-primary-foreground font-semibold hover:opacity-90 transition"
           >
@@ -922,6 +925,7 @@ function FullReport({ status, orderId, hasEmail, onEmailSubmitted, chatPromoOffe
               price: status.ab_price_v1 === "test" ? "test" : "control",
               cta: status.ab_cta_v1 === "test" ? "test" : "control",
               skip_preview: status.ab_skip_preview === "test" ? "test" : "control",
+              premium: status.ab_premium_v1 === "test" ? "test" : "control",
             })}
             className="group flex items-center justify-center gap-3 w-full py-4 px-6 rounded-2xl font-semibold text-white transition-all duration-200"
             style={{

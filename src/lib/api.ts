@@ -50,6 +50,9 @@ export interface UploadResponse {
   // A/B test ab_skip_preview: "control" | "test" | null. Echo of the client-sent
   // bucket — "test" means light was skipped, preview is null, show no-freemium paywall.
   ab_skip_preview?: string | null;
+  // A/B test ab_premium_v1: "control" | "test" | null. "test" → paywall re-framed
+  // «Базовый 299 / Расширенный 499» with feature-split (combo price = 499).
+  ab_premium_v1?: string | null;
   // Resolved prices for this bucket. UI MUST render these, not hardcoded values.
   prices?: PriceBundle;
 }
@@ -246,6 +249,8 @@ export interface OrderStatus {
   // A/B test ab_skip_preview — surfaced for YM tagging of result-page goals
   // (payment_done, pdf_downloaded) so the no-freemium arm is splittable.
   ab_skip_preview?: string | null;
+  // A/B test ab_premium_v1 — surfaced for YM tagging on result-page goals.
+  ab_premium_v1?: string | null;
   prices?: PriceBundle;
   claude_result_json?: {
     meta: {

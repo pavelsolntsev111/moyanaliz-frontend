@@ -784,7 +784,7 @@ function InlinePaywall({
   withChat, setWithChat, withThreeReports, setWithThreeReports,
   withAbonement, setWithAbonement,
   abEmailBeforePay, prepayEmail, setPrepayEmail,
-  prices, abPriceV1, abCtaV1,
+  prices, abPriceV1, abCtaV1, premiumTest,
 }: {
   promoVisible: boolean
   setPromoVisible: (v: boolean) => void
@@ -817,6 +817,10 @@ function InlinePaywall({
   abPriceV1: string | null
   // A/B CTA copy bucket (ab_cta_v1). "test" → personalized single-CTA copy.
   abCtaV1: string | null
+  // A/B premium packaging bucket (ab_premium_v1). true → re-framed paywall:
+  // «Базовый отчёт 299» (single) / «Расширенный отчёт» (combo, prices.combo=499)
+  // with feature-split bullet lists; packs labeled «N базовых отчётов».
+  premiumTest: boolean
 }) {
   const priceTag = abPriceV1 === "test" ? "test" : "control"
   const ctaTag = abCtaV1 === "test" ? "test" : "control"
@@ -888,7 +892,7 @@ function InlinePaywall({
           {/* Tier selector — hidden for pack/abonement promos (they always
               redeem as ONE single report). Admin free codes ("111") keep the
               selector so the user can still pick combo with chat. */}
-          {!promoResult?.is_pack && (
+          {!promoResult?.is_pack && !premiumTest && (
           <div className="mb-4 space-y-2">
             <button
               onClick={() => { setWithChat(false); setWithThreeReports(false); setWithAbonement(false) }}
@@ -979,6 +983,95 @@ function InlinePaywall({
           </div>
           )}
 
+          {/* ── A/B ab_premium_v1 (test) tier selector: Базовый / Расширенный
+              with feature-split bullet lists; packs «N базовых отчётов» below. ── */}
+          {!promoResult?.is_pack && premiumTest && (
+          <div className="mb-4 space-y-2.5">
+            <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1">Выберите формат отчёта</p>
+
+            {/* Базовый */}
+            <button
+              onClick={() => { setWithChat(false); setWithThreeReports(false); setWithAbonement(false) }}
+              disabled={loading}
+              className={`block w-full rounded-xl border-2 p-3.5 text-left transition-colors ${
+                !withChat && !withThreeReports && !withAbonement ? "border-primary bg-primary/5" : "border-border hover:border-muted-foreground/30"
+              } ${loading ? "opacity-50 pointer-events-none" : ""}`}
+            >
+              <div className="flex items-center gap-3">
+                <div className={`h-4 w-4 shrink-0 rounded-full border-2 flex items-center justify-center ${!withChat && !withThreeReports && !withAbonement ? "border-primary" : "border-muted-foreground/40"}`}>
+                  {!withChat && !withThreeReports && !withAbonement && <div className="h-2 w-2 rounded-full bg-primary" />}
+                </div>
+                <p className="flex-1 text-sm font-bold text-foreground">Базовый отчёт</p>
+                <span className="text-base font-bold text-foreground shrink-0">{promoResult?.free ? "бесплатно" : `${baseDisplayPrice} ₽`}</span>
+              </div>
+              <div className="mt-2.5 space-y-1.5 pl-1">
+                {["Детальные комментарии по всем показателям",
+                  "Выявление связей между показателями, с учётом вашего пола и возраста",
+                  "Краткое заключение: что в норме, а что требует внимания",
+                  "Наглядные шкалы нормы — видно, где ваши значения"].map((f) => (
+                  <div key={f} className="flex items-start gap-2 text-[13px] leading-snug text-muted-foreground">
+                    <CheckCircle2 className="h-3.5 w-3.5 text-primary shrink-0 mt-0.5" /><span>{f}</span>
+                  </div>
+                ))}
+              </div>
+            </button>
+
+            {/* Расширенный */}
+            <button
+              onClick={() => { setWithChat(true); setWithThreeReports(false); setWithAbonement(false) }}
+              disabled={loading}
+              className={`relative block w-full rounded-xl border-2 p-3.5 text-left transition-colors ${
+                withChat && !withThreeReports && !withAbonement ? "border-primary bg-primary/5" : "border-border hover:border-muted-foreground/30"
+              } ${loading ? "opacity-50 pointer-events-none" : ""}`}
+            >
+              <span className="absolute -top-2 right-3 rounded-full bg-primary px-2 py-0.5 text-[10px] font-bold text-white">популярный</span>
+              <div className="flex items-center gap-3">
+                <div className={`h-4 w-4 shrink-0 rounded-full border-2 flex items-center justify-center ${withChat && !withThreeReports && !withAbonement ? "border-primary" : "border-muted-foreground/40"}`}>
+                  {withChat && !withThreeReports && !withAbonement && <div className="h-2 w-2 rounded-full bg-primary" />}
+                </div>
+                <p className="flex-1 text-sm font-bold text-foreground">Расширенный отчёт</p>
+                <span className="text-base font-bold text-foreground shrink-0">{promoResult?.free ? "бесплатно" : `${comboDisplayPrice} ₽`}</span>
+              </div>
+              <p className="mt-2 text-xs font-semibold text-primary pl-1">Всё из базового, плюс:</p>
+              <div className="mt-1.5 space-y-1.5 pl-1">
+                {["Рекомендации по питанию",
+                  "Рекомендации, какие анализы ещё сдать",
+                  "Вопросы для врача",
+                  "Онлайн-консультация с ИИ-ассистентом"].map((f) => (
+                  <div key={f} className="flex items-start gap-2 text-[13px] leading-snug text-muted-foreground">
+                    <CheckCircle2 className="h-3.5 w-3.5 text-primary shrink-0 mt-0.5" /><span>{f}</span>
+                  </div>
+                ))}
+              </div>
+            </button>
+
+            {/* Packs — visually separated, labeled «N базовых отчётов» */}
+            <div className="flex items-center gap-2.5 pt-2 pb-0.5">
+              <div className="h-px flex-1 bg-border" /><span className="text-xs text-muted-foreground">или несколько отчётов</span><div className="h-px flex-1 bg-border" />
+            </div>
+            <button
+              onClick={() => { setWithThreeReports(true); setWithChat(false); setWithAbonement(false) }}
+              disabled={loading}
+              className={`relative flex w-full min-h-[50px] items-center gap-3 rounded-xl border-2 p-3 text-left transition-colors ${withThreeReports ? "border-emerald-500 bg-emerald-50/50 dark:bg-emerald-950/20" : "border-border hover:border-muted-foreground/30"} ${loading ? "opacity-50 pointer-events-none" : ""}`}
+            >
+              <span className="absolute -top-2 right-3 rounded-full px-2 py-0.5 text-[10px] font-bold text-white" style={{ background: "#16a34a" }}>−50%</span>
+              <div className={`h-4 w-4 shrink-0 rounded-full border-2 flex items-center justify-center ${withThreeReports ? "border-emerald-600" : "border-muted-foreground/40"}`}>{withThreeReports && <div className="h-2 w-2 rounded-full bg-emerald-600" />}</div>
+              <div className="flex-1"><p className="text-sm font-semibold text-foreground">3 базовых отчёта</p><p className="text-xs text-muted-foreground mt-0.5">в два раза дешевле за расшифровку</p></div>
+              <span className="text-sm font-bold shrink-0" style={{ color: "#16a34a" }}>{prices.three_reports} ₽</span>
+            </button>
+            <button
+              onClick={() => { setWithAbonement(true); setWithChat(false); setWithThreeReports(false) }}
+              disabled={loading}
+              className={`relative flex w-full min-h-[50px] items-center gap-3 rounded-xl border-2 p-3 text-left transition-colors ${withAbonement ? "border-amber-500 bg-amber-50/60 dark:bg-amber-950/20" : "border-border hover:border-muted-foreground/30"} ${loading ? "opacity-50 pointer-events-none" : ""}`}
+            >
+              <span className="absolute -top-2 right-3 rounded-full px-2 py-0.5 text-[10px] font-bold text-white" style={{ background: "#d97706" }}>−70%</span>
+              <div className={`h-4 w-4 shrink-0 rounded-full border-2 flex items-center justify-center ${withAbonement ? "border-amber-600" : "border-muted-foreground/40"}`}>{withAbonement && <div className="h-2 w-2 rounded-full bg-amber-600" />}</div>
+              <div className="flex-1"><p className="text-sm font-semibold text-foreground">10 базовых отчётов</p><p className="text-xs text-muted-foreground mt-0.5">для себя и близких</p></div>
+              <span className="text-sm font-bold shrink-0" style={{ color: "#d97706" }}>{prices.abonement} ₽</span>
+            </button>
+          </div>
+          )}
+
           {/* A/B group B: required email field above the CTA. Hidden when the
               free-promo flow is active (it has its own email input below). */}
           {abEmailBeforePay && !promoResult?.free && (
@@ -1020,14 +1113,15 @@ function InlinePaywall({
                 return
               }
               const emailArg = abEmailBeforePay ? prepayEmail.trim() : undefined
+              const premiumTag = premiumTest ? "test" : "control"
               if (withAbonement) {
-                ymGoal("click_pay_abonement", { price: priceTag, cta: ctaTag })
+                ymGoal("click_pay_abonement", { price: priceTag, cta: ctaTag, premium: premiumTag })
                 onPay(undefined, false, false, true, emailArg)
               } else if (withThreeReports) {
-                ymGoal("click_pay_five_reports", { price: priceTag, cta: ctaTag })
+                ymGoal("click_pay_five_reports", { price: priceTag, cta: ctaTag, premium: premiumTag })
                 onPay(undefined, false, true, false, emailArg)
               } else {
-                ymGoal("click_get_report", { price: priceTag, cta: ctaTag, tier: withChat ? "combo" : "single" })
+                ymGoal("click_get_report", { price: priceTag, cta: ctaTag, premium: premiumTag, tier: withChat ? "combo" : "single" })
                 onPay(hasDiscount ? promoCode.trim() : undefined, withChat, false, false, emailArg)
               }
             }}
@@ -1053,11 +1147,14 @@ function InlinePaywall({
             ) : (
               <>
                 {withAbonement
-                  ? `Купить 10 отчётов — ${prices.abonement} ₽`
+                  ? `Купить ${premiumTest ? "10 базовых отчётов" : "10 отчётов"} — ${prices.abonement} ₽`
                   : withThreeReports
-                  ? `Купить 3 отчёта — ${prices.three_reports} ₽`
+                  ? `Купить ${premiumTest ? "3 базовых отчёта" : "3 отчёта"} — ${prices.three_reports} ₽`
                   : withChat
-                  ? `С консультацией — ${displayPrice} ₽`
+                  /* premiumTest: «Получить расширенный отчёт» (combo=499); else combo copy */
+                  ? `${premiumTest ? "Получить расширенный отчёт" : "С консультацией"} — ${displayPrice} ₽`
+                  : premiumTest
+                  ? `Получить базовый отчёт — ${displayPrice} ₽`
                   /* AB ab_cta_v1: test → "Узнать, что с N показателем/показателями — N ₽"
                      when outOfRangeCount > 0. Control or all-normal → current copy. */
                   : getSingleCtaText(abCtaV1, outOfRangeCount, displayPrice)}
@@ -1175,7 +1272,7 @@ function InlinePaywall({
 }
 
 /** Bottom CTA card + sticky mobile button */
-function BottomCTA({ onPay, loading, withChat, withThreeReports, withAbonement, prices, abCtaV1, outOfRangeCount }: {
+function BottomCTA({ onPay, loading, withChat, withThreeReports, withAbonement, prices, abCtaV1, outOfRangeCount, premiumTest }: {
   onPay: () => void
   loading: boolean
   withChat: boolean
@@ -1186,6 +1283,8 @@ function BottomCTA({ onPay, loading, withChat, withThreeReports, withAbonement, 
   // copy so the user sees the same message above and below the fold.
   abCtaV1: string | null
   outOfRangeCount: number
+  // A/B premium packaging — sticky CTA mirrors «Базовый/Расширенный отчёт».
+  premiumTest?: boolean
 }) {
   const [showSticky, setShowSticky] = useState(false)
 
@@ -1214,11 +1313,13 @@ function BottomCTA({ onPay, loading, withChat, withThreeReports, withAbonement, 
           >
             <span className="flex items-center gap-2 text-sm font-bold">
               {withAbonement
-                ? `Купить 10 отчётов — ${prices.abonement} ₽`
+                ? `Купить ${premiumTest ? "10 базовых отчётов" : "10 отчётов"} — ${prices.abonement} ₽`
                 : withThreeReports
-                ? `Купить 3 отчёта — ${prices.three_reports} ₽`
+                ? `Купить ${premiumTest ? "3 базовых отчёта" : "3 отчёта"} — ${prices.three_reports} ₽`
                 : withChat
-                ? `С консультацией — ${prices.combo} ₽`
+                ? `${premiumTest ? "Получить расширенный отчёт" : "С консультацией"} — ${prices.combo} ₽`
+                : premiumTest
+                ? `Получить базовый отчёт — ${prices.single} ₽`
                 /* AB ab_cta_v1: same logic as InlinePaywall — mirror on mobile. */
                 : getSingleCtaText(abCtaV1, outOfRangeCount, prices.single)}
               <ChevronRight className="h-4 w-4" />
@@ -1310,9 +1411,13 @@ interface PaywallStepProps {
   // "Ваш анализ загружен — выберите тип отчёта" header with tiers pulled up.
   // preview prop is null in this arm (light analysis was skipped on the backend).
   skipPreview?: boolean
+  // A/B premium packaging bucket (ab_premium_v1, started 2026-06-09). true →
+  // re-framed «Базовый 299 / Расширенный 499» tier selector + feature-split;
+  // the redundant «В полном отчёте»/«Онлайн-консультация» teasers are hidden.
+  premiumTest?: boolean
 }
 
-export function PaywallStep({ onPay, onPromo, loading, preview, abEmailBeforePay = false, prices, abPriceV1 = null, abCtaV1 = null, skipPreview = false }: PaywallStepProps) {
+export function PaywallStep({ onPay, onPromo, loading, preview, abEmailBeforePay = false, prices, abPriceV1 = null, abCtaV1 = null, skipPreview = false, premiumTest = false }: PaywallStepProps) {
   const [promoVisible, setPromoVisible] = useState(false)
   const [promoCode, setPromoCode] = useState("")
   const [withChat, setWithChat] = useState(false)
@@ -1438,18 +1543,22 @@ export function PaywallStep({ onPay, onPromo, loading, preview, abEmailBeforePay
           prices={prices}
           abPriceV1={abPriceV1}
           abCtaV1={abCtaV1}
+          premiumTest={premiumTest}
         />
       </div>
 
-      {/* ── 5. Report section teasers ── */}
-      <div className="mt-8">
-        <ReportSectionTeasers />
-      </div>
-
-      {/* ── 6. Chat consultation teasers ── */}
-      <div className="mt-4">
-        <ChatConsultationTeasers />
-      </div>
+      {/* ── 5/6. Report + chat teasers — HIDDEN in premium test (features are
+          now in the Базовый/Расширенный tier cards, so these are redundant). ── */}
+      {!premiumTest && (
+        <>
+          <div className="mt-8">
+            <ReportSectionTeasers />
+          </div>
+          <div className="mt-4">
+            <ChatConsultationTeasers />
+          </div>
+        </>
+      )}
 
       {/* ── 7. Testimonials (after the report/chat composition) ── */}
       <TestimonialsBlock />
@@ -1481,6 +1590,7 @@ export function PaywallStep({ onPay, onPromo, loading, preview, abEmailBeforePay
         prices={prices}
         abCtaV1={abCtaV1}
         outOfRangeCount={outOfRangeCount}
+        premiumTest={premiumTest}
       />
     </div>
   )
