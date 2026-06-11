@@ -53,6 +53,10 @@ export interface UploadResponse {
   // A/B test ab_premium_v1: "control" | "test" | null. "test" → paywall re-framed
   // «Базовый 299 / Расширенный 499» with feature-split (combo price = 499).
   ab_premium_v1?: string | null;
+  // A/B test ab_bump_v1: "control" | "test" | null. "test" → combo tier card
+  // replaced by a one-line checkbox «Добавить чат с ИИ-консультантом +50 ₽»
+  // between the tier cards and the CTA (ticks with_chat → same combo 349).
+  ab_bump_v1?: string | null;
   // Resolved prices for this bucket. UI MUST render these, not hardcoded values.
   prices?: PriceBundle;
 }
@@ -255,6 +259,8 @@ export interface OrderStatus {
   ab_skip_preview?: string | null;
   // A/B test ab_premium_v1 — surfaced for YM tagging on result-page goals.
   ab_premium_v1?: string | null;
+  // A/B test ab_bump_v1 — surfaced for YM tagging on result-page goals.
+  ab_bump_v1?: string | null;
   prices?: PriceBundle;
   claude_result_json?: {
     meta: {

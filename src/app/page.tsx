@@ -52,6 +52,9 @@ export default function HomePage() {
   const abSkipRef = useRef<string | null>(null);
   // A/B premium packaging test. "control"|"test"|null. Server-side hash bucket.
   const [abPremiumV1, setAbPremiumV1] = useState<string | null>(null);
+  // A/B order-bump test. "control"|"test"|null. Server-side hash bucket.
+  // test → combo tier card replaced by a chat add-on checkbox above the CTA.
+  const [abBumpV1, setAbBumpV1] = useState<string | null>(null);
   const [prices, setPrices] = useState<PriceBundle>(FALLBACK_PRICES);
   const [error, setError] = useState<string | null>(null);
   const [payLoading, setPayLoading] = useState(false);
@@ -67,12 +70,13 @@ export default function HomePage() {
   // before upload) so the front-funnel is splittable.
   // `price`/`cta` tests are closed (everyone control) but kept for continuity.
   // All params live on the same goal hit — Метрика «Параметры визитов» делит по любому.
-  const abParams = (group: boolean, priceGroup: string | null, ctaGroup: string | null, skipGroup: string | null, premiumGroup: string | null = abPremiumV1) => ({
+  const abParams = (group: boolean, priceGroup: string | null, ctaGroup: string | null, skipGroup: string | null, premiumGroup: string | null = abPremiumV1, bumpGroup: string | null = abBumpV1) => ({
     ab: group ? "B" : "A",
     price: priceGroup === "test" ? "test" : "control",
     cta: ctaGroup === "test" ? "test" : "control",
     skip_preview: skipGroup === "test" ? "test" : "control",
     premium: premiumGroup === "test" ? "test" : "control",
+    bump: bumpGroup === "test" ? "test" : "control",
   });
 
   const handleFileSelected = useCallback(async (f: File) => {
@@ -110,8 +114,9 @@ export default function HomePage() {
         setAbCtaV1(res.ab_cta_v1 ?? null);
         setAbSkipPreview(res.ab_skip_preview ?? "test");
         setAbPremiumV1(res.ab_premium_v1 ?? null);
+        setAbBumpV1(res.ab_bump_v1 ?? null);
         if (res.prices) setPrices(res.prices);
-        ymGoal("file_uploaded", abParams(!!res.ab_email_before_pay, res.ab_price_v1 ?? null, res.ab_cta_v1 ?? null, res.ab_skip_preview ?? "test", res.ab_premium_v1 ?? null));
+        ymGoal("file_uploaded", abParams(!!res.ab_email_before_pay, res.ab_price_v1 ?? null, res.ab_cta_v1 ?? null, res.ab_skip_preview ?? "test", res.ab_premium_v1 ?? null, res.ab_bump_v1 ?? null));
       }).catch(() => {
         // Don't bounce the user mid-read; ensureOrderId() surfaces the failure
         // on the pay/promo click and sends them back to re-upload.
@@ -131,14 +136,16 @@ export default function HomePage() {
       const ctaGroup = res.ab_cta_v1 ?? null;
       const skipGroup = res.ab_skip_preview ?? skip;
       const premiumGroup = res.ab_premium_v1 ?? null;
+      const bumpGroup = res.ab_bump_v1 ?? null;
       setAbEmailBeforePay(ab);
       setAbPriceV1(priceGroup);
       setAbCtaV1(ctaGroup);
       setAbSkipPreview(skipGroup);
       setAbPremiumV1(premiumGroup);
+      setAbBumpV1(bumpGroup);
       if (res.prices) setPrices(res.prices);
       uploadDone.current = true;  // analyzing animation finishes → handleAnalyzingComplete
-      ymGoal("file_uploaded", abParams(ab, priceGroup, ctaGroup, skipGroup, premiumGroup));
+      ymGoal("file_uploaded", abParams(ab, priceGroup, ctaGroup, skipGroup, premiumGroup, bumpGroup));
     } catch (e) {
       setError(e instanceof Error ? e.message : "Ошибка загрузки");
       setStep("upload");
@@ -260,6 +267,7 @@ export default function HomePage() {
             abCtaV1={abCtaV1}
             skipPreview={abSkipPreview === "test"}
             premiumTest={abPremiumV1 === "test"}
+            bumpTest={abBumpV1 === "test"}
           />
         )}
       </main>
