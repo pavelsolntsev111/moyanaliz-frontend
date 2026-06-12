@@ -47,6 +47,7 @@ export function SupportModal({ onClose }: SupportModalProps) {
   const [attachments, setAttachments] = useState<Attachment[]>([]);
   const [attachError, setAttachError] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const objectUrlsRef = useRef<string[]>([]); // all created blob URLs, for unmount cleanup
   // other
   const [message, setMessage] = useState("");
   // honeypot
@@ -67,10 +68,11 @@ export function SupportModal({ onClose }: SupportModalProps) {
     return () => { document.body.style.overflow = prev; };
   }, []);
 
-  // Revoke any object URLs on unmount to avoid leaks.
+  // Revoke ALL object URLs created during this modal session on unmount.
+  // Tracked in a ref (not state) so the cleanup sees URLs added after mount.
   useEffect(() => {
-    return () => { attachments.forEach((a) => a.previewUrl && URL.revokeObjectURL(a.previewUrl)); };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    const urls = objectUrlsRef.current;
+    return () => { urls.forEach((u) => URL.revokeObjectURL(u)); };
   }, []);
 
   async function handleFiles(files: FileList | null) {
@@ -78,12 +80,26 @@ export function SupportModal({ onClose }: SupportModalProps) {
     if (!files || files.length === 0) return;
     const room = MAX_ATTACH - attachments.length;
     if (room <= 0) { setAttachError(`Можно приложить не больше ${MAX_ATTACH} файлов`); return; }
-    const picked = Array.from(files).slice(0, room);
+    const all = Array.from(files);
+    const picked = all.slice(0, room);
+    const errors: string[] = [];
+    if (all.length > room) errors.push(`добавлено ${room} из ${all.length} (лимит ${MAX_ATTACH})`);
     for (const file of picked) {
-      const okType = /^image\/(jpeg|png|webp|gif|heic|heif)$/i.test(file.type) || file.type === "application/pdf";
-      if (!okType) { setAttachError("Только фото/скриншот (JPG, PNG, WebP) или PDF"); continue; }
-      if (file.size > 10 * 1024 * 1024) { setAttachError("Файл больше 10 МБ — приложите скриншот поменьше"); continue; }
-      const previewUrl = file.type.startsWith("image/") ? URL.createObjectURL(file) : undefined;
+      // Accept by MIME, with an extension fallback for empty file.type (common
+      // for HEIC and some mobile picks). Backend can't decode HEIC → only the
+      // server-supported set here; HEIC users get a clear message, not a 415.
+      const name = file.name.toLowerCase();
+      const okType =
+        /^image\/(jpeg|png|webp|gif)$/i.test(file.type) ||
+        file.type === "application/pdf" ||
+        (!file.type && /\.(jpe?g|png|webp|gif|pdf)$/i.test(name));
+      const isHeic = /^image\/(heic|heif)$/i.test(file.type) || /\.(heic|heif)$/i.test(name);
+      if (isHeic) { errors.push("HEIC не поддерживается — сделайте скриншот или сохраните как JPG"); continue; }
+      if (!okType) { errors.push("только фото/скриншот (JPG, PNG, WebP) или PDF"); continue; }
+      if (file.size > 10 * 1024 * 1024) { errors.push("файл больше 10 МБ"); continue; }
+      const isImage = file.type.startsWith("image/") || /\.(jpe?g|png|webp|gif)$/i.test(name);
+      const previewUrl = isImage ? URL.createObjectURL(file) : undefined;
+      if (previewUrl) objectUrlsRef.current.push(previewUrl);
       const placeholder: Attachment = { key: "", localName: file.name, previewUrl, uploading: true };
       setAttachments((prev) => [...prev, placeholder]);
       try {
@@ -94,9 +110,10 @@ export function SupportModal({ onClose }: SupportModalProps) {
       } catch {
         setAttachments((prev) => prev.filter((a) => a !== placeholder));
         if (previewUrl) URL.revokeObjectURL(previewUrl);
-        setAttachError("Не удалось загрузить файл, попробуйте ещё раз");
+        errors.push("не удалось загрузить файл");
       }
     }
+    if (errors.length) setAttachError(errors.join("; "));
     if (fileInputRef.current) fileInputRef.current.value = "";
   }
 
@@ -111,7 +128,7 @@ export function SupportModal({ onClose }: SupportModalProps) {
       setError("Укажите корректный email — на него придёт ответ");
       return;
     }
-    if (category === "report_issue" && !last4Valid) {
+    if (category === "report_issue" && payMethod !== "sbp" && !last4Valid) {
       setError("Последние 4 цифры карты — ровно 4 цифры");
       return;
     }
@@ -132,7 +149,7 @@ export function SupportModal({ onClose }: SupportModalProps) {
         category,
         email: email.trim(),
         name: name.trim() || undefined,
-        card_last4: category === "report_issue" ? last4 || undefined : undefined,
+        card_last4: category === "report_issue" && payMethod !== "sbp" ? last4 || undefined : undefined,
         payment_method: category === "report_issue" && payMethod ? payMethod : undefined,
         paid_at: category === "report_issue" ? paidDate || undefined : undefined,
         paid_time_of_day: category === "report_issue" ? timeOfDay || undefined : undefined,
@@ -332,7 +349,7 @@ export function SupportModal({ onClose }: SupportModalProps) {
                     <button
                       key={val}
                       type="button"
-                      onClick={() => setPayMethod(val)}
+                      onClick={() => { setPayMethod(val); if (val === "sbp") setLast4(""); }}
                       className={
                         "rounded-xl border px-2 py-2.5 text-xs font-medium transition-colors " +
                         (payMethod === val
