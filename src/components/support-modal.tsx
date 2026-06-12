@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
-import { X, FileSearch, MessageCircleQuestion, CheckCircle2, Loader2, ArrowLeft, Inbox, Paperclip, Trash2 } from "lucide-react";
+import { X, FileSearch, MessageCircleQuestion, CheckCircle2, Loader2, ArrowLeft, Inbox, Paperclip, Trash2, FileText, Plus } from "lucide-react";
 import { submitSupportRequest, uploadSupportAttachment, type SupportAttachmentRef } from "@/lib/api";
 import { ymGoal } from "@/lib/ym";
 
@@ -46,6 +46,7 @@ export function SupportModal({ onClose }: SupportModalProps) {
   const [comment, setComment] = useState("");
   const [attachments, setAttachments] = useState<Attachment[]>([]);
   const [attachError, setAttachError] = useState("");
+  const [dragOver, setDragOver] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const objectUrlsRef = useRef<string[]>([]); // all created blob URLs, for unmount cleanup
   // other
@@ -120,6 +121,12 @@ export function SupportModal({ onClose }: SupportModalProps) {
   function removeAttachment(target: Attachment) {
     if (target.previewUrl) URL.revokeObjectURL(target.previewUrl);
     setAttachments((prev) => prev.filter((a) => a !== target));
+  }
+
+  function onDrop(e: React.DragEvent) {
+    e.preventDefault();
+    setDragOver(false);
+    handleFiles(e.dataTransfer.files);
   }
 
   async function submit(category: "report_issue" | "other") {
@@ -284,46 +291,75 @@ export function SupportModal({ onClose }: SupportModalProps) {
                   amount, last4 and sometimes the payment id in one shot. */}
               <div>
                 <label className={labelCls}>Чек или скриншот оплаты</label>
-                <div className="flex flex-wrap gap-2">
-                  {attachments.map((a, i) => (
-                    <div
-                      key={i}
-                      className="relative flex h-20 w-20 items-center justify-center overflow-hidden rounded-xl border border-border bg-background"
-                    >
-                      {a.previewUrl ? (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img src={a.previewUrl} alt={a.localName} className="h-full w-full object-cover" />
-                      ) : (
-                        <span className="px-1 text-center text-[10px] leading-tight text-muted-foreground">PDF<br />{a.localName.slice(0, 12)}</span>
-                      )}
-                      {a.uploading && (
-                        <div className="absolute inset-0 flex items-center justify-center bg-card/70">
-                          <Loader2 className="h-5 w-5 animate-spin text-primary" />
-                        </div>
-                      )}
-                      {!a.uploading && (
-                        <button
-                          type="button"
-                          onClick={() => removeAttachment(a)}
-                          className="absolute right-0.5 top-0.5 rounded-md bg-foreground/60 p-1 text-white hover:bg-foreground"
-                          aria-label="Удалить вложение"
-                        >
-                          <Trash2 className="h-3 w-3" />
-                        </button>
-                      )}
+
+                {attachments.length === 0 ? (
+                  <button
+                    type="button"
+                    onClick={() => fileInputRef.current?.click()}
+                    onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
+                    onDragLeave={() => setDragOver(false)}
+                    onDrop={onDrop}
+                    className={
+                      "flex w-full flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed px-4 py-7 text-center transition-colors " +
+                      (dragOver
+                        ? "border-primary bg-primary/10"
+                        : "border-primary/35 bg-primary/[0.04] hover:border-primary/60 hover:bg-primary/[0.08]")
+                    }
+                  >
+                    <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/10">
+                      <Paperclip className="h-5 w-5 text-primary" />
                     </div>
-                  ))}
-                  {attachments.length < MAX_ATTACH && (
-                    <button
-                      type="button"
-                      onClick={() => fileInputRef.current?.click()}
-                      className="flex h-20 w-20 flex-col items-center justify-center gap-1 rounded-xl border border-dashed border-primary/50 bg-primary/5 text-primary transition-colors hover:bg-primary/10"
-                    >
-                      <Paperclip className="h-5 w-5" />
-                      <span className="text-[11px] font-medium">Приложить</span>
-                    </button>
-                  )}
-                </div>
+                    <div className="text-sm font-semibold text-foreground">Приложить чек или скриншот</div>
+                    <div className="text-xs text-muted-foreground">
+                      фото или PDF — перетащите сюда или нажмите
+                    </div>
+                  </button>
+                ) : (
+                  <div className="flex flex-wrap gap-2.5">
+                    {attachments.map((a, i) => (
+                      <div
+                        key={i}
+                        className="group relative flex h-[88px] w-[88px] items-center justify-center overflow-hidden rounded-xl border border-border bg-background shadow-sm"
+                      >
+                        {a.previewUrl ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img src={a.previewUrl} alt={a.localName} className="h-full w-full object-cover" />
+                        ) : (
+                          <div className="flex flex-col items-center gap-1 px-1.5 text-center">
+                            <FileText className="h-6 w-6 text-primary" />
+                            <span className="line-clamp-2 text-[10px] leading-tight text-muted-foreground">{a.localName}</span>
+                          </div>
+                        )}
+                        {a.uploading && (
+                          <div className="absolute inset-0 flex items-center justify-center bg-card/75 backdrop-blur-[1px]">
+                            <Loader2 className="h-5 w-5 animate-spin text-primary" />
+                          </div>
+                        )}
+                        {!a.uploading && (
+                          <button
+                            type="button"
+                            onClick={() => removeAttachment(a)}
+                            className="absolute right-1 top-1 rounded-lg bg-foreground/55 p-1 text-white opacity-0 transition-opacity hover:bg-foreground group-hover:opacity-100"
+                            aria-label="Удалить вложение"
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </button>
+                        )}
+                      </div>
+                    ))}
+                    {attachments.length < MAX_ATTACH && (
+                      <button
+                        type="button"
+                        onClick={() => fileInputRef.current?.click()}
+                        className="flex h-[88px] w-[88px] flex-col items-center justify-center gap-1 rounded-xl border-2 border-dashed border-primary/35 bg-primary/[0.04] text-primary transition-colors hover:border-primary/60 hover:bg-primary/10"
+                      >
+                        <Plus className="h-5 w-5" />
+                        <span className="text-[11px] font-medium">Ещё</span>
+                      </button>
+                    )}
+                  </div>
+                )}
+
                 <input
                   ref={fileInputRef}
                   type="file"
