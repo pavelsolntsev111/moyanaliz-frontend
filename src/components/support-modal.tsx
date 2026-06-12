@@ -1,21 +1,29 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
-import { X, FileSearch, MessageCircleQuestion, CheckCircle2, Loader2, ArrowLeft, Inbox } from "lucide-react";
-import { submitSupportRequest } from "@/lib/api";
+import { X, FileSearch, MessageCircleQuestion, CheckCircle2, Loader2, ArrowLeft, Inbox, Paperclip, Trash2 } from "lucide-react";
+import { submitSupportRequest, uploadSupportAttachment, type SupportAttachmentRef } from "@/lib/api";
 import { ymGoal } from "@/lib/ym";
 
 type Step = "choose" | "report" | "other" | "done";
+type PayMethod = "card" | "sbp" | "unknown" | "";
 
 interface SupportModalProps {
   onClose: () => void;
+}
+
+interface Attachment extends SupportAttachmentRef {
+  previewUrl?: string; // object URL for image thumbnail
+  uploading?: boolean;
+  localName: string;
 }
 
 const inputCls =
   "w-full rounded-xl border border-border bg-card px-4 py-3 text-sm text-foreground outline-none transition-colors focus:border-primary placeholder:text-muted-foreground/60";
 const labelCls = "mb-1.5 block text-sm font-medium text-foreground";
 const hintCls = "mt-1 text-xs text-muted-foreground";
+const MAX_ATTACH = 3;
 
 export function SupportModal({ onClose }: SupportModalProps) {
   const [mounted, setMounted] = useState(false);
@@ -29,10 +37,16 @@ export function SupportModal({ onClose }: SupportModalProps) {
   const [name, setName] = useState("");
   // report_issue fields
   const [last4, setLast4] = useState("");
+  const [payMethod, setPayMethod] = useState<PayMethod>("");
+  const [paidDate, setPaidDate] = useState("");
+  const [timeOfDay, setTimeOfDay] = useState("");
+  const [amount, setAmount] = useState("");
   const [analysisType, setAnalysisType] = useState("");
   const [surname, setSurname] = useState("");
-  const [orderId, setOrderId] = useState("");
   const [comment, setComment] = useState("");
+  const [attachments, setAttachments] = useState<Attachment[]>([]);
+  const [attachError, setAttachError] = useState("");
+  const fileInputRef = useRef<HTMLInputElement>(null);
   // other
   const [message, setMessage] = useState("");
   // honeypot
@@ -40,6 +54,7 @@ export function SupportModal({ onClose }: SupportModalProps) {
 
   const emailValid = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email.trim());
   const last4Valid = last4 === "" || /^\d{4}$/.test(last4);
+  const uploadingAny = attachments.some((a) => a.uploading);
 
   // Render via portal to document.body — the SiteHeader has backdrop-blur,
   // which creates a containing block for position:fixed descendants. Without
@@ -51,6 +66,44 @@ export function SupportModal({ onClose }: SupportModalProps) {
     document.body.style.overflow = "hidden";
     return () => { document.body.style.overflow = prev; };
   }, []);
+
+  // Revoke any object URLs on unmount to avoid leaks.
+  useEffect(() => {
+    return () => { attachments.forEach((a) => a.previewUrl && URL.revokeObjectURL(a.previewUrl)); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  async function handleFiles(files: FileList | null) {
+    setAttachError("");
+    if (!files || files.length === 0) return;
+    const room = MAX_ATTACH - attachments.length;
+    if (room <= 0) { setAttachError(`Можно приложить не больше ${MAX_ATTACH} файлов`); return; }
+    const picked = Array.from(files).slice(0, room);
+    for (const file of picked) {
+      const okType = /^image\/(jpeg|png|webp|gif|heic|heif)$/i.test(file.type) || file.type === "application/pdf";
+      if (!okType) { setAttachError("Только фото/скриншот (JPG, PNG, WebP) или PDF"); continue; }
+      if (file.size > 10 * 1024 * 1024) { setAttachError("Файл больше 10 МБ — приложите скриншот поменьше"); continue; }
+      const previewUrl = file.type.startsWith("image/") ? URL.createObjectURL(file) : undefined;
+      const placeholder: Attachment = { key: "", localName: file.name, previewUrl, uploading: true };
+      setAttachments((prev) => [...prev, placeholder]);
+      try {
+        const ref = await uploadSupportAttachment(file);
+        setAttachments((prev) =>
+          prev.map((a) => (a === placeholder ? { ...a, ...ref, uploading: false } : a))
+        );
+      } catch {
+        setAttachments((prev) => prev.filter((a) => a !== placeholder));
+        if (previewUrl) URL.revokeObjectURL(previewUrl);
+        setAttachError("Не удалось загрузить файл, попробуйте ещё раз");
+      }
+    }
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  }
+
+  function removeAttachment(target: Attachment) {
+    if (target.previewUrl) URL.revokeObjectURL(target.previewUrl);
+    setAttachments((prev) => prev.filter((a) => a !== target));
+  }
 
   async function submit(category: "report_issue" | "other") {
     setError("");
@@ -66,17 +119,28 @@ export function SupportModal({ onClose }: SupportModalProps) {
       setError("Опишите ваш вопрос");
       return;
     }
+    if (uploadingAny) {
+      setError("Дождитесь загрузки вложений");
+      return;
+    }
     setSending(true);
     try {
+      const refs = attachments
+        .filter((a) => a.key && !a.uploading)
+        .map((a) => ({ key: a.key, content_type: a.content_type, filename: a.filename }));
       const res = await submitSupportRequest({
         category,
         email: email.trim(),
         name: name.trim() || undefined,
         card_last4: category === "report_issue" ? last4 || undefined : undefined,
+        payment_method: category === "report_issue" && payMethod ? payMethod : undefined,
+        paid_at: category === "report_issue" ? paidDate || undefined : undefined,
+        paid_time_of_day: category === "report_issue" ? timeOfDay || undefined : undefined,
+        amount: category === "report_issue" ? amount || undefined : undefined,
         analysis_type: category === "report_issue" ? analysisType.trim() || undefined : undefined,
         patient_surname: category === "report_issue" ? surname.trim() || undefined : undefined,
-        order_id: category === "report_issue" ? orderId.trim() || undefined : undefined,
         message: category === "report_issue" ? comment.trim() || undefined : message.trim(),
+        attachments: refs.length ? refs : undefined,
         website: website || undefined,
       });
       setTicketId(res.ticket_id);
@@ -198,9 +262,93 @@ export function SupportModal({ onClose }: SupportModalProps) {
                   className={inputCls}
                 />
               </div>
-              <div className="grid grid-cols-2 gap-3">
+
+              {/* Receipt / screenshot — the highest-signal field: carries date,
+                  amount, last4 and sometimes the payment id in one shot. */}
+              <div>
+                <label className={labelCls}>Чек или скриншот оплаты</label>
+                <div className="flex flex-wrap gap-2">
+                  {attachments.map((a, i) => (
+                    <div
+                      key={i}
+                      className="relative flex h-20 w-20 items-center justify-center overflow-hidden rounded-xl border border-border bg-background"
+                    >
+                      {a.previewUrl ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={a.previewUrl} alt={a.localName} className="h-full w-full object-cover" />
+                      ) : (
+                        <span className="px-1 text-center text-[10px] leading-tight text-muted-foreground">PDF<br />{a.localName.slice(0, 12)}</span>
+                      )}
+                      {a.uploading && (
+                        <div className="absolute inset-0 flex items-center justify-center bg-card/70">
+                          <Loader2 className="h-5 w-5 animate-spin text-primary" />
+                        </div>
+                      )}
+                      {!a.uploading && (
+                        <button
+                          type="button"
+                          onClick={() => removeAttachment(a)}
+                          className="absolute right-0.5 top-0.5 rounded-md bg-foreground/60 p-1 text-white hover:bg-foreground"
+                          aria-label="Удалить вложение"
+                        >
+                          <Trash2 className="h-3 w-3" />
+                        </button>
+                      )}
+                    </div>
+                  ))}
+                  {attachments.length < MAX_ATTACH && (
+                    <button
+                      type="button"
+                      onClick={() => fileInputRef.current?.click()}
+                      className="flex h-20 w-20 flex-col items-center justify-center gap-1 rounded-xl border border-dashed border-primary/50 bg-primary/5 text-primary transition-colors hover:bg-primary/10"
+                    >
+                      <Paperclip className="h-5 w-5" />
+                      <span className="text-[11px] font-medium">Приложить</span>
+                    </button>
+                  )}
+                </div>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*,application/pdf"
+                  multiple
+                  className="hidden"
+                  onChange={(e) => handleFiles(e.target.files)}
+                />
+                <p className={hintCls}>самый быстрый способ — на чеке есть всё, что нужно для поиска</p>
+                {attachError && <p className="mt-1 text-xs font-medium text-red-600">{attachError}</p>}
+              </div>
+
+              {/* Payment method — routes the agent: card → search by last4,
+                  SBP → search by date+amount (last4 is meaningless for SBP). */}
+              <div>
+                <label className={labelCls}>Как оплачивали?</label>
+                <div className="grid grid-cols-3 gap-2">
+                  {([
+                    ["card", "Картой"],
+                    ["sbp", "СБП / по телефону"],
+                    ["unknown", "Не помню"],
+                  ] as [PayMethod, string][]).map(([val, lbl]) => (
+                    <button
+                      key={val}
+                      type="button"
+                      onClick={() => setPayMethod(val)}
+                      className={
+                        "rounded-xl border px-2 py-2.5 text-xs font-medium transition-colors " +
+                        (payMethod === val
+                          ? "border-primary bg-primary/10 text-primary"
+                          : "border-border bg-background text-foreground hover:border-primary/50")
+                      }
+                    >
+                      {lbl}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {payMethod !== "sbp" && (
                 <div>
-                  <label className={labelCls}>4 цифры карты</label>
+                  <label className={labelCls}>4 последние цифры карты, с которой оплатили</label>
                   <input
                     type="text"
                     inputMode="numeric"
@@ -210,7 +358,52 @@ export function SupportModal({ onClose }: SupportModalProps) {
                     placeholder="0000"
                     className={inputCls}
                   />
-                  <p className={hintCls}>если платили картой; цифры с пластика</p>
+                  <p className={hintCls}>цифры с пластика или из приложения банка</p>
+                </div>
+              )}
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className={labelCls}>Когда оплатили</label>
+                  <input
+                    type="date"
+                    value={paidDate}
+                    onChange={(e) => setPaidDate(e.target.value)}
+                    className={inputCls}
+                  />
+                  <p className={hintCls}>примерно</p>
+                </div>
+                <div>
+                  <label className={labelCls}>Время суток</label>
+                  <select
+                    value={timeOfDay}
+                    onChange={(e) => setTimeOfDay(e.target.value)}
+                    className={inputCls}
+                  >
+                    <option value="">не помню</option>
+                    <option value="утро">утро</option>
+                    <option value="день">день</option>
+                    <option value="вечер">вечер</option>
+                    <option value="ночь">ночь</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className={labelCls}>Сумма</label>
+                  <select
+                    value={amount}
+                    onChange={(e) => setAmount(e.target.value)}
+                    className={inputCls}
+                  >
+                    <option value="">не помню</option>
+                    <option value="299 ₽">299 ₽</option>
+                    <option value="349 ₽">349 ₽</option>
+                    <option value="449 ₽">449 ₽</option>
+                    <option value="899 ₽">899 ₽</option>
+                    <option value="другая">другая сумма</option>
+                  </select>
                 </div>
                 <div>
                   <label className={labelCls}>Фамилия в анализе</label>
@@ -224,28 +417,18 @@ export function SupportModal({ onClose }: SupportModalProps) {
                   <p className={hintCls}>пациента, не плательщика</p>
                 </div>
               </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className={labelCls}>Тип анализа</label>
-                  <input
-                    type="text"
-                    value={analysisType}
-                    onChange={(e) => setAnalysisType(e.target.value)}
-                    placeholder="кровь, гормоны…"
-                    className={inputCls}
-                  />
-                </div>
-                <div>
-                  <label className={labelCls}>Номер заказа</label>
-                  <input
-                    type="text"
-                    value={orderId}
-                    onChange={(e) => setOrderId(e.target.value)}
-                    placeholder="если знаете"
-                    className={inputCls}
-                  />
-                </div>
+
+              <div>
+                <label className={labelCls}>Тип анализа</label>
+                <input
+                  type="text"
+                  value={analysisType}
+                  onChange={(e) => setAnalysisType(e.target.value)}
+                  placeholder="кровь, гормоны, моча…"
+                  className={inputCls}
+                />
               </div>
+
               <div>
                 <label className={labelCls}>Комментарий</label>
                 <textarea
@@ -262,11 +445,11 @@ export function SupportModal({ onClose }: SupportModalProps) {
 
             <button
               onClick={() => submit("report_issue")}
-              disabled={sending}
+              disabled={sending || uploadingAny}
               className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl bg-primary px-6 py-3.5 font-semibold text-primary-foreground transition-all hover:opacity-90 disabled:opacity-60"
             >
-              {sending && <Loader2 className="h-4 w-4 animate-spin" />}
-              {sending ? "Отправляем…" : "Отправить в поддержку"}
+              {(sending || uploadingAny) && <Loader2 className="h-4 w-4 animate-spin" />}
+              {sending ? "Отправляем…" : uploadingAny ? "Загрузка вложений…" : "Отправить в поддержку"}
             </button>
           </>
         )}

@@ -332,15 +332,26 @@ export async function getOrderStatus(orderId: string): Promise<OrderStatus> {
 
 // --- Web support form (header «Поддержка») ---
 
+export interface SupportAttachmentRef {
+  key: string;
+  content_type?: string;
+  filename?: string;
+}
+
 export interface SupportRequestPayload {
   category: "report_issue" | "other";
   email: string;
   name?: string;
   card_last4?: string;
+  payment_method?: "card" | "sbp" | "unknown";
+  paid_at?: string;
+  paid_time_of_day?: string;
+  amount?: string;
   analysis_type?: string;
   patient_surname?: string;
   order_id?: string;
   message?: string;
+  attachments?: SupportAttachmentRef[];
   website?: string; // honeypot — users never fill this
 }
 
@@ -351,5 +362,15 @@ export async function submitSupportRequest(
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload),
+  });
+}
+
+// Upload a receipt/screenshot for the support form → returns its S3 key.
+export async function uploadSupportAttachment(file: File): Promise<SupportAttachmentRef> {
+  const formData = new FormData();
+  formData.append("file", file);
+  return request<SupportAttachmentRef>("/api/v1/support/attachment", {
+    method: "POST",
+    body: formData,
   });
 }
