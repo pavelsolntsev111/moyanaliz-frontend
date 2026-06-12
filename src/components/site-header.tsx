@@ -1,11 +1,20 @@
 "use client";
 
 import Link from "next/link";
-import { Activity, Menu, X } from "lucide-react";
+import { Activity, LifeBuoy, Menu, X } from "lucide-react";
 import { useState } from "react";
+import { SupportModal } from "@/components/support-modal";
+import { ymGoal } from "@/lib/ym";
 
 export function SiteHeader() {
   const [menuOpen, setMenuOpen] = useState(false);
+  const [supportOpen, setSupportOpen] = useState(false);
+
+  function openSupport() {
+    setMenuOpen(false);
+    setSupportOpen(true);
+    ymGoal("support_form_opened");
+  }
 
   return (
     <header className="sticky top-0 z-50 border-b border-border bg-card/95 backdrop-blur supports-[backdrop-filter]:bg-card/80">
@@ -44,15 +53,32 @@ export function SiteHeader() {
           >
             Абонемент
           </Link>
+          <button
+            onClick={openSupport}
+            className="flex items-center gap-1.5 rounded-lg border border-border px-3 py-1.5 text-sm font-medium text-muted-foreground transition-colors hover:border-primary hover:text-primary"
+          >
+            <LifeBuoy className="h-4 w-4" />
+            Поддержка
+          </button>
         </nav>
 
-        <button
-          onClick={() => setMenuOpen(!menuOpen)}
-          className="text-foreground md:hidden"
-          aria-label={menuOpen ? "Закрыть меню" : "Открыть меню"}
-        >
-          {menuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
-        </button>
+        <div className="flex items-center gap-3 md:hidden">
+          <button
+            onClick={openSupport}
+            className="flex items-center gap-1 rounded-lg border border-border px-2.5 py-1.5 text-xs font-medium text-muted-foreground"
+            aria-label="Поддержка"
+          >
+            <LifeBuoy className="h-4 w-4" />
+            Поддержка
+          </button>
+          <button
+            onClick={() => setMenuOpen(!menuOpen)}
+            className="text-foreground"
+            aria-label={menuOpen ? "Закрыть меню" : "Открыть меню"}
+          >
+            {menuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
+          </button>
+        </div>
       </div>
 
       {menuOpen && (
@@ -89,6 +115,8 @@ export function SiteHeader() {
           </div>
         </nav>
       )}
+
+      {supportOpen && <SupportModal onClose={() => setSupportOpen(false)} />}
     </header>
   );
 }

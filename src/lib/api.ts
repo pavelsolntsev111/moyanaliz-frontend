@@ -329,3 +329,27 @@ export interface OrderStatus {
 export async function getOrderStatus(orderId: string): Promise<OrderStatus> {
   return request<OrderStatus>(`/api/v1/order/${orderId}/status`);
 }
+
+// --- Web support form (header «Поддержка») ---
+
+export interface SupportRequestPayload {
+  category: "report_issue" | "other";
+  email: string;
+  name?: string;
+  card_last4?: string;
+  analysis_type?: string;
+  patient_surname?: string;
+  order_id?: string;
+  message?: string;
+  website?: string; // honeypot — users never fill this
+}
+
+export async function submitSupportRequest(
+  payload: SupportRequestPayload
+): Promise<{ ok: boolean; ticket_id: string | null }> {
+  return request("/api/v1/support/request", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+}
