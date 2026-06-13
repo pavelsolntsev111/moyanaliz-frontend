@@ -984,7 +984,7 @@ function InlinePaywall({
               } ${loading ? "opacity-50 pointer-events-none" : ""}`}
             >
               <span className="absolute -top-2 right-3 rounded-full px-2 py-0.5 text-[10px] font-bold text-white" style={{ background: "#d97706" }}>
-                {packTest ? "−77%" : "−70%"}
+                −77%
               </span>
               <div className={`h-4 w-4 shrink-0 rounded-full border-2 flex items-center justify-center ${
                 withAbonement ? "border-amber-600" : "border-muted-foreground/40"
