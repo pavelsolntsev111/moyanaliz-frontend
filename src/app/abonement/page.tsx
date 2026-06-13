@@ -63,13 +63,13 @@ export default function AbonementPage() {
                 на расшифровку анализов
               </h1>
               <p className="mt-5 text-lg text-muted-foreground">
-                10 расшифровок за 899&nbsp;₽ — вместо 2&nbsp;990&nbsp;₽ при
+                10 расшифровок за 699&nbsp;₽ — вместо 2&nbsp;990&nbsp;₽ при
                 разовых покупках. Используйте в течение года для своих
                 анализов и анализов близких.
               </p>
 
               <ul className="mt-8 space-y-3 text-base">
-                <Bullet>90&nbsp;₽ за расшифровку вместо 299&nbsp;₽</Bullet>
+                <Bullet>70&nbsp;₽ за расшифровку вместо 299&nbsp;₽</Bullet>
                 <Bullet>Действует 12 месяцев с момента оплаты</Bullet>
                 <Bullet>Расшифровывайте свои анализы и анализы близких</Bullet>
                 <Bullet>Без подписки и автопродления — один платёж</Bullet>
@@ -83,13 +83,13 @@ export default function AbonementPage() {
               </div>
               <div className="mt-3 flex items-baseline gap-3">
                 <span className="text-5xl font-bold text-foreground">
-                  899&nbsp;₽
+                  699&nbsp;₽
                 </span>
                 <span className="text-lg text-muted-foreground line-through">
                   2990&nbsp;₽
                 </span>
                 <span className="rounded-full bg-primary/10 px-2.5 py-0.5 text-sm font-semibold text-primary">
-                  −70%
+                  −77%
                 </span>
               </div>
               <div className="mt-1 text-sm text-muted-foreground">
@@ -123,7 +123,7 @@ export default function AbonementPage() {
                   disabled={loading}
                   className="mt-4 w-full rounded-lg bg-primary py-4 text-base font-semibold text-primary-foreground shadow-md transition hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-60"
                 >
-                  {loading ? "Создаём платёж..." : "Купить за 899 ₽"}
+                  {loading ? "Создаём платёж..." : "Купить за 699 ₽"}
                 </button>
 
                 <div className="mt-4 flex items-center justify-center gap-1.5 text-xs text-muted-foreground">
@@ -229,7 +229,7 @@ export default function AbonementPage() {
             <ol className="mt-12 space-y-6">
               <Step
                 num={1}
-                title="Оплачиваете 899 ₽"
+                title="Оплачиваете 699 ₽"
                 text="Картой или через СБП. Платёж проходит через ЮКассу, чек уходит на email."
               />
               <Step
