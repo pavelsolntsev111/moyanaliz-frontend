@@ -958,7 +958,7 @@ function InlinePaywall({
               } ${loading ? "opacity-50 pointer-events-none" : ""}`}
             >
               <span className="absolute -top-2 right-3 rounded-full px-2 py-0.5 text-[10px] font-bold text-white" style={{ background: "#16a34a" }}>
-                {packTest ? "−67%" : "−50%"}
+                {packTest ? "−70%" : "−50%"}
               </span>
               <div className={`h-4 w-4 shrink-0 rounded-full border-2 flex items-center justify-center ${
                 withThreeReports ? "border-emerald-600" : "border-muted-foreground/40"
