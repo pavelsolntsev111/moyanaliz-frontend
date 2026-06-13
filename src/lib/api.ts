@@ -57,6 +57,9 @@ export interface UploadResponse {
   // replaced by a one-line checkbox «Добавить чат с ИИ-консультантом +50 ₽»
   // between the tier cards and the CTA (ticks with_chat → same combo 349).
   ab_bump_v1?: string | null;
+  // A/B test ab_pack_v1: "control" | "test" | null. "test" → the 3-report pack
+  // card becomes a 5-report pack «5 отчётов» at 499 (prices.three_reports=499).
+  ab_pack_v1?: string | null;
   // Resolved prices for this bucket. UI MUST render these, not hardcoded values.
   prices?: PriceBundle;
 }
@@ -261,6 +264,8 @@ export interface OrderStatus {
   ab_premium_v1?: string | null;
   // A/B test ab_bump_v1 — surfaced for YM tagging on result-page goals.
   ab_bump_v1?: string | null;
+  // A/B test ab_pack_v1 — surfaced for YM tagging on result-page goals.
+  ab_pack_v1?: string | null;
   prices?: PriceBundle;
   claude_result_json?: {
     meta: {

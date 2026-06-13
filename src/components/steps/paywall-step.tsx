@@ -785,7 +785,7 @@ function InlinePaywall({
   withChat, setWithChat, withThreeReports, setWithThreeReports,
   withAbonement, setWithAbonement,
   abEmailBeforePay, prepayEmail, setPrepayEmail,
-  prices, abPriceV1, abCtaV1, premiumTest, bumpTest,
+  prices, abPriceV1, abCtaV1, premiumTest, bumpTest, packTest,
 }: {
   promoVisible: boolean
   setPromoVisible: (v: boolean) => void
@@ -826,6 +826,9 @@ function InlinePaywall({
   // a one-line checkbox «Добавить чат с ИИ-консультантом +50 ₽» between the
   // tier cards and the CTA toggles withChat instead (same combo 349 order).
   bumpTest: boolean
+  // A/B pack-reframe bucket (ab_pack_v1). true → the 3-report pack card becomes
+  // a 5-report pack: «5 отчётов» at prices.three_reports (=499), badge −67%.
+  packTest: boolean
 }) {
   const priceTag = abPriceV1 === "test" ? "test" : "control"
   const ctaTag = abCtaV1 === "test" ? "test" : "control"
@@ -955,7 +958,7 @@ function InlinePaywall({
               } ${loading ? "opacity-50 pointer-events-none" : ""}`}
             >
               <span className="absolute -top-2 right-3 rounded-full px-2 py-0.5 text-[10px] font-bold text-white" style={{ background: "#16a34a" }}>
-                −50%
+                {packTest ? "−67%" : "−50%"}
               </span>
               <div className={`h-4 w-4 shrink-0 rounded-full border-2 flex items-center justify-center ${
                 withThreeReports ? "border-emerald-600" : "border-muted-foreground/40"
@@ -963,8 +966,12 @@ function InlinePaywall({
                 {withThreeReports && <div className="h-2 w-2 rounded-full bg-emerald-600" />}
               </div>
               <div className="flex-1">
-                <p className="text-sm font-semibold text-foreground">3 отчёта</p>
-                <p className="text-xs text-muted-foreground mt-0.5">в два раза дешевле, чем при покупке одного отчёта</p>
+                <p className="text-sm font-semibold text-foreground">{packTest ? "5 отчётов" : "3 отчёта"}</p>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  {packTest
+                    ? `всего ${Math.round(prices.three_reports / 5)} ₽ за расшифровку — выгоднее всего`
+                    : "в два раза дешевле, чем при покупке одного отчёта"}
+                </p>
               </div>
               <span className="text-sm font-bold shrink-0" style={{ color: "#16a34a" }}>{prices.three_reports} ₽</span>
             </button>
@@ -1151,14 +1158,15 @@ function InlinePaywall({
               const emailArg = abEmailBeforePay ? prepayEmail.trim() : undefined
               const premiumTag = premiumTest ? "test" : "control"
               const bumpTag = bumpTest ? "test" : "control"
+              const packTag = packTest ? "test" : "control"
               if (withAbonement) {
-                ymGoal("click_pay_abonement", { price: priceTag, cta: ctaTag, premium: premiumTag, bump: bumpTag })
+                ymGoal("click_pay_abonement", { price: priceTag, cta: ctaTag, premium: premiumTag, bump: bumpTag, pack: packTag })
                 onPay(undefined, false, false, true, emailArg)
               } else if (withThreeReports) {
-                ymGoal("click_pay_five_reports", { price: priceTag, cta: ctaTag, premium: premiumTag, bump: bumpTag })
+                ymGoal("click_pay_five_reports", { price: priceTag, cta: ctaTag, premium: premiumTag, bump: bumpTag, pack: packTag })
                 onPay(undefined, false, true, false, emailArg)
               } else {
-                ymGoal("click_get_report", { price: priceTag, cta: ctaTag, premium: premiumTag, bump: bumpTag, tier: withChat ? "combo" : "single" })
+                ymGoal("click_get_report", { price: priceTag, cta: ctaTag, premium: premiumTag, bump: bumpTag, pack: packTag, tier: withChat ? "combo" : "single" })
                 onPay(hasDiscount ? promoCode.trim() : undefined, withChat, false, false, emailArg)
               }
             }}
@@ -1186,7 +1194,7 @@ function InlinePaywall({
                 {withAbonement
                   ? `Купить ${premiumTest ? "10 базовых отчётов" : "10 отчётов"} — ${prices.abonement} ₽`
                   : withThreeReports
-                  ? `Купить ${premiumTest ? "3 базовых отчёта" : "3 отчёта"} — ${prices.three_reports} ₽`
+                  ? `Купить ${packTest ? "5 отчётов" : premiumTest ? "3 базовых отчёта" : "3 отчёта"} — ${prices.three_reports} ₽`
                   : withChat
                   /* premiumTest: «Получить расширенный отчёт» (combo=499);
                      bumpTest: checkbox ticked → «Получить отчёт + чат» */
@@ -1310,7 +1318,7 @@ function InlinePaywall({
 }
 
 /** Bottom CTA card + sticky mobile button */
-function BottomCTA({ onPay, loading, withChat, withThreeReports, withAbonement, prices, abCtaV1, outOfRangeCount, premiumTest, bumpTest }: {
+function BottomCTA({ onPay, loading, withChat, withThreeReports, withAbonement, prices, abCtaV1, outOfRangeCount, premiumTest, bumpTest, packTest }: {
   onPay: () => void
   loading: boolean
   withChat: boolean
@@ -1325,6 +1333,8 @@ function BottomCTA({ onPay, loading, withChat, withThreeReports, withAbonement, 
   premiumTest?: boolean
   // A/B order bump — sticky CTA mirrors «Получить отчёт + чат» when ticked.
   bumpTest?: boolean
+  // A/B pack reframe — sticky CTA mirrors «Купить 5 отчётов» when pack selected.
+  packTest?: boolean
 }) {
   const [showSticky, setShowSticky] = useState(false)
 
@@ -1355,7 +1365,7 @@ function BottomCTA({ onPay, loading, withChat, withThreeReports, withAbonement, 
               {withAbonement
                 ? `Купить ${premiumTest ? "10 базовых отчётов" : "10 отчётов"} — ${prices.abonement} ₽`
                 : withThreeReports
-                ? `Купить ${premiumTest ? "3 базовых отчёта" : "3 отчёта"} — ${prices.three_reports} ₽`
+                ? `Купить ${packTest ? "5 отчётов" : premiumTest ? "3 базовых отчёта" : "3 отчёта"} — ${prices.three_reports} ₽`
                 : withChat
                 ? `${premiumTest ? "Получить расширенный отчёт" : bumpTest ? "Получить отчёт + чат" : "С консультацией"} — ${prices.combo} ₽`
                 : premiumTest
@@ -1458,9 +1468,12 @@ interface PaywallStepProps {
   // A/B order-bump bucket (ab_bump_v1, started 2026-06-10). true → combo tier
   // card removed; one-line chat add-on checkbox above the CTA sets withChat.
   bumpTest?: boolean
+  // A/B pack-reframe bucket (ab_pack_v1, started 2026-06-13). true → the 3-report
+  // pack card becomes a 5-report pack «5 отчётов» at prices.three_reports (=499).
+  packTest?: boolean
 }
 
-export function PaywallStep({ onPay, onPromo, loading, preview, abEmailBeforePay = false, prices, abPriceV1 = null, abCtaV1 = null, skipPreview = false, premiumTest = false, bumpTest = false }: PaywallStepProps) {
+export function PaywallStep({ onPay, onPromo, loading, preview, abEmailBeforePay = false, prices, abPriceV1 = null, abCtaV1 = null, skipPreview = false, premiumTest = false, bumpTest = false, packTest = false }: PaywallStepProps) {
   const [promoVisible, setPromoVisible] = useState(false)
   const [promoCode, setPromoCode] = useState("")
   const [withChat, setWithChat] = useState(false)
@@ -1588,6 +1601,7 @@ export function PaywallStep({ onPay, onPromo, loading, preview, abEmailBeforePay
           abCtaV1={abCtaV1}
           premiumTest={premiumTest}
           bumpTest={bumpTest}
+          packTest={packTest}
         />
       </div>
 
@@ -1636,6 +1650,7 @@ export function PaywallStep({ onPay, onPromo, loading, preview, abEmailBeforePay
         outOfRangeCount={outOfRangeCount}
         premiumTest={premiumTest}
         bumpTest={bumpTest}
+        packTest={packTest}
       />
     </div>
   )
