@@ -4,168 +4,73 @@ import { createPortal } from "react-dom";
 import { useEffect, useState } from "react";
 import {
   X,
+  FileText,
+  BookOpen,
+  UserCheck,
+  AlertTriangle,
   Apple,
   Pill,
   CalendarCheck,
+  FlaskConical,
   Stethoscope,
-  FileText,
   ShieldCheck,
-  ChevronRight,
 } from "lucide-react";
 
 /**
  * ReportExampleModal — sample-report preview shown on the paywall (A/B ab_example_v1).
  *
- * Content is curated from a real anonymized order (9eb03073319d, ж/44, comprehensive
- * 8-panel checkup) — 3 of its most relatable findings rendered in the product's web-report
- * card style. No PII (only sex/age, as in the real report). Fully self-contained: no API,
- * no images, mobile-native. Footer pins the pay CTA so closing returns to the paywall.
+ * ONE indicator, in depth (per owner 2026-06-14): a single critical finding —
+ * ferritin — analyzed the way every indicator is in the full report. Curated from a
+ * real anonymized order (9eb03073319d, ж/44): personalised reading tied to her sex/age
+ * and other results (hemoglobin / colour index / serum iron), "what else to test &
+ * monitor", and a question-for-the-doctor. No PII (name never rendered). Self-contained;
+ * footer pins the pay CTA so closing returns to the paywall.
  */
 
-type Severity = "critical" | "warning";
-
-interface ExampleCard {
-  name: string;
-  value: string;
-  unit: string;
-  reference: string;
-  /** 0..1 position of the value on the reference bar (for the marker). */
-  pos: number;
-  status: string;
-  severity: Severity;
-  whatIs: string;
-  recommendation: string;
-  actions: { icon: "apple" | "pill" | "calendar" | "doctor"; text: string }[];
-}
-
-const EXAMPLE_META = {
+const META = {
   types: ["Общий анализ крови", "Биохимия", "Щитовидная железа", "Обмен железа", "Витамин D", "Коагулограмма"],
   extraTypes: 2,
   lab: "Лаборатория Гемотест",
   patient: "Женщина, 44 года",
-  totalApprox: 102,
+  total: 102,
   abnormal: 6,
 };
 
-const EXAMPLE_CARDS: ExampleCard[] = [
-  {
-    name: "Ферритин",
-    value: "7.7",
-    unit: "нг/мл",
-    reference: "15–150 нг/мл",
-    pos: 0.04,
-    status: "Критически низкий",
-    severity: "critical",
-    whatIs:
-      "Главный показатель запасов железа в организме. Падает раньше гемоглобина — поэтому ловит дефицит на ранней стадии.",
-    recommendation:
-      "Запасы железа истощены (норма — от 15). По критериям ВОЗ это диагностический признак железодефицита — частая причина усталости, выпадения волос и одышки.",
-    actions: [
-      { icon: "apple", text: "Красное мясо, печень, гречка, зелёные овощи" },
-      { icon: "pill", text: "Обсудить с врачом препараты железа" },
-      { icon: "calendar", text: "Пересдать ферритин через 1 месяц" },
-    ],
-  },
-  {
-    name: "Холестерин ЛПНП («плохой»)",
-    value: "3.91",
-    unit: "ммоль/л",
-    reference: "до 3.34 ммоль/л",
-    pos: 0.86,
-    status: "Повышен",
-    severity: "warning",
-    whatIs:
-      "«Плохой» холестерин — накапливается в стенках сосудов и повышает риск атеросклероза и сердечно-сосудистых заболеваний.",
-    recommendation:
-      "Значение в зоне повышенного риска. Пока не критично, но требует внимания — особенно в сочетании с другими факторами.",
-    actions: [
-      { icon: "apple", text: "Меньше насыщенных жиров, больше клетчатки и рыбы" },
-      { icon: "calendar", text: "Повторить липидограмму через 3 месяца" },
-    ],
-  },
-  {
-    name: "Липаза",
-    value: "69.6",
-    unit: "Ед/л",
-    reference: "13–60 Ед/л",
-    pos: 0.82,
-    status: "Повышена",
-    severity: "warning",
-    whatIs: "Фермент поджелудочной железы, расщепляющий жиры в пище.",
-    recommendation:
-      "Превышение на 16% может указывать на лёгкое раздражение поджелудочной железы. Само по себе не диагноз, но стоит проконтролировать.",
-    actions: [
-      { icon: "apple", text: "Ограничить жирное и алкоголь" },
-      { icon: "calendar", text: "Пересдать через 2 недели" },
-      { icon: "doctor", text: "Если останется повышенной — к гастроэнтерологу" },
-    ],
-  },
-];
-
-const ACTION_ICON = {
-  apple: Apple,
-  pill: Pill,
-  calendar: CalendarCheck,
-  doctor: Stethoscope,
-} as const;
-
-function RangeBar({ pos, severity }: { pos: number; severity: Severity }) {
-  const color = severity === "critical" ? "bg-red-500" : "bg-amber-500";
+function RangeBar() {
+  // ferritin 7.7 on a 15–150 reference scale → below the lower bound (far left).
   return (
-    <div className="relative mt-2 h-2 w-full rounded-full bg-gradient-to-r from-amber-200 via-emerald-300 to-amber-200">
-      <div
-        className={`absolute top-1/2 h-4 w-4 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-white shadow ${color}`}
-        style={{ left: `${Math.max(4, Math.min(96, pos * 100))}%` }}
-      />
+    <div className="mt-2">
+      <div className="relative h-2.5 w-full rounded-full bg-gradient-to-r from-red-300 via-emerald-300 to-amber-200">
+        <div
+          className="absolute top-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-white bg-red-500 shadow"
+          style={{ left: "3%", height: "1.05rem", width: "1.05rem" }}
+        />
+      </div>
+      <div className="mt-1 flex justify-between text-[11px] text-muted-foreground">
+        <span>0</span>
+        <span className="text-red-600 font-medium">ваши 7.7 ↑ нужно ≥15</span>
+        <span>150</span>
+      </div>
     </div>
   );
 }
 
-function ExampleCardView({ card }: { card: ExampleCard }) {
-  const isCrit = card.severity === "critical";
-  const accent = isCrit
-    ? "border-red-200 bg-red-50/60"
-    : "border-amber-200 bg-amber-50/50";
-  const badge = isCrit
-    ? "bg-red-100 text-red-700"
-    : "bg-amber-100 text-amber-700";
+function SectionHeader({ icon: Icon, children, tone = "default" }: { icon: React.ElementType; children: React.ReactNode; tone?: "default" | "primary" | "red" }) {
+  const color = tone === "red" ? "text-red-600" : tone === "primary" ? "text-primary" : "text-foreground";
   return (
-    <div className={`rounded-2xl border ${accent} p-4 sm:p-5`}>
-      <div className="flex items-start justify-between gap-3">
-        <h4 className="text-sm font-semibold text-foreground sm:text-base">{card.name}</h4>
-        <span className={`shrink-0 rounded-full px-2.5 py-1 text-xs font-medium ${badge}`}>
-          {card.status}
-        </span>
-      </div>
-
-      <div className="mt-3 flex items-baseline gap-2">
-        <span className="text-2xl font-bold text-foreground">{card.value}</span>
-        <span className="text-sm text-muted-foreground">{card.unit}</span>
-        <span className="ml-auto text-xs text-muted-foreground">Норма: {card.reference}</span>
-      </div>
-      <RangeBar pos={card.pos} severity={card.severity} />
-
-      <div className="mt-4 space-y-3 text-sm leading-relaxed text-foreground/90">
-        <p>
-          <span className="font-medium text-foreground">Что это.</span> {card.whatIs}
-        </p>
-        <p>
-          <span className="font-medium text-foreground">Ваш результат.</span> {card.recommendation}
-        </p>
-      </div>
-
-      <div className="mt-4 space-y-2 rounded-xl bg-background/70 p-3">
-        {card.actions.map((a, i) => {
-          const Icon = ACTION_ICON[a.icon];
-          return (
-            <div key={i} className="flex items-start gap-2.5 text-sm text-foreground/90">
-              <Icon className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
-              <span>{a.text}</span>
-            </div>
-          );
-        })}
-      </div>
+    <div className="mb-2 flex items-center gap-2">
+      <Icon className={`h-4 w-4 ${color}`} />
+      <h5 className={`text-sm font-semibold ${color}`}>{children}</h5>
     </div>
+  );
+}
+
+/** Inline reference to another result — makes the reading feel individual. */
+function Ref({ label, value, ok }: { label: string; value: string; ok?: boolean }) {
+  return (
+    <span className={`inline-flex items-baseline gap-1 rounded-md px-1.5 py-0.5 text-[13px] font-medium ${ok ? "bg-emerald-50 text-emerald-700" : "bg-red-50 text-red-700"}`}>
+      {label} <span className="font-semibold">{value}</span>
+    </span>
   );
 }
 
@@ -198,7 +103,6 @@ export function ReportExampleModal({
 
   return createPortal(
     <div className="fixed inset-0 z-[70] overflow-y-auto">
-      {/* backdrop — click closes */}
       <div className="fixed inset-0 bg-foreground/50 backdrop-blur-sm" onClick={onClose} />
 
       <div className="flex min-h-full items-start justify-center p-3 sm:py-8">
@@ -207,15 +111,9 @@ export function ReportExampleModal({
           <div className="sticky top-0 z-10 flex items-center justify-between gap-3 border-b border-border bg-card/95 px-4 py-3 backdrop-blur sm:px-6">
             <div className="flex items-center gap-2">
               <FileText className="h-5 w-5 text-primary" />
-              <span className="text-sm font-semibold text-foreground sm:text-base">
-                Пример готового отчёта
-              </span>
+              <span className="text-sm font-semibold text-foreground sm:text-base">Пример: как разобран один показатель</span>
             </div>
-            <button
-              onClick={onClose}
-              aria-label="Закрыть"
-              className="rounded-full p-1.5 text-muted-foreground transition hover:bg-muted hover:text-foreground"
-            >
+            <button onClick={onClose} aria-label="Закрыть" className="rounded-full p-1.5 text-muted-foreground transition hover:bg-muted hover:text-foreground">
               <X className="h-5 w-5" />
             </button>
           </div>
@@ -225,64 +123,108 @@ export function ReportExampleModal({
             {/* report meta */}
             <div className="rounded-2xl border border-border bg-background/60 p-4">
               <div className="flex flex-wrap gap-1.5">
-                {EXAMPLE_META.types.map((t) => (
-                  <span
-                    key={t}
-                    className="rounded-full bg-primary/10 px-2.5 py-1 text-xs font-medium text-primary"
-                  >
-                    {t}
-                  </span>
+                {META.types.map((t) => (
+                  <span key={t} className="rounded-full bg-primary/10 px-2.5 py-1 text-xs font-medium text-primary">{t}</span>
                 ))}
-                <span className="rounded-full bg-muted px-2.5 py-1 text-xs font-medium text-muted-foreground">
-                  +{EXAMPLE_META.extraTypes}
-                </span>
+                <span className="rounded-full bg-muted px-2.5 py-1 text-xs font-medium text-muted-foreground">+{META.extraTypes}</span>
               </div>
-              <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
-                <span>{EXAMPLE_META.lab}</span>
-                <span>·</span>
-                <span>{EXAMPLE_META.patient}</span>
-                <span>·</span>
-                <span>
-                  Проверено более {EXAMPLE_META.totalApprox} показателей ·{" "}
-                  <span className="font-semibold text-foreground">{EXAMPLE_META.abnormal} с отклонениями</span>
-                </span>
+              <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
+                <span>{META.lab}</span><span>·</span>
+                <span>{META.patient}</span><span>·</span>
+                <span>{META.total} показателей · <span className="font-semibold text-foreground">{META.abnormal} с отклонениями</span></span>
               </div>
-            </div>
-
-            {/* summary banner */}
-            <div className="mt-4 rounded-2xl border border-red-200 bg-red-50/70 p-4 text-sm leading-relaxed text-foreground/90">
-              <span className="font-semibold text-red-700">Найдено 6 отклонений, одно — критическое.</span>{" "}
-              Ниже — 3 из них с разбором: что это значит и что делать. В полном отчёте так же разобран{" "}
-              <span className="font-medium text-foreground">каждый</span> показатель.
-            </div>
-
-            {/* cards */}
-            <div className="mt-4 space-y-3">
-              {EXAMPLE_CARDS.map((c) => (
-                <ExampleCardView key={c.name} card={c} />
-              ))}
-            </div>
-
-            {/* teaser: breadth of the full report */}
-            <div className="mt-4 rounded-2xl border border-dashed border-primary/30 bg-primary/[0.04] p-4">
-              <p className="text-sm font-medium text-foreground">
-                …и ещё {EXAMPLE_META.totalApprox - 3} показателей разобраны так же подробно
+              <p className="mt-3 text-sm leading-relaxed text-foreground/90">
+                Ниже — <span className="font-semibold text-foreground">один</span> показатель (самый важный в этом отчёте) разобран так, как в полном отчёте разобран <span className="font-semibold text-foreground">каждый</span> из {META.total}.
               </p>
-              <div className="mt-3 grid grid-cols-2 gap-2 text-xs text-muted-foreground sm:grid-cols-3">
-                {[
-                  "Что означает каждый показатель",
-                  "Ваш результат простым языком",
-                  "Питание и образ жизни",
-                  "Когда пересдать анализы",
-                  "К какому врачу идти",
-                  "Вопросы для приёма + PDF на email",
-                ].map((t) => (
-                  <div key={t} className="flex items-start gap-1.5">
-                    <ChevronRight className="mt-0.5 h-3.5 w-3.5 shrink-0 text-primary" />
-                    <span>{t}</span>
-                  </div>
-                ))}
+            </div>
+
+            {/* ── deep single-indicator card ── */}
+            <div className="mt-4 rounded-2xl border border-red-200 bg-red-50/40 p-4 sm:p-5">
+              <div className="flex items-start justify-between gap-3">
+                <h4 className="text-base font-bold text-foreground sm:text-lg">Ферритин</h4>
+                <span className="shrink-0 rounded-full bg-red-100 px-2.5 py-1 text-xs font-semibold text-red-700">Критически низкий</span>
               </div>
+              <div className="mt-3 flex items-baseline gap-2">
+                <span className="text-3xl font-bold text-foreground">7.7</span>
+                <span className="text-sm text-muted-foreground">нг/мл</span>
+                <span className="ml-auto text-xs text-muted-foreground">Норма: 15–150 нг/мл</span>
+              </div>
+              <RangeBar />
+
+              <div className="mt-5 space-y-5">
+                {/* what is it */}
+                <section>
+                  <SectionHeader icon={BookOpen}>Что это</SectionHeader>
+                  <p className="text-sm leading-relaxed text-foreground/90">
+                    Ферритин — белок, в котором организм хранит железо «про запас». Это самый ранний и точный маркер запасов железа: он падает за <span className="font-medium text-foreground">месяцы</span> до того, как снизится гемоглобин. Поэтому нормальный гемоглобин ещё не гарантирует, что с железом всё в порядке.
+                  </p>
+                </section>
+
+                {/* personalised reading — the individual part */}
+                <section className="rounded-xl border border-primary/20 bg-primary/[0.05] p-3.5">
+                  <SectionHeader icon={UserCheck} tone="primary">Что это значит именно для вас</SectionHeader>
+                  <div className="space-y-2.5 text-sm leading-relaxed text-foreground/90">
+                    <p>
+                      У вас, <span className="font-medium text-foreground">женщины 44 лет</span>, ферритин 7.7 — это вдвое ниже нижней границы. Запасы железа практически исчерпаны.
+                    </p>
+                    <p>Это не случайная цифра — она сходится с другими вашими результатами:</p>
+                    <div className="flex flex-wrap items-center gap-1.5">
+                      <Ref label="Цветовой показатель" value="0.84" />
+                      <span className="text-xs text-muted-foreground">— эритроциты начинают «бледнеть» (ниже нормы 0.85)</span>
+                    </div>
+                    <div className="flex flex-wrap items-center gap-1.5">
+                      <Ref label="Гемоглобин" value="123" ok />
+                      <span className="text-xs text-muted-foreground">— ещё в норме, анемии пока нет</span>
+                    </div>
+                    <p>
+                      Это <span className="font-semibold text-foreground">скрытый (латентный) железодефицит</span>: тело пока удерживает гемоглобин, но резервов не осталось — анализ поймал проблему до анемии. У женщин до менопаузы это частая ситуация из-за ежемесячной кровопотери.
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      ⚠️ Сывороточное железо у вас <span className="font-medium">626 (в норме)</span> — но оно скачет день ото дня и не отражает запасы. Истину показывает именно ферритин.
+                    </p>
+                  </div>
+                </section>
+
+                {/* why it matters */}
+                <section>
+                  <SectionHeader icon={AlertTriangle} tone="red">Чем грозит, если не заняться</SectionHeader>
+                  <p className="text-sm leading-relaxed text-foreground/90">
+                    Даже без анемии низкий ферритин даёт усталость, выпадение волос, ломкость ногтей, одышку при нагрузке и «туман в голове». Если не восполнить — разовьётся железодефицитная анемия.
+                  </p>
+                </section>
+
+                {/* what to do */}
+                <section>
+                  <SectionHeader icon={Apple}>Что делать</SectionHeader>
+                  <div className="space-y-2 rounded-xl bg-background/70 p-3">
+                    <div className="flex items-start gap-2.5 text-sm text-foreground/90"><Apple className="mt-0.5 h-4 w-4 shrink-0 text-primary" /><span>Красное мясо, печень, гречка, бобовые + витамин C (усиливает усвоение). Чай и кофе во время еды — наоборот, мешают.</span></div>
+                    <div className="flex items-start gap-2.5 text-sm text-foreground/90"><Pill className="mt-0.5 h-4 w-4 shrink-0 text-primary" /><span>Диетой 7.7 не поднять — почти наверняка нужны препараты железа. Форму и дозу подберёт врач.</span></div>
+                    <div className="flex items-start gap-2.5 text-sm text-foreground/90"><CalendarCheck className="mt-0.5 h-4 w-4 shrink-0 text-primary" /><span>Пересдать ферритин и гемоглобин через 4–6 недель после начала приёма.</span></div>
+                  </div>
+                </section>
+
+                {/* what else to test & monitor */}
+                <section>
+                  <SectionHeader icon={FlaskConical} tone="primary">Что ещё сдать и за чем следить</SectionHeader>
+                  <p className="text-sm leading-relaxed text-foreground/90">
+                    Чтобы понять <span className="font-medium text-foreground">причину</span> и глубину дефицита: ОЖСС, % насыщения трансферрина, ретикулоциты. При стойкой усталости — витамин B12 и фолиевая кислота (бывает смешанный дефицит). <span className="font-medium text-foreground">Следить:</span> ферритин раз в 1–2 месяца, пока не выйдет в комфортные 30–50 нг/мл.
+                  </p>
+                </section>
+
+                {/* question for doctor */}
+                <section>
+                  <SectionHeader icon={Stethoscope}>Вопрос врачу</SectionHeader>
+                  <blockquote className="rounded-xl border-l-[3px] border-primary bg-primary/[0.04] px-3.5 py-2.5 text-sm italic leading-relaxed text-foreground/90">
+                    «Ферритин 7.7 — нужны ли препараты железа и в какой дозе? Стоит ли искать причину потери железа — например, проверить обильность менструаций или обследовать ЖКТ?»
+                  </blockquote>
+                </section>
+              </div>
+            </div>
+
+            {/* focused teaser */}
+            <div className="mt-4 rounded-2xl border border-dashed border-primary/30 bg-primary/[0.04] p-4 text-center">
+              <p className="text-sm font-medium text-foreground">…и так разобран каждый из {META.total} показателей</p>
+              <p className="mt-1 text-xs text-muted-foreground">что значит лично для вас, с учётом пола, возраста и связей между анализами — плюс PDF на email и вопросы для приёма у врача</p>
             </div>
 
             <p className="mt-3 flex items-center justify-center gap-1.5 text-center text-xs text-muted-foreground">
@@ -291,18 +233,12 @@ export function ReportExampleModal({
             </p>
           </div>
 
-          {/* pinned footer CTA — pay is always one tap away */}
+          {/* pinned footer CTA */}
           <div className="sticky bottom-0 z-10 border-t border-border bg-card/95 px-4 py-3 backdrop-blur sm:px-6">
-            <button
-              onClick={onPay}
-              className="w-full rounded-xl bg-primary px-4 py-3.5 text-center text-sm font-semibold text-primary-foreground shadow-sm transition hover:opacity-90 sm:text-base"
-            >
+            <button onClick={onPay} className="w-full rounded-xl bg-primary px-4 py-3.5 text-center text-sm font-semibold text-primary-foreground shadow-sm transition hover:opacity-90 sm:text-base">
               {payLabel}
             </button>
-            <button
-              onClick={onClose}
-              className="mt-2 w-full text-center text-xs text-muted-foreground transition hover:text-foreground"
-            >
+            <button onClick={onClose} className="mt-2 w-full text-center text-xs text-muted-foreground transition hover:text-foreground">
               Закрыть и вернуться
             </button>
           </div>
