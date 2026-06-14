@@ -58,6 +58,9 @@ export default function HomePage() {
   // A/B pack-reframe test. "control"|"test"|null. Server-side hash bucket.
   // test → 3-report pack card becomes a 5-report pack (499). Price from API.
   const [abPackV1, setAbPackV1] = useState<string | null>(null);
+  // A/B sample-report test. "control"|"test"|null. Server-side hash bucket.
+  // test → clickable "пример готового отчёта" block + modal above the CTA.
+  const [abExampleV1, setAbExampleV1] = useState<string | null>(null);
   const [prices, setPrices] = useState<PriceBundle>(FALLBACK_PRICES);
   const [error, setError] = useState<string | null>(null);
   const [payLoading, setPayLoading] = useState(false);
@@ -73,7 +76,7 @@ export default function HomePage() {
   // before upload) so the front-funnel is splittable.
   // `price`/`cta` tests are closed (everyone control) but kept for continuity.
   // All params live on the same goal hit — Метрика «Параметры визитов» делит по любому.
-  const abParams = (group: boolean, priceGroup: string | null, ctaGroup: string | null, skipGroup: string | null, premiumGroup: string | null = abPremiumV1, bumpGroup: string | null = abBumpV1, packGroup: string | null = abPackV1) => ({
+  const abParams = (group: boolean, priceGroup: string | null, ctaGroup: string | null, skipGroup: string | null, premiumGroup: string | null = abPremiumV1, bumpGroup: string | null = abBumpV1, packGroup: string | null = abPackV1, exampleGroup: string | null = abExampleV1) => ({
     ab: group ? "B" : "A",
     price: priceGroup === "test" ? "test" : "control",
     cta: ctaGroup === "test" ? "test" : "control",
@@ -81,6 +84,7 @@ export default function HomePage() {
     premium: premiumGroup === "test" ? "test" : "control",
     bump: bumpGroup === "test" ? "test" : "control",
     pack: packGroup === "test" ? "test" : "control",
+    example: exampleGroup === "test" ? "test" : "control",
   });
 
   const handleFileSelected = useCallback(async (f: File) => {
@@ -120,8 +124,9 @@ export default function HomePage() {
         setAbPremiumV1(res.ab_premium_v1 ?? null);
         setAbBumpV1(res.ab_bump_v1 ?? null);
         setAbPackV1(res.ab_pack_v1 ?? null);
+        setAbExampleV1(res.ab_example_v1 ?? null);
         if (res.prices) setPrices(res.prices);
-        ymGoal("file_uploaded", abParams(!!res.ab_email_before_pay, res.ab_price_v1 ?? null, res.ab_cta_v1 ?? null, res.ab_skip_preview ?? "test", res.ab_premium_v1 ?? null, res.ab_bump_v1 ?? null, res.ab_pack_v1 ?? null));
+        ymGoal("file_uploaded", abParams(!!res.ab_email_before_pay, res.ab_price_v1 ?? null, res.ab_cta_v1 ?? null, res.ab_skip_preview ?? "test", res.ab_premium_v1 ?? null, res.ab_bump_v1 ?? null, res.ab_pack_v1 ?? null, res.ab_example_v1 ?? null));
       }).catch(() => {
         // Don't bounce the user mid-read; ensureOrderId() surfaces the failure
         // on the pay/promo click and sends them back to re-upload.
@@ -143,6 +148,7 @@ export default function HomePage() {
       const premiumGroup = res.ab_premium_v1 ?? null;
       const bumpGroup = res.ab_bump_v1 ?? null;
       const packGroup = res.ab_pack_v1 ?? null;
+      const exampleGroup = res.ab_example_v1 ?? null;
       setAbEmailBeforePay(ab);
       setAbPriceV1(priceGroup);
       setAbCtaV1(ctaGroup);
@@ -150,9 +156,10 @@ export default function HomePage() {
       setAbPremiumV1(premiumGroup);
       setAbBumpV1(bumpGroup);
       setAbPackV1(packGroup);
+      setAbExampleV1(exampleGroup);
       if (res.prices) setPrices(res.prices);
       uploadDone.current = true;  // analyzing animation finishes → handleAnalyzingComplete
-      ymGoal("file_uploaded", abParams(ab, priceGroup, ctaGroup, skipGroup, premiumGroup, bumpGroup, packGroup));
+      ymGoal("file_uploaded", abParams(ab, priceGroup, ctaGroup, skipGroup, premiumGroup, bumpGroup, packGroup, exampleGroup));
     } catch (e) {
       setError(e instanceof Error ? e.message : "Ошибка загрузки");
       setStep("upload");
@@ -276,6 +283,7 @@ export default function HomePage() {
             premiumTest={abPremiumV1 === "test"}
             bumpTest={abBumpV1 === "test"}
             packTest={abPackV1 === "test"}
+            exampleTest={abExampleV1 === "test"}
           />
         )}
       </main>

@@ -23,9 +23,11 @@ import {
   MessageSquare,
   BarChart3,
   Sparkles,
+  Eye,
 } from "lucide-react"
 import type { PreviewData, AnalysisIndicator, LightIndicator } from "@/lib/types"
 import { IndicatorCard } from "@/components/indicator-card"
+import { ReportExampleModal } from "@/components/report-example-modal"
 import { mockIndicators } from "@/lib/mock-data"
 import { validatePromo } from "@/lib/api"
 import type { PromoValidateResponse, PriceBundle } from "@/lib/api"
@@ -785,7 +787,7 @@ function InlinePaywall({
   withChat, setWithChat, withThreeReports, setWithThreeReports,
   withAbonement, setWithAbonement,
   abEmailBeforePay, prepayEmail, setPrepayEmail,
-  prices, abPriceV1, abCtaV1, premiumTest, bumpTest, packTest,
+  prices, abPriceV1, abCtaV1, premiumTest, bumpTest, packTest, exampleTest,
 }: {
   promoVisible: boolean
   setPromoVisible: (v: boolean) => void
@@ -829,6 +831,10 @@ function InlinePaywall({
   // A/B pack-reframe bucket (ab_pack_v1). true → the 3-report pack card becomes
   // a 5-report pack: «5 отчётов» at prices.three_reports (=499), badge −67%.
   packTest: boolean
+  // A/B sample-report bucket (ab_example_v1). true → render a clickable
+  // "Посмотреть пример готового отчёта" block above the CTA that opens a modal
+  // with a curated sample report; the modal footer pins the pay CTA.
+  exampleTest: boolean
 }) {
   const priceTag = abPriceV1 === "test" ? "test" : "control"
   const ctaTag = abCtaV1 === "test" ? "test" : "control"
@@ -855,6 +861,33 @@ function InlinePaywall({
     : prices.combo
   const displayPrice = withThreeReports ? prices.three_reports : withChat ? comboDisplayPrice : baseDisplayPrice
   const hasDiscount = promoResult?.valid && !promoResult.free && promoResult.discount_percent
+
+  // A/B ab_example_v1: sample-report modal state.
+  const [exampleOpen, setExampleOpen] = useState(false)
+
+  // Primary pay action — fires the same goals + onPay() as the main CTA, so the
+  // example modal's footer button is identical to clicking «Получить полный отчёт».
+  const triggerPay = () => {
+    const prepayEmailValid = !abEmailBeforePay || isValidEmail(prepayEmail)
+    if (!prepayEmailValid) {
+      document.getElementById("paywall-email")?.focus()
+      return
+    }
+    const emailArg = abEmailBeforePay ? prepayEmail.trim() : undefined
+    const premiumTag = premiumTest ? "test" : "control"
+    const bumpTag = bumpTest ? "test" : "control"
+    const packTag = packTest ? "test" : "control"
+    if (withAbonement) {
+      ymGoal("click_pay_abonement", { price: priceTag, cta: ctaTag, premium: premiumTag, bump: bumpTag, pack: packTag })
+      onPay(undefined, false, false, true, emailArg)
+    } else if (withThreeReports) {
+      ymGoal("click_pay_five_reports", { price: priceTag, cta: ctaTag, premium: premiumTag, bump: bumpTag, pack: packTag })
+      onPay(undefined, false, true, false, emailArg)
+    } else {
+      ymGoal("click_get_report", { price: priceTag, cta: ctaTag, premium: premiumTag, bump: bumpTag, pack: packTag, tier: withChat ? "combo" : "single" })
+      onPay(hasDiscount ? promoCode.trim() : undefined, withChat, false, false, emailArg)
+    }
+  }
 
   const handleValidatePromo = async () => {
     if (!promoCode.trim()) return
@@ -1142,34 +1175,41 @@ function InlinePaywall({
             </div>
           )}
 
+          {/* A/B ab_example_v1: sample-report preview trigger, just above the CTA */}
+          {exampleTest && !promoResult?.free && (
+            <button
+              type="button"
+              onClick={() => {
+                ymGoal("example_opened", { price: priceTag, cta: ctaTag, example: "test" })
+                setExampleOpen(true)
+              }}
+              className="group mb-2.5 flex w-full items-center gap-3 rounded-xl border border-primary/30 bg-primary/[0.05] px-4 py-3 text-left transition hover:border-primary/50 hover:bg-primary/[0.08]"
+            >
+              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                <Eye className="h-5 w-5" />
+              </span>
+              <span className="min-w-0 flex-1">
+                <span className="block text-sm font-semibold text-foreground">Посмотреть пример готового отчёта</span>
+                <span className="block text-xs text-muted-foreground">Реальный разбор: показатели, что значат, что делать</span>
+              </span>
+              <ChevronRight className="h-5 w-5 shrink-0 text-primary transition group-hover:translate-x-0.5" />
+            </button>
+          )}
+          {exampleOpen && (
+            <ReportExampleModal
+              onClose={() => setExampleOpen(false)}
+              onPay={() => { setExampleOpen(false); triggerPay() }}
+              payLabel={`Получить полный отчёт — ${prices.single} ₽`}
+            />
+          )}
+
           {/* 1. CTA Button */}
           {!promoResult?.free && (() => {
             const prepayEmailValid = !abEmailBeforePay || isValidEmail(prepayEmail)
             const ctaDisabled = loading || !prepayEmailValid
             return (
           <button
-            onClick={() => {
-              if (!prepayEmailValid) {
-                // Defensive: button is also `disabled`, but click can still
-                // fire on some edge cases (e.g. enter key). Focus the field.
-                document.getElementById("paywall-email")?.focus()
-                return
-              }
-              const emailArg = abEmailBeforePay ? prepayEmail.trim() : undefined
-              const premiumTag = premiumTest ? "test" : "control"
-              const bumpTag = bumpTest ? "test" : "control"
-              const packTag = packTest ? "test" : "control"
-              if (withAbonement) {
-                ymGoal("click_pay_abonement", { price: priceTag, cta: ctaTag, premium: premiumTag, bump: bumpTag, pack: packTag })
-                onPay(undefined, false, false, true, emailArg)
-              } else if (withThreeReports) {
-                ymGoal("click_pay_five_reports", { price: priceTag, cta: ctaTag, premium: premiumTag, bump: bumpTag, pack: packTag })
-                onPay(undefined, false, true, false, emailArg)
-              } else {
-                ymGoal("click_get_report", { price: priceTag, cta: ctaTag, premium: premiumTag, bump: bumpTag, pack: packTag, tier: withChat ? "combo" : "single" })
-                onPay(hasDiscount ? promoCode.trim() : undefined, withChat, false, false, emailArg)
-              }
-            }}
+            onClick={triggerPay}
             disabled={ctaDisabled}
             className="flex w-full items-center justify-center gap-2 rounded-xl px-4 py-4 text-sm font-bold text-white transition-opacity hover:opacity-90 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
             style={withAbonement
@@ -1471,9 +1511,13 @@ interface PaywallStepProps {
   // A/B pack-reframe bucket (ab_pack_v1, started 2026-06-13). true → the 3-report
   // pack card becomes a 5-report pack «5 отчётов» at prices.three_reports (=499).
   packTest?: boolean
+  // A/B sample-report bucket (ab_example_v1, started 2026-06-14). true → a
+  // clickable "Посмотреть пример готового отчёта" block above the CTA opens a
+  // modal with a curated sample report (pinned pay CTA in its footer).
+  exampleTest?: boolean
 }
 
-export function PaywallStep({ onPay, onPromo, loading, preview, abEmailBeforePay = false, prices, abPriceV1 = null, abCtaV1 = null, skipPreview = false, premiumTest = false, bumpTest = false, packTest = false }: PaywallStepProps) {
+export function PaywallStep({ onPay, onPromo, loading, preview, abEmailBeforePay = false, prices, abPriceV1 = null, abCtaV1 = null, skipPreview = false, premiumTest = false, bumpTest = false, packTest = false, exampleTest = false }: PaywallStepProps) {
   const [promoVisible, setPromoVisible] = useState(false)
   const [promoCode, setPromoCode] = useState("")
   const [withChat, setWithChat] = useState(false)
@@ -1602,6 +1646,7 @@ export function PaywallStep({ onPay, onPromo, loading, preview, abEmailBeforePay
           premiumTest={premiumTest}
           bumpTest={bumpTest}
           packTest={packTest}
+          exampleTest={exampleTest}
         />
       </div>
 
