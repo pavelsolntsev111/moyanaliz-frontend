@@ -2,7 +2,7 @@
 
 import { createPortal } from "react-dom";
 import { useEffect, useState } from "react";
-import { X, FileText } from "lucide-react";
+import { X, FileText, Check } from "lucide-react";
 
 /**
  * ReportExampleModal — sample-report preview shown on the paywall (A/B ab_example_v1).
@@ -100,7 +100,7 @@ export function ReportExampleModal({
                 </Section>
 
                 <Section title="Что это значит для вас">
-                  <p>У вас, женщины 44 лет, ферритин 7.7 — вдвое ниже нормы, запасы железа почти исчерпаны.</p>
+                  <p>Для женщины 44 лет ферритин 7.7 — вдвое ниже нормы, запасы железа почти исчерпаны.</p>
                   <p>Это согласуется с другими вашими показателями: цветовой показатель 0.84 уже ниже нормы (эритроциты начинают «бледнеть»), а гемоглобин 123 пока в норме — анемии ещё нет. Значит, дефицит скрытый: организм держит гемоглобин из последних резервов, и анализ поймал проблему заранее. У женщин до менопаузы это частая ситуация из-за регулярной кровопотери.</p>
                   <p>Сывороточное железо (626) выглядит нормальным, но оно меняется день ото дня — настоящие запасы показывает именно ферритин.</p>
                 </Section>
@@ -127,10 +127,26 @@ export function ReportExampleModal({
               </div>
             </div>
 
-            {/* teaser */}
-            <p className="mt-4 text-center text-sm leading-relaxed text-muted-foreground">
-              В полном отчёте так же разобран каждый показатель из вашего анализа — с учётом пола, возраста и связей между показателями. Плюс PDF на email и вопросы для приёма у врача.
-            </p>
+            {/* what the full report includes — mirrors the paywall feature list */}
+            <div className="mt-4 rounded-2xl border border-border bg-background/50 p-4 sm:p-5">
+              <p className="text-sm font-semibold text-foreground">В полном отчёте так же разобран каждый показатель из вашего анализа</p>
+              <p className="mt-1 text-sm text-muted-foreground">с учётом пола, возраста и связей между показателями. В отчёт входит:</p>
+              <ul className="mt-3 space-y-2">
+                {[
+                  "Детальные комментарии по всем показателям",
+                  "Рекомендации по питанию",
+                  "Персональный чек-лист «Что делать дальше»",
+                  "Рекомендации, какие анализы ещё сдать",
+                  "Вопросы для врача",
+                  "PDF-отчёт на email",
+                ].map((f) => (
+                  <li key={f} className="flex items-start gap-2 text-sm text-foreground/90">
+                    <Check className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
+                    <span>{f}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
           </div>
 
           {/* pinned footer CTA */}
