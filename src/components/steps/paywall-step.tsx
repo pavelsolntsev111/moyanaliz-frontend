@@ -787,7 +787,7 @@ function InlinePaywall({
   withChat, setWithChat, withThreeReports, setWithThreeReports,
   withAbonement, setWithAbonement,
   abEmailBeforePay, prepayEmail, setPrepayEmail,
-  prices, abPriceV1, abCtaV1, premiumTest, bumpTest, packTest, exampleTest,
+  prices, abPriceV1, abCtaV1, premiumTest, bumpTest, packTest, exampleTest, onExampleOpen,
 }: {
   promoVisible: boolean
   setPromoVisible: (v: boolean) => void
@@ -835,6 +835,9 @@ function InlinePaywall({
   // "Посмотреть пример готового отчёта" block above the CTA that opens a modal
   // with a curated sample report; the modal footer pins the pay CTA.
   exampleTest: boolean
+  // Fired (best-effort) when the user opens the sample-report modal — records
+  // the open server-side for ab_example_v1 open-rate.
+  onExampleOpen?: () => void
 }) {
   const priceTag = abPriceV1 === "test" ? "test" : "control"
   const ctaTag = abCtaV1 === "test" ? "test" : "control"
@@ -1181,6 +1184,7 @@ function InlinePaywall({
               type="button"
               onClick={() => {
                 ymGoal("example_opened", { price: priceTag, cta: ctaTag, example: "test" })
+                onExampleOpen?.()
                 setExampleOpen(true)
               }}
               className="group mb-2.5 flex w-full items-center gap-3 rounded-xl border border-primary/30 bg-primary/[0.05] px-4 py-3 text-left transition hover:border-primary/50 hover:bg-primary/[0.08]"
@@ -1515,9 +1519,12 @@ interface PaywallStepProps {
   // clickable "Посмотреть пример готового отчёта" block above the CTA opens a
   // modal with a curated sample report (pinned pay CTA in its footer).
   exampleTest?: boolean
+  // Best-effort callback when the sample-report modal is opened (server-side
+  // open tracking for ab_example_v1).
+  onExampleOpen?: () => void
 }
 
-export function PaywallStep({ onPay, onPromo, loading, preview, abEmailBeforePay = false, prices, abPriceV1 = null, abCtaV1 = null, skipPreview = false, premiumTest = false, bumpTest = false, packTest = false, exampleTest = false }: PaywallStepProps) {
+export function PaywallStep({ onPay, onPromo, loading, preview, abEmailBeforePay = false, prices, abPriceV1 = null, abCtaV1 = null, skipPreview = false, premiumTest = false, bumpTest = false, packTest = false, exampleTest = false, onExampleOpen }: PaywallStepProps) {
   const [promoVisible, setPromoVisible] = useState(false)
   const [promoCode, setPromoCode] = useState("")
   const [withChat, setWithChat] = useState(false)
@@ -1647,6 +1654,7 @@ export function PaywallStep({ onPay, onPromo, loading, preview, abEmailBeforePay
           bumpTest={bumpTest}
           packTest={packTest}
           exampleTest={exampleTest}
+          onExampleOpen={onExampleOpen}
         />
       </div>
 

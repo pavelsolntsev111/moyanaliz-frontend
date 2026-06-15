@@ -176,6 +176,13 @@ export async function setOrderEmail(
   });
 }
 
+export function markExampleOpened(orderId: string): void {
+  // Fire-and-forget: records the sample-report modal open server-side (A/B
+  // ab_example_v1) so open-rate per arm is queryable independent of YM.
+  // Best-effort — never blocks the UI or surfaces errors.
+  fetch(`${API_URL}/api/v1/order/${orderId}/example-opened`, { method: "POST" }).catch(() => {});
+}
+
 export interface PromoResponse {
   ok: boolean;
   redirect_url: string;

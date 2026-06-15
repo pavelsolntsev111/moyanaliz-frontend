@@ -8,7 +8,7 @@ import { SiteFooter } from "@/components/site-footer";
 import { UploadStep } from "@/components/steps/upload-step";
 import { AnalyzingStep } from "@/components/steps/analyzing-step";
 import { PaywallStep } from "@/components/steps/paywall-step";
-import { uploadFile, createPayment, applyPromo, type PriceBundle, type UploadResponse } from "@/lib/api";
+import { uploadFile, createPayment, applyPromo, markExampleOpened, type PriceBundle, type UploadResponse } from "@/lib/api";
 import { captureAttribution } from "@/lib/attribution";
 import { useRouter } from "next/navigation";
 
@@ -212,6 +212,18 @@ export default function HomePage() {
     [ensureOrderId, router, abEmailBeforePay, abPriceV1, abCtaV1, abSkipPreview]
   );
 
+  // A/B ab_example_v1: the sample-report modal was opened. Records it server-side
+  // (best-effort) so open-rate per arm is queryable. ensureOrderId resolves the
+  // background-upload id in the instant-paywall arm.
+  const handleExampleOpen = useCallback(async () => {
+    try {
+      const oid = await ensureOrderId();
+      if (oid) markExampleOpened(oid);
+    } catch {
+      /* best-effort tracking — never disrupt the UI */
+    }
+  }, [ensureOrderId]);
+
   const handlePromo = useCallback(
     async (email: string, promoCode: string, withChat?: boolean) => {
       setPayLoading(true);
@@ -284,6 +296,7 @@ export default function HomePage() {
             bumpTest={abBumpV1 === "test"}
             packTest={abPackV1 === "test"}
             exampleTest={abExampleV1 === "test"}
+            onExampleOpen={handleExampleOpen}
           />
         )}
       </main>
