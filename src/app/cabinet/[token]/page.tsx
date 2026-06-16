@@ -1,17 +1,8 @@
 "use client";
 
 import { use, useEffect, useState } from "react";
-import {
-  LineChart,
-  Line,
-  XAxis,
-  YAxis,
-  Tooltip,
-  ReferenceArea,
-  ResponsiveContainer,
-} from "recharts";
-import { Activity, TrendingUp, TrendingDown, Minus, FileText, ArrowRight, Lock } from "lucide-react";
-import { getCabinet, type CabinetData, type CabinetIndicator } from "@/lib/api";
+import { Activity, FileText, Plus, TableProperties, ListChecks, Lock, Check, ArrowRight } from "lucide-react";
+import { getCabinet, type CabinetData, type CabinetIndicator, type CabinetPoint } from "@/lib/api";
 import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
 
@@ -19,6 +10,7 @@ import { SiteFooter } from "@/components/site-footer";
 // campaign; renders without any backend call so it always works in emails/screenshots.
 const DEMO_CABINET: CabinetData = {
   ok: true, demo: true, patient: { sex: "female", age: 44 },
+  dates: ["2026-01-12", "2026-03-20", "2026-06-08"],
   summary: { analyses_count: 3, tracked_count: 5, labs: ["Гемотест", "Инвитро"], from: "2026-01-12", to: "2026-06-08" },
   indicators: [
     { name: "Ферритин", unit: "нг/мл", reference_raw: "15–150", ref_low: 15, ref_high: 150, points: [
@@ -40,95 +32,199 @@ const DEMO_CABINET: CabinetData = {
 };
 
 const MONTHS = ["янв", "фев", "мар", "апр", "май", "июн", "июл", "авг", "сен", "окт", "ноя", "дек"];
-function fmtDate(d: string | null): string {
+function fmtDay(d: string | null, withYear = false): string {
   if (!d) return "";
-  const [, m, day] = d.split("-");
+  const [y, m, day] = d.split("-");
   const mi = parseInt(m, 10) - 1;
-  return `${parseInt(day, 10)} ${MONTHS[mi] ?? ""}`;
+  return `${parseInt(day, 10)} ${MONTHS[mi] ?? ""}${withYear ? ` ${y.slice(2)}` : ""}`;
 }
 function fmtPeriod(from?: string | null, to?: string | null): string {
   if (!from || !to) return "";
   const f = from.split("-"), t = to.split("-");
   return `${MONTHS[parseInt(f[1], 10) - 1]} ${f[0]} — ${MONTHS[parseInt(t[1], 10) - 1]} ${t[0]}`;
 }
-
-function Trend({ ind }: { ind: CabinetIndicator }) {
-  if (ind.points.length < 2) return null;
-  const first = ind.points[0].value;
-  const last = ind.points[ind.points.length - 1].value;
-  const lastAbn = ind.points[ind.points.length - 1].abnormal;
-  const firstAbn = ind.points[0].abnormal;
-  // "improving" = moved from abnormal toward normal
-  const improving = firstAbn && !lastAbn;
-  if (improving) return <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-xs font-medium text-emerald-700"><TrendingUp className="h-3.5 w-3.5" /> пришёл в норму</span>;
-  if (last > first) return <span className="inline-flex items-center gap-1 text-xs text-muted-foreground"><TrendingUp className="h-3.5 w-3.5" /> растёт</span>;
-  if (last < first) return <span className="inline-flex items-center gap-1 text-xs text-muted-foreground"><TrendingDown className="h-3.5 w-3.5" /> снижается</span>;
-  return <span className="inline-flex items-center gap-1 text-xs text-muted-foreground"><Minus className="h-3.5 w-3.5" /> стабильно</span>;
+function plural(n: number, one: string, few: string, many: string): string {
+  const m10 = n % 10, m100 = n % 100;
+  if (m10 === 1 && m100 !== 11) return one;
+  if (m10 >= 2 && m10 <= 4 && (m100 < 10 || m100 >= 20)) return few;
+  return many;
 }
 
-function IndicatorChart({ ind }: { ind: CabinetIndicator }) {
-  const data = ind.points.map((p) => ({ ...p, label: fmtDate(p.date) }));
-  const latest = ind.points[ind.points.length - 1];
-  const vals = ind.points.map((p) => p.value);
-  const vmin = Math.min(...vals), vmax = Math.max(...vals);
-  const lo = ind.ref_low, hi = ind.ref_high;
-  // Domain follows the VALUES, extended only to the NEARBY reference threshold —
-  // so a recovery (e.g. ferritin 7.7→41) isn't crushed by a far-off ceiling (150).
-  const bounds = [vmin, vmax];
-  if (lo != null && lo <= vmax * 1.8) bounds.push(lo);
-  if (hi != null && hi <= vmax * 1.8 && hi >= vmin * 0.4) bounds.push(hi);
-  let ymin = Math.min(...bounds), ymax = Math.max(...bounds);
-  const pad = (ymax - ymin) * 0.18 || ymax * 0.1 || 1;
-  ymin = Math.max(0, ymin - pad);
-  ymax = ymax + pad;
-  const fmtTick = (v: number) => {
-    const n = Number(v);
-    return Number.isInteger(n) ? String(n) : n.toFixed(n < 10 ? 1 : 0);
-  };
+// "came to normal" = first reading was out of range, latest is in range. The win we sell.
+function cameToNormal(ind: CabinetIndicator): boolean {
+  if (ind.points.length < 2) return false;
+  return ind.points[0].abnormal && !ind.points[ind.points.length - 1].abnormal;
+}
+function fmtVal(v: number): string {
+  return Number.isInteger(v) ? String(v) : String(Number(v.toFixed(2)));
+}
+// Clean "norma" line: build from numeric bounds when available, otherwise show a
+// short raw range, but never dump a verbose "см. комментарий…" string into the cell.
+function refText(ind: CabinetIndicator): string {
+  const u = ind.unit ? ` ${ind.unit}` : "";
+  if (ind.ref_low != null && ind.ref_high != null) return `норма ${fmtVal(ind.ref_low)}–${fmtVal(ind.ref_high)}${u}`;
+  if (ind.ref_high != null) return `норма до ${fmtVal(ind.ref_high)}${u}`;
+  if (ind.ref_low != null) return `норма от ${fmtVal(ind.ref_low)}${u}`;
+  const raw = (ind.reference_raw || "").trim();
+  if (raw && raw.length <= 22 && !/коммент/i.test(raw)) return `норма ${raw}${u}`;
+  return ind.unit ? `ед.: ${ind.unit}` : "норма не указана";
+}
+function dirArrow(status: string): string {
+  const s = (status || "").toLowerCase();
+  if (/(high|above|выше|критич.*выс)/.test(s)) return "↑";
+  if (/(low|below|ниже|критич.*низ)/.test(s)) return "↓";
+  return "";
+}
+
+// ───────────────────────── tab 1: список анализов ─────────────────────────
+function AnalysesList({ data }: { data: CabinetData }) {
   return (
-    <div className="rounded-2xl border border-border bg-card p-4">
-      <div className="flex items-start justify-between gap-2">
-        <div>
-          <h3 className="text-sm font-semibold text-foreground">{ind.name}</h3>
-          <p className="text-xs text-muted-foreground">Норма: {ind.reference_raw || "—"} {ind.unit}</p>
-        </div>
-        <div className="text-right">
-          <div className="flex items-baseline gap-1">
-            <span className={`text-xl font-bold ${latest.abnormal ? "text-red-600" : "text-emerald-600"}`}>{latest.value}</span>
-            <span className="text-xs text-muted-foreground">{ind.unit}</span>
-          </div>
-          <Trend ind={ind} />
-        </div>
-      </div>
-      <div className="mt-3 h-[150px] w-full">
-        <ResponsiveContainer width="100%" height="100%">
-          <LineChart data={data} margin={{ top: 6, right: 14, left: -8, bottom: 0 }}>
-            {(lo != null || hi != null) && (
-              <ReferenceArea
-                y1={lo ?? ymin}
-                y2={hi ?? ymax}
-                fill="#10b981"
-                fillOpacity={0.1}
-              />
+    <div>
+      <a
+        href="/"
+        className="flex w-full items-center justify-center gap-2 rounded-2xl bg-primary px-5 py-4 text-base font-semibold text-primary-foreground shadow-sm transition hover:opacity-90"
+      >
+        <Plus className="h-5 w-5" /> Добавить анализ
+      </a>
+      <p className="mt-2 text-center text-xs text-muted-foreground">
+        Загрузите новый анализ — он сам встанет в вашу историю
+      </p>
+
+      <h2 className="mb-3 mt-7 text-base font-semibold text-foreground">
+        Все мои анализы <span className="text-muted-foreground">· {data.analyses.length}</span>
+      </h2>
+      <div className="space-y-2.5">
+        {data.analyses.map((a) => (
+          <a
+            key={a.order_id}
+            href={a.pdf_url}
+            className="flex items-center gap-3.5 rounded-2xl border border-border bg-card px-4 py-3.5 transition hover:border-primary/50 hover:shadow-sm"
+          >
+            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
+              <FileText className="h-5 w-5" />
+            </span>
+            <div className="min-w-0 flex-1">
+              <div className="text-[15px] font-semibold text-foreground">
+                {fmtDay(a.date, true)}
+              </div>
+              <div className="truncate text-sm text-muted-foreground">
+                {a.lab || "Лаборатория"}
+                {a.types.length > 0 && ` · ${a.types.slice(0, 3).join(", ")}`}
+              </div>
+            </div>
+            {typeof a.out_of_range === "number" && a.out_of_range > 0 ? (
+              <span className="shrink-0 rounded-full bg-red-50 px-2.5 py-1 text-xs font-medium text-red-700">
+                {a.out_of_range} {plural(a.out_of_range, "отклонение", "отклонения", "отклонений")}
+              </span>
+            ) : (
+              <span className="shrink-0 rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-medium text-emerald-700">
+                в норме
+              </span>
             )}
-            <XAxis dataKey="label" tick={{ fontSize: 11, fill: "#9ca3af" }} tickLine={false} axisLine={false} />
-            <YAxis domain={[ymin, ymax]} tickFormatter={fmtTick} tick={{ fontSize: 11, fill: "#9ca3af" }} tickLine={false} axisLine={false} width={34} />
-            <Tooltip
-              contentStyle={{ borderRadius: 12, border: "1px solid #e5e7eb", fontSize: 12 }}
-              formatter={(v: number) => [`${v} ${ind.unit}`, ind.name]}
-            />
-            <Line
-              type="monotone"
-              dataKey="value"
-              stroke="#00b4bc"
-              strokeWidth={2.5}
-              isAnimationActive={false}
-              dot={{ r: 4, fill: "#00b4bc", stroke: "#fff", strokeWidth: 2 }}
-              activeDot={{ r: 5 }}
-            />
-          </LineChart>
-        </ResponsiveContainer>
+          </a>
+        ))}
+        {data.analyses.length === 0 && (
+          <div className="rounded-2xl border border-dashed border-border bg-card/50 p-6 text-center text-sm text-muted-foreground">
+            Здесь появятся все ваши анализы. Нажмите «Добавить анализ», чтобы загрузить первый.
+          </div>
+        )}
       </div>
+    </div>
+  );
+}
+
+// ───────────────────────── tab 2: динамика (таблица) ─────────────────────────
+function DynamicsTable({ data }: { data: CabinetData }) {
+  // Columns: dates newest-first so the current value is the first thing you see.
+  const cols = [...(data.dates || [])].reverse();
+  const multiYear = new Set((data.dates || []).map((d) => d.slice(0, 4))).size > 1;
+  const indicators = data.indicators.filter((i) => i.points.length > 0);
+
+  if (indicators.length === 0 || cols.length === 0) {
+    return (
+      <div className="rounded-2xl border border-dashed border-border bg-card/50 p-8 text-center text-sm text-muted-foreground">
+        Динамика появится, когда у вас будет хотя бы один разобранный анализ.
+      </div>
+    );
+  }
+
+  const byDate = (ind: CabinetIndicator) => {
+    const m = new Map<string, CabinetPoint>();
+    for (const p of ind.points) if (p.date) m.set(p.date, p);
+    return m;
+  };
+
+  return (
+    <div>
+      <p className="mb-3 text-sm text-muted-foreground">
+        Слева — показатель и его норма. В колонках — даты анализов (от новых к старым).
+        <span className="ml-1 inline-flex items-center gap-1 align-middle">
+          <span className="inline-block h-3 w-3 rounded-sm bg-red-100" /> — вне нормы.
+        </span>
+      </p>
+      <div className="overflow-x-auto rounded-2xl border border-border bg-card">
+        <table className="w-full border-collapse text-sm">
+          <thead>
+            <tr className="border-b border-border">
+              <th className="sticky left-0 z-20 min-w-[150px] max-w-[160px] bg-card px-3.5 py-3 text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                Показатель
+              </th>
+              {cols.map((d, i) => (
+                <th
+                  key={d}
+                  className={`min-w-[66px] px-2.5 py-3 text-center text-xs font-semibold ${
+                    i === 0 ? "text-primary" : "text-muted-foreground"
+                  }`}
+                >
+                  {fmtDay(d, multiYear)}
+                  {i === 0 && <div className="text-[10px] font-normal text-muted-foreground">сейчас</div>}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {indicators.map((ind) => {
+              const m = byDate(ind);
+              const win = cameToNormal(ind);
+              return (
+                <tr key={ind.name} className="border-b border-border/60 last:border-0">
+                  <th className="sticky left-0 z-10 min-w-[150px] max-w-[160px] bg-card px-3.5 py-2.5 text-left align-top font-normal">
+                    <div className="text-[14px] font-semibold leading-tight text-foreground">{ind.name}</div>
+                    <div className="mt-0.5 text-[11px] leading-tight text-muted-foreground">
+                      {refText(ind)}
+                    </div>
+                    {win && (
+                      <span className="mt-1 inline-flex items-center gap-1 rounded-full bg-emerald-50 px-1.5 py-0.5 text-[10px] font-medium text-emerald-700">
+                        <Check className="h-3 w-3" /> пришёл в норму
+                      </span>
+                    )}
+                  </th>
+                  {cols.map((d) => {
+                    const p = m.get(d);
+                    if (!p) {
+                      return <td key={d} className="px-2.5 py-2.5 text-center text-muted-foreground/40">·</td>;
+                    }
+                    return (
+                      <td
+                        key={d}
+                        className={`px-2.5 py-2.5 text-center text-[14px] font-semibold tabular-nums ${
+                          p.abnormal ? "bg-red-50 text-red-600" : "text-foreground"
+                        }`}
+                      >
+                        {fmtVal(p.value)}
+                        {p.abnormal && <span className="ml-0.5 text-[11px]">{dirArrow(p.status)}</span>}
+                      </td>
+                    );
+                  })}
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+      <p className="mt-3 text-center text-xs text-muted-foreground">
+        Прокрутите таблицу вбок, чтобы увидеть более ранние анализы →
+      </p>
     </div>
   );
 }
@@ -137,19 +233,17 @@ export default function CabinetPage({ params }: { params: Promise<{ token: strin
   const { token } = use(params);
   const [data, setData] = useState<CabinetData | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [tab, setTab] = useState<"list" | "dynamics">("list");
 
   useEffect(() => {
     if (token === "demo") { setData(DEMO_CABINET); return; }
     getCabinet(token).then(setData).catch(() => setError("Ссылка недействительна или устарела."));
   }, [token]);
 
-  const tracked = (data?.indicators ?? []).filter((i) => i.points.length >= 2);
-  const snapshot = (data?.indicators ?? []).filter((i) => i.points.length < 2 && i.points[0]?.abnormal);
-
   return (
     <div className="flex min-h-screen flex-col bg-background">
       <SiteHeader />
-      <main className="mx-auto w-full max-w-4xl flex-1 px-4 py-8 sm:px-6">
+      <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-8 sm:px-6">
         {error && (
           <div className="rounded-2xl border border-border bg-card p-8 text-center">
             <Lock className="mx-auto h-8 w-8 text-muted-foreground" />
@@ -171,7 +265,7 @@ export default function CabinetPage({ params }: { params: Promise<{ token: strin
               <div>
                 <h1 className="text-xl font-bold text-foreground sm:text-2xl">Личный кабинет здоровья</h1>
                 <p className="text-sm text-muted-foreground">
-                  {data.summary.analyses_count} {data.summary.analyses_count === 1 ? "анализ" : "анализа"}
+                  {data.summary.analyses_count} {plural(data.summary.analyses_count, "анализ", "анализа", "анализов")}
                   {data.summary.from && ` · ${fmtPeriod(data.summary.from, data.summary.to)}`}
                   {data.summary.labs.length > 0 && ` · ${data.summary.labs.join(", ")}`}
                 </p>
@@ -184,68 +278,36 @@ export default function CabinetPage({ params }: { params: Promise<{ token: strin
               </div>
             )}
 
-            {/* dynamics */}
-            {tracked.length > 0 ? (
-              <section className="mt-6">
-                <h2 className="mb-3 text-sm font-semibold text-foreground">Динамика показателей</h2>
-                <div className="grid gap-4 sm:grid-cols-2">
-                  {tracked.map((ind) => <IndicatorChart key={ind.name} ind={ind} />)}
-                </div>
-              </section>
-            ) : (
-              <div className="mt-6 rounded-2xl border border-dashed border-border bg-card/50 p-6 text-center text-sm text-muted-foreground">
-                Динамика появится, когда вы загрузите второй анализ — мы построим график изменения каждого показателя во времени.
-              </div>
-            )}
+            {/* tabs / menu */}
+            <div className="mt-6 grid grid-cols-2 gap-2 rounded-2xl border border-border bg-card p-1.5">
+              <button
+                onClick={() => setTab("list")}
+                className={`flex items-center justify-center gap-2 rounded-xl px-3 py-3 text-sm font-semibold transition ${
+                  tab === "list" ? "bg-primary text-primary-foreground shadow-sm" : "text-muted-foreground hover:bg-muted"
+                }`}
+              >
+                <ListChecks className="h-4 w-4" /> Мои анализы
+              </button>
+              <button
+                onClick={() => setTab("dynamics")}
+                className={`flex items-center justify-center gap-2 rounded-xl px-3 py-3 text-sm font-semibold transition ${
+                  tab === "dynamics" ? "bg-primary text-primary-foreground shadow-sm" : "text-muted-foreground hover:bg-muted"
+                }`}
+              >
+                <TableProperties className="h-4 w-4" /> Динамика показателей
+              </button>
+            </div>
 
-            {/* latest abnormal snapshot */}
-            {snapshot.length > 0 && (
-              <section className="mt-8">
-                <h2 className="mb-3 text-sm font-semibold text-foreground">Отклонения в последнем анализе</h2>
-                <div className="grid gap-2 sm:grid-cols-2">
-                  {snapshot.slice(0, 8).map((ind) => {
-                    const p = ind.points[ind.points.length - 1];
-                    return (
-                      <div key={ind.name} className="flex items-center justify-between rounded-xl border border-border bg-card px-3.5 py-2.5">
-                        <span className="text-sm text-foreground">{ind.name}</span>
-                        <span className="text-sm font-semibold text-red-600">{p.value} {ind.unit}</span>
-                      </div>
-                    );
-                  })}
-                </div>
-              </section>
-            )}
-
-            {/* analyses list */}
-            <section className="mt-8">
-              <h2 className="mb-3 text-sm font-semibold text-foreground">Ваши анализы</h2>
-              <div className="space-y-2">
-                {data.analyses.map((a) => (
-                  <a
-                    key={a.order_id}
-                    href={a.pdf_url}
-                    className="flex items-center gap-3 rounded-xl border border-border bg-card px-4 py-3 transition hover:border-primary/40"
-                  >
-                    <FileText className="h-5 w-5 shrink-0 text-primary" />
-                    <div className="min-w-0 flex-1">
-                      <div className="text-sm font-medium text-foreground">{fmtDate(a.date)} {a.date?.slice(0, 4)} · {a.lab || "лаборатория"}</div>
-                      <div className="truncate text-xs text-muted-foreground">{a.types.slice(0, 4).join(", ")}{a.types.length > 4 ? "…" : ""}</div>
-                    </div>
-                    {typeof a.out_of_range === "number" && a.out_of_range > 0 && (
-                      <span className="shrink-0 rounded-full bg-red-50 px-2 py-0.5 text-xs font-medium text-red-700">{a.out_of_range} откл.</span>
-                    )}
-                    <ArrowRight className="h-4 w-4 shrink-0 text-muted-foreground" />
-                  </a>
-                ))}
-              </div>
-            </section>
+            <div className="mt-6">
+              {tab === "list" ? <AnalysesList data={data} /> : <DynamicsTable data={data} />}
+            </div>
 
             {/* subscription CTA — the cabinet is the product we sell */}
             <section className="mt-10 overflow-hidden rounded-2xl border border-primary/30 bg-gradient-to-br from-primary/[0.08] to-transparent p-6">
               <h3 className="text-lg font-bold text-foreground">Следите за здоровьем весь год</h3>
               <p className="mt-1.5 text-sm leading-relaxed text-muted-foreground">
-                Годовая подписка: все анализы из любой лаборатории в одной ленте, динамика каждого показателя,
-                AI-объяснение трендов и напоминания, когда пора пересдать. Загружайте сколько угодно анализов.
+                Годовая подписка: все анализы из любой лаборатории в одной ленте, динамика каждого показателя
+                и напоминания, когда пора пересдать. Загружайте сколько угодно анализов.
               </p>
               <button className="mt-4 inline-flex items-center gap-2 rounded-xl bg-primary px-5 py-3 text-sm font-semibold text-primary-foreground transition hover:opacity-90">
                 Оформить подписку <ArrowRight className="h-4 w-4" />

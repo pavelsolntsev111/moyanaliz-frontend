@@ -198,6 +198,7 @@ export interface CabinetData {
   ok: boolean;
   demo: boolean;
   patient: { sex?: string | null; age?: number | null };
+  dates: string[]; // unique analysis dates, ascending — the dynamics-table columns
   summary: { analyses_count: number; tracked_count: number; labs: string[]; from?: string | null; to?: string | null };
   indicators: CabinetIndicator[];
   analyses: CabinetAnalysis[];
