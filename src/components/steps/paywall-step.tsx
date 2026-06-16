@@ -23,11 +23,10 @@ import {
   MessageSquare,
   BarChart3,
   Sparkles,
-  Eye,
 } from "lucide-react"
 import type { PreviewData, AnalysisIndicator, LightIndicator } from "@/lib/types"
 import { IndicatorCard } from "@/components/indicator-card"
-import { ReportExampleModal } from "@/components/report-example-modal"
+import { ReportExampleModal, ReportExampleTeaser } from "@/components/report-example-modal"
 import { mockIndicators } from "@/lib/mock-data"
 import { validatePromo } from "@/lib/api"
 import type { PromoValidateResponse, PriceBundle } from "@/lib/api"
@@ -1180,24 +1179,15 @@ function InlinePaywall({
 
           {/* A/B ab_example_v1: sample-report preview trigger, just above the CTA */}
           {exampleTest && !promoResult?.free && (
-            <button
-              type="button"
-              onClick={() => {
-                ymGoal("example_opened", { price: priceTag, cta: ctaTag, example: "test" })
-                onExampleOpen?.()
-                setExampleOpen(true)
-              }}
-              className="group mb-2.5 flex w-full items-center gap-3 rounded-xl border border-primary/30 bg-primary/[0.05] px-4 py-3 text-left transition hover:border-primary/50 hover:bg-primary/[0.08]"
-            >
-              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
-                <Eye className="h-5 w-5" />
-              </span>
-              <span className="min-w-0 flex-1">
-                <span className="block text-sm font-semibold text-foreground">Посмотреть пример готового отчёта</span>
-                <span className="block text-xs text-muted-foreground">Реальный разбор: показатели, что значат, что делать</span>
-              </span>
-              <ChevronRight className="h-5 w-5 shrink-0 text-primary transition group-hover:translate-x-0.5" />
-            </button>
+            <div className="mb-2.5">
+              <ReportExampleTeaser
+                onClick={() => {
+                  ymGoal("example_opened", { price: priceTag, cta: ctaTag, example: "test" })
+                  onExampleOpen?.()
+                  setExampleOpen(true)
+                }}
+              />
+            </div>
           )}
           {exampleOpen && (
             <ReportExampleModal

@@ -2,7 +2,7 @@
 
 import { createPortal } from "react-dom";
 import { useEffect, useState } from "react";
-import { X, FileText, Check } from "lucide-react";
+import { X, FileText, Check, Eye, ChevronRight } from "lucide-react";
 
 /**
  * ReportExampleModal — sample-report preview shown on the paywall (A/B ab_example_v1).
@@ -32,6 +32,54 @@ function Section({ title, children }: { title: string; children: React.ReactNode
       <h5 className="mb-1.5 text-sm font-semibold text-foreground">{title}</h5>
       <div className="space-y-2 text-sm leading-relaxed text-muted-foreground">{children}</div>
     </div>
+  );
+}
+
+/**
+ * ReportExampleTeaser — the on-paywall trigger (ab_example_v1 test arm).
+ * Shows a real slice of the report (the ferritin finding, faded out) so it's
+ * obvious there's valuable content behind the click — drives open-rate. The
+ * whole card is the button; opens ReportExampleModal.
+ */
+export function ReportExampleTeaser({ onClick }: { onClick: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="group block w-full overflow-hidden rounded-2xl border border-primary/30 bg-gradient-to-b from-primary/[0.07] to-transparent p-3.5 text-left transition hover:border-primary/50"
+    >
+      <div className="mb-2.5 flex items-center gap-2">
+        <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+          <Eye className="h-4 w-4" />
+        </span>
+        <span className="text-sm font-semibold text-foreground">Пример: как мы разберём ваш анализ</span>
+      </div>
+
+      {/* a real slice of the report — the ferritin finding, faded at the bottom */}
+      <div className="relative max-h-[128px] overflow-hidden rounded-xl border border-border bg-card p-3">
+        <div className="flex items-center justify-between gap-2">
+          <span className="text-sm font-semibold text-foreground">Ферритин</span>
+          <span className="shrink-0 rounded-full bg-red-100 px-2 py-0.5 text-[11px] font-medium text-red-700">Критически низкий</span>
+        </div>
+        <div className="mt-1.5 flex items-baseline gap-1.5">
+          <span className="text-xl font-bold text-foreground">7.7</span>
+          <span className="text-xs text-muted-foreground">нг/мл</span>
+          <span className="ml-auto text-[11px] text-muted-foreground">Норма: 15–150</span>
+        </div>
+        <div className="mt-2 h-1.5 w-full rounded-full bg-muted">
+          <div className="h-1.5 rounded-full bg-red-400" style={{ width: "5%" }} />
+        </div>
+        <p className="mt-2 text-xs leading-relaxed text-muted-foreground">
+          Для женщины 44 лет — запасы железа почти исчерпаны. Это сходится с цветовым показателем 0.84, а гемоглобин пока в норме…
+        </p>
+        <div className="pointer-events-none absolute inset-x-0 bottom-0 h-12 bg-gradient-to-t from-card to-transparent" />
+      </div>
+
+      <div className="mt-2.5 flex items-center justify-center gap-1.5 rounded-xl bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground transition group-hover:opacity-90">
+        Посмотреть весь разбор
+        <ChevronRight className="h-4 w-4" />
+      </div>
+    </button>
   );
 }
 
