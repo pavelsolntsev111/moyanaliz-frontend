@@ -176,6 +176,37 @@ export async function setOrderEmail(
   });
 }
 
+export interface CabinetPoint { date: string; value: number; status: string; abnormal: boolean }
+export interface CabinetIndicator {
+  name: string;
+  unit: string;
+  reference_raw: string;
+  ref_low: number | null;
+  ref_high: number | null;
+  points: CabinetPoint[];
+}
+export interface CabinetAnalysis {
+  order_id: string;
+  date: string | null;
+  lab?: string | null;
+  types: string[];
+  total?: number | null;
+  out_of_range?: number | null;
+  pdf_url: string;
+}
+export interface CabinetData {
+  ok: boolean;
+  demo: boolean;
+  patient: { sex?: string | null; age?: number | null };
+  summary: { analyses_count: number; tracked_count: number; labs: string[]; from?: string | null; to?: string | null };
+  indicators: CabinetIndicator[];
+  analyses: CabinetAnalysis[];
+}
+
+export async function getCabinet(token: string): Promise<CabinetData> {
+  return request<CabinetData>(`/api/v1/cabinet/${encodeURIComponent(token)}`);
+}
+
 export function markExampleOpened(orderId: string): void {
   // Fire-and-forget: records the sample-report modal open server-side (A/B
   // ab_example_v1) so open-rate per arm is queryable independent of YM.
