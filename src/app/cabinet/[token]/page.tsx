@@ -1,6 +1,7 @@
 "use client";
 
 import { use, useEffect, useState } from "react";
+import Link from "next/link";
 import { Activity, FileText, Plus, TableProperties, ListChecks, Lock, Check, ArrowRight } from "lucide-react";
 import { getCabinet, type CabinetData, type CabinetIndicator, type CabinetPoint } from "@/lib/api";
 import { SiteHeader } from "@/components/site-header";
@@ -80,12 +81,12 @@ function dirArrow(status: string): string {
 function AnalysesList({ data }: { data: CabinetData }) {
   return (
     <div>
-      <a
+      <Link
         href="/"
         className="flex w-full items-center justify-center gap-2 rounded-2xl bg-primary px-5 py-4 text-base font-semibold text-primary-foreground shadow-sm transition hover:opacity-90"
       >
         <Plus className="h-5 w-5" /> Добавить анализ
-      </a>
+      </Link>
       <p className="mt-2 text-center text-xs text-muted-foreground">
         Загрузите новый анализ — он сам встанет в вашу историю
       </p>
@@ -231,12 +232,13 @@ function DynamicsTable({ data }: { data: CabinetData }) {
 
 export default function CabinetPage({ params }: { params: Promise<{ token: string }> }) {
   const { token } = use(params);
-  const [data, setData] = useState<CabinetData | null>(null);
+  // Demo renders entirely client-side (no backend) so it always works for screenshots.
+  const [data, setData] = useState<CabinetData | null>(token === "demo" ? DEMO_CABINET : null);
   const [error, setError] = useState<string | null>(null);
   const [tab, setTab] = useState<"list" | "dynamics">("list");
 
   useEffect(() => {
-    if (token === "demo") { setData(DEMO_CABINET); return; }
+    if (token === "demo") return;
     getCabinet(token).then(setData).catch(() => setError("Ссылка недействительна или устарела."));
   }, [token]);
 
