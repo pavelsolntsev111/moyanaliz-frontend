@@ -1001,7 +1001,7 @@ function InlinePaywall({
                 withChat && !withThreeReports && !withAbonement ? "border-primary bg-primary/5" : "border-border hover:border-muted-foreground/30"
               } ${loading ? "opacity-50 pointer-events-none" : ""}`}
             >
-              <span className={`absolute -top-2 right-3 rounded-full px-2 py-0.5 text-[10px] font-bold text-white ${comboPromo ? "bg-red-500" : "bg-primary"}`}>
+              <span className={`absolute -top-2 right-3 rounded-full px-2 py-0.5 text-[10px] font-bold text-white ${comboPromo ? "bg-amber-500" : "bg-primary"}`}>
                 {comboPromo ? `−${Math.round((1 - comboDisplayPrice / comboOldPrice) * 100)}% сегодня` : "популярный"}
               </span>
               <div className={`h-4 w-4 shrink-0 rounded-full border-2 flex items-center justify-center ${
@@ -1012,7 +1012,7 @@ function InlinePaywall({
               <div className="flex-1">
                 <p className="text-sm font-semibold text-foreground">Полный отчёт + консультация с AI-ассистентом</p>
                 {comboPromo && !promoResult?.free && (
-                  <p className="mt-0.5 flex items-center gap-1 text-xs font-medium text-red-600">
+                  <p className="mt-0.5 flex items-center gap-1 text-xs font-medium text-amber-700">
                     🔥 Акция до конца дня · <EndOfDayCountdown />
                   </p>
                 )}
