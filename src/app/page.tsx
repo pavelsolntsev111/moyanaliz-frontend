@@ -61,6 +61,9 @@ export default function HomePage() {
   // A/B sample-report test. "control"|"test"|null. Server-side hash bucket.
   // test → clickable "пример готового отчёта" block + modal above the CTA.
   const [abExampleV1, setAbExampleV1] = useState<string | null>(null);
+  // A/B combo-urgency test. "control"|"test"|null. test → combo card shows
+  // struck 450→349 + "акция до конца дня" + countdown. Price-neutral (both 349).
+  const [abComboPromoV1, setAbComboPromoV1] = useState<string | null>(null);
   const [prices, setPrices] = useState<PriceBundle>(FALLBACK_PRICES);
   const [error, setError] = useState<string | null>(null);
   const [payLoading, setPayLoading] = useState(false);
@@ -76,7 +79,7 @@ export default function HomePage() {
   // before upload) so the front-funnel is splittable.
   // `price`/`cta` tests are closed (everyone control) but kept for continuity.
   // All params live on the same goal hit — Метрика «Параметры визитов» делит по любому.
-  const abParams = (group: boolean, priceGroup: string | null, ctaGroup: string | null, skipGroup: string | null, premiumGroup: string | null = abPremiumV1, bumpGroup: string | null = abBumpV1, packGroup: string | null = abPackV1, exampleGroup: string | null = abExampleV1) => ({
+  const abParams = (group: boolean, priceGroup: string | null, ctaGroup: string | null, skipGroup: string | null, premiumGroup: string | null = abPremiumV1, bumpGroup: string | null = abBumpV1, packGroup: string | null = abPackV1, exampleGroup: string | null = abExampleV1, comboPromoGroup: string | null = abComboPromoV1) => ({
     ab: group ? "B" : "A",
     price: priceGroup === "test" ? "test" : "control",
     cta: ctaGroup === "test" ? "test" : "control",
@@ -85,6 +88,7 @@ export default function HomePage() {
     bump: bumpGroup === "test" ? "test" : "control",
     pack: packGroup === "test" ? "test" : "control",
     example: exampleGroup === "test" ? "test" : "control",
+    combo_promo: comboPromoGroup === "test" ? "test" : "control",
   });
 
   const handleFileSelected = useCallback(async (f: File) => {
@@ -125,8 +129,9 @@ export default function HomePage() {
         setAbBumpV1(res.ab_bump_v1 ?? null);
         setAbPackV1(res.ab_pack_v1 ?? null);
         setAbExampleV1(res.ab_example_v1 ?? null);
+        setAbComboPromoV1(res.ab_combo_promo_v1 ?? null);
         if (res.prices) setPrices(res.prices);
-        ymGoal("file_uploaded", abParams(!!res.ab_email_before_pay, res.ab_price_v1 ?? null, res.ab_cta_v1 ?? null, res.ab_skip_preview ?? "test", res.ab_premium_v1 ?? null, res.ab_bump_v1 ?? null, res.ab_pack_v1 ?? null, res.ab_example_v1 ?? null));
+        ymGoal("file_uploaded", abParams(!!res.ab_email_before_pay, res.ab_price_v1 ?? null, res.ab_cta_v1 ?? null, res.ab_skip_preview ?? "test", res.ab_premium_v1 ?? null, res.ab_bump_v1 ?? null, res.ab_pack_v1 ?? null, res.ab_example_v1 ?? null, res.ab_combo_promo_v1 ?? null));
       }).catch(() => {
         // Don't bounce the user mid-read; ensureOrderId() surfaces the failure
         // on the pay/promo click and sends them back to re-upload.
@@ -149,6 +154,7 @@ export default function HomePage() {
       const bumpGroup = res.ab_bump_v1 ?? null;
       const packGroup = res.ab_pack_v1 ?? null;
       const exampleGroup = res.ab_example_v1 ?? null;
+      const comboPromoGroup = res.ab_combo_promo_v1 ?? null;
       setAbEmailBeforePay(ab);
       setAbPriceV1(priceGroup);
       setAbCtaV1(ctaGroup);
@@ -157,9 +163,10 @@ export default function HomePage() {
       setAbBumpV1(bumpGroup);
       setAbPackV1(packGroup);
       setAbExampleV1(exampleGroup);
+      setAbComboPromoV1(comboPromoGroup);
       if (res.prices) setPrices(res.prices);
       uploadDone.current = true;  // analyzing animation finishes → handleAnalyzingComplete
-      ymGoal("file_uploaded", abParams(ab, priceGroup, ctaGroup, skipGroup, premiumGroup, bumpGroup, packGroup, exampleGroup));
+      ymGoal("file_uploaded", abParams(ab, priceGroup, ctaGroup, skipGroup, premiumGroup, bumpGroup, packGroup, exampleGroup, comboPromoGroup));
     } catch (e) {
       setError(e instanceof Error ? e.message : "Ошибка загрузки");
       setStep("upload");
@@ -297,6 +304,7 @@ export default function HomePage() {
             packTest={abPackV1 === "test"}
             exampleTest={abExampleV1 === "test"}
             onExampleOpen={handleExampleOpen}
+            comboPromoTest={abComboPromoV1 === "test"}
           />
         )}
       </main>

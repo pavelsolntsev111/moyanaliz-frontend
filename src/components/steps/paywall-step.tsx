@@ -779,6 +779,26 @@ function LockedAbnormalCard({ indicator }: { indicator: AnalysisIndicator }) {
   )
 }
 
+/** Live HH:MM:SS countdown to local end-of-day — for the combo "акция до конца дня" test. */
+function EndOfDayCountdown() {
+  const [t, setT] = useState("")
+  useEffect(() => {
+    const pad = (n: number) => String(n).padStart(2, "0")
+    const tick = () => {
+      const now = new Date()
+      const end = new Date(now); end.setHours(23, 59, 59, 999)
+      let s = Math.max(0, Math.floor((end.getTime() - now.getTime()) / 1000))
+      const h = Math.floor(s / 3600); s -= h * 3600
+      const m = Math.floor(s / 60); s -= m * 60
+      setT(`${pad(h)}:${pad(m)}:${pad(s)}`)
+    }
+    tick()
+    const id = setInterval(tick, 1000)
+    return () => clearInterval(id)
+  }, [])
+  return <span className="tabular-nums font-semibold">{t}</span>
+}
+
 /** Inline paywall — personalized copy */
 function InlinePaywall({
   promoVisible, setPromoVisible, promoCode, setPromoCode,
@@ -786,7 +806,7 @@ function InlinePaywall({
   withChat, setWithChat, withThreeReports, setWithThreeReports,
   withAbonement, setWithAbonement,
   abEmailBeforePay, prepayEmail, setPrepayEmail,
-  prices, abPriceV1, abCtaV1, premiumTest, bumpTest, packTest, exampleTest, onExampleOpen,
+  prices, abPriceV1, abCtaV1, premiumTest, bumpTest, packTest, exampleTest, onExampleOpen, comboPromoTest,
 }: {
   promoVisible: boolean
   setPromoVisible: (v: boolean) => void
@@ -837,6 +857,9 @@ function InlinePaywall({
   // Fired (best-effort) when the user opens the sample-report modal — records
   // the open server-side for ab_example_v1 open-rate.
   onExampleOpen?: () => void
+  // A/B ab_combo_promo_v1. true → combo card shows struck 450→349 + "акция до
+  // конца дня" + countdown. Price-neutral (both arms charge 349).
+  comboPromoTest?: boolean
 }) {
   const priceTag = abPriceV1 === "test" ? "test" : "control"
   const ctaTag = abCtaV1 === "test" ? "test" : "control"
@@ -866,6 +889,16 @@ function InlinePaywall({
 
   // A/B ab_example_v1: sample-report modal state.
   const [exampleOpen, setExampleOpen] = useState(false)
+
+  // A/B ab_combo_promo_v1: combo urgency framing. test → struck "regular" price
+  // 450 → 349 + "Акция до конца дня" + live countdown on the combo card. Both arms
+  // CHARGE 349 (price-neutral). ?combopromo=1 also forces it on for local preview.
+  const [comboPromoUrl, setComboPromoUrl] = useState(false)
+  useEffect(() => {
+    setComboPromoUrl(new URLSearchParams(window.location.search).get("combopromo") === "1")
+  }, [])
+  const comboPromo = comboPromoTest || comboPromoUrl
+  const comboOldPrice = 450
 
   // Primary pay action — fires the same goals + onPay() as the main CTA, so the
   // example modal's footer button is identical to clicking «Получить полный отчёт».
@@ -968,8 +1001,8 @@ function InlinePaywall({
                 withChat && !withThreeReports && !withAbonement ? "border-primary bg-primary/5" : "border-border hover:border-muted-foreground/30"
               } ${loading ? "opacity-50 pointer-events-none" : ""}`}
             >
-              <span className="absolute -top-2 right-3 rounded-full bg-primary px-2 py-0.5 text-[10px] font-bold text-white">
-                популярный
+              <span className={`absolute -top-2 right-3 rounded-full px-2 py-0.5 text-[10px] font-bold text-white ${comboPromo ? "bg-red-500" : "bg-primary"}`}>
+                {comboPromo ? `−${Math.round((1 - comboDisplayPrice / comboOldPrice) * 100)}% сегодня` : "популярный"}
               </span>
               <div className={`h-4 w-4 shrink-0 rounded-full border-2 flex items-center justify-center ${
                 withChat && !withThreeReports && !withAbonement ? "border-primary" : "border-muted-foreground/40"
@@ -978,10 +1011,22 @@ function InlinePaywall({
               </div>
               <div className="flex-1">
                 <p className="text-sm font-semibold text-foreground">Полный отчёт + консультация с AI-ассистентом</p>
+                {comboPromo && !promoResult?.free && (
+                  <p className="mt-0.5 flex items-center gap-1 text-xs font-medium text-red-600">
+                    🔥 Акция до конца дня · <EndOfDayCountdown />
+                  </p>
+                )}
               </div>
-              <span className="text-sm font-bold text-foreground shrink-0">
-                {promoResult?.free ? "бесплатно" : `${comboDisplayPrice} ₽`}
-              </span>
+              {comboPromo && !promoResult?.free ? (
+                <span className="flex shrink-0 flex-col items-end leading-tight">
+                  <span className="text-xs text-muted-foreground line-through">{comboOldPrice} ₽</span>
+                  <span className="text-sm font-bold text-foreground">{comboDisplayPrice} ₽</span>
+                </span>
+              ) : (
+                <span className="text-sm font-bold text-foreground shrink-0">
+                  {promoResult?.free ? "бесплатно" : `${comboDisplayPrice} ₽`}
+                </span>
+              )}
             </button>
             )}
 
@@ -1512,9 +1557,12 @@ interface PaywallStepProps {
   // Best-effort callback when the sample-report modal is opened (server-side
   // open tracking for ab_example_v1).
   onExampleOpen?: () => void
+  // A/B ab_combo_promo_v1 (combo urgency framing). true → struck 450→349 +
+  // "акция до конца дня" + countdown on the combo card. Price-neutral.
+  comboPromoTest?: boolean
 }
 
-export function PaywallStep({ onPay, onPromo, loading, preview, abEmailBeforePay = false, prices, abPriceV1 = null, abCtaV1 = null, skipPreview = false, premiumTest = false, bumpTest = false, packTest = false, exampleTest = false, onExampleOpen }: PaywallStepProps) {
+export function PaywallStep({ onPay, onPromo, loading, preview, abEmailBeforePay = false, prices, abPriceV1 = null, abCtaV1 = null, skipPreview = false, premiumTest = false, bumpTest = false, packTest = false, exampleTest = false, onExampleOpen, comboPromoTest = false }: PaywallStepProps) {
   const [promoVisible, setPromoVisible] = useState(false)
   const [promoCode, setPromoCode] = useState("")
   const [withChat, setWithChat] = useState(false)
@@ -1645,6 +1693,7 @@ export function PaywallStep({ onPay, onPromo, loading, preview, abEmailBeforePay
           packTest={packTest}
           exampleTest={exampleTest}
           onExampleOpen={onExampleOpen}
+          comboPromoTest={comboPromoTest}
         />
       </div>
 
