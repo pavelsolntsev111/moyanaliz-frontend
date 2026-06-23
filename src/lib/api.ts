@@ -66,6 +66,9 @@ export interface UploadResponse {
   // A/B test ab_combo_promo_v1: "control" | "test" | null. "test" → combo card shows
   // struck 450 → 349 + "Акция до конца дня" + countdown. Price-neutral (both 349).
   ab_combo_promo_v1?: string | null;
+  // A/B test ab_sale_v1: "control" | "test" | null. "test" → −25% sale frame on both
+  // top tariffs (single 399→299, combo 465→349) + countdown. Price-neutral.
+  ab_sale_v1?: string | null;
   // Resolved prices for this bucket. UI MUST render these, not hardcoded values.
   prices?: PriceBundle;
 }
@@ -315,6 +318,8 @@ export interface OrderStatus {
   ab_example_v1?: string | null;
   // A/B test ab_combo_promo_v1 — surfaced for YM tagging on result-page goals.
   ab_combo_promo_v1?: string | null;
+  // A/B test ab_sale_v1 — surfaced for YM tagging on result-page goals.
+  ab_sale_v1?: string | null;
   prices?: PriceBundle;
   claude_result_json?: {
     meta: {

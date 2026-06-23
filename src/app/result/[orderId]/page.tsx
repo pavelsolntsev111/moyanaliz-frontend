@@ -93,6 +93,7 @@ export default function ResultPage({ params }: Props) {
       pack: s.ab_pack_v1 === "test" ? "test" : "control",
       example: s.ab_example_v1 === "test" ? "test" : "control",
       combo_promo: s.ab_combo_promo_v1 === "test" ? "test" : "control",
+      sale: s.ab_sale_v1 === "test" ? "test" : "control",
     });
   }, [goalKey]);
 
@@ -724,6 +725,7 @@ function StatusScreen({ status, orderId }: { status: OrderStatus; orderId: strin
               pack: status.ab_pack_v1 === "test" ? "test" : "control",
               example: status.ab_example_v1 === "test" ? "test" : "control",
               combo_promo: status.ab_combo_promo_v1 === "test" ? "test" : "control",
+              sale: status.ab_sale_v1 === "test" ? "test" : "control",
             })}
             className="mt-5 inline-flex items-center gap-2 py-3 px-8 rounded-xl bg-primary text-primary-foreground font-semibold hover:opacity-90 transition"
           >
@@ -943,6 +945,7 @@ function FullReport({ status, orderId, hasEmail, onEmailSubmitted, chatPromoOffe
               pack: status.ab_pack_v1 === "test" ? "test" : "control",
               example: status.ab_example_v1 === "test" ? "test" : "control",
               combo_promo: status.ab_combo_promo_v1 === "test" ? "test" : "control",
+              sale: status.ab_sale_v1 === "test" ? "test" : "control",
             })}
             className="group flex items-center justify-center gap-3 w-full py-4 px-6 rounded-2xl font-semibold text-white transition-all duration-200"
             style={{

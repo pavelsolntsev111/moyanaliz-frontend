@@ -806,7 +806,7 @@ function InlinePaywall({
   withChat, setWithChat, withThreeReports, setWithThreeReports,
   withAbonement, setWithAbonement,
   abEmailBeforePay, prepayEmail, setPrepayEmail,
-  prices, abPriceV1, abCtaV1, premiumTest, bumpTest, packTest, exampleTest, onExampleOpen, comboPromoTest,
+  prices, abPriceV1, abCtaV1, premiumTest, bumpTest, packTest, exampleTest, onExampleOpen, saleTest,
 }: {
   promoVisible: boolean
   setPromoVisible: (v: boolean) => void
@@ -857,9 +857,9 @@ function InlinePaywall({
   // Fired (best-effort) when the user opens the sample-report modal — records
   // the open server-side for ab_example_v1 open-rate.
   onExampleOpen?: () => void
-  // A/B ab_combo_promo_v1. true → combo card shows struck 450→349 + "акция до
-  // конца дня" + countdown. Price-neutral (both arms charge 349).
-  comboPromoTest?: boolean
+  // A/B ab_sale_v1. true → struck prices on single (399→299) + combo (465→349) +
+  // "−25%" badges + "акция до конца дня" countdown. Price-neutral (both 299/349).
+  saleTest?: boolean
 }) {
   const priceTag = abPriceV1 === "test" ? "test" : "control"
   const ctaTag = abCtaV1 === "test" ? "test" : "control"
@@ -890,15 +890,17 @@ function InlinePaywall({
   // A/B ab_example_v1: sample-report modal state.
   const [exampleOpen, setExampleOpen] = useState(false)
 
-  // A/B ab_combo_promo_v1: combo urgency framing. test → struck "regular" price
-  // 450 → 349 + "Акция до конца дня" + live countdown on the combo card. Both arms
-  // CHARGE 349 (price-neutral). ?combopromo=1 also forces it on for local preview.
-  const [comboPromoUrl, setComboPromoUrl] = useState(false)
+  // A/B ab_sale_v1: −25% sale framing on BOTH top tariffs. test → struck "regular"
+  // prices single 399→299 and combo 465→349 + "−25%" badges + one "Акция до конца
+  // дня" countdown. Both arms CHARGE 299/349 (price-neutral). ?sale=1 forces it on
+  // for local preview. Struck prices documented as regular prices in the offer.
+  const [saleUrl, setSaleUrl] = useState(false)
   useEffect(() => {
-    setComboPromoUrl(new URLSearchParams(window.location.search).get("combopromo") === "1")
+    setSaleUrl(new URLSearchParams(window.location.search).get("sale") === "1")
   }, [])
-  const comboPromo = comboPromoTest || comboPromoUrl
-  const comboOldPrice = 450
+  const sale = saleTest || saleUrl
+  const singleOldPrice = 399
+  const comboOldPrice = 465
 
   // Primary pay action — fires the same goals + onPay() as the main CTA, so the
   // example modal's footer button is identical to clicking «Получить полный отчёт».
@@ -976,10 +978,13 @@ function InlinePaywall({
             <button
               onClick={() => { if (!bumpTest) setWithChat(false); setWithThreeReports(false); setWithAbonement(false) }}
               disabled={loading}
-              className={`flex w-full min-h-[56px] items-center gap-3 rounded-xl border-2 p-3 text-left transition-colors ${
+              className={`relative flex w-full min-h-[56px] items-center gap-3 rounded-xl border-2 p-3 text-left transition-colors ${
                 (bumpTest || !withChat) && !withThreeReports && !withAbonement ? "border-primary bg-primary/5" : "border-border hover:border-muted-foreground/30"
               } ${loading ? "opacity-50 pointer-events-none" : ""}`}
             >
+              {sale && !promoResult?.free && (
+                <span className="absolute -top-2 right-3 rounded-full bg-amber-500 px-2 py-0.5 text-[10px] font-bold text-white">−25%</span>
+              )}
               <div className={`h-4 w-4 shrink-0 rounded-full border-2 flex items-center justify-center ${
                 (bumpTest || !withChat) && !withThreeReports && !withAbonement ? "border-primary" : "border-muted-foreground/40"
               }`}>
@@ -988,9 +993,16 @@ function InlinePaywall({
               <div className="flex-1">
                 <p className="text-sm font-semibold text-foreground">Полный отчет</p>
               </div>
-              <span className="text-sm font-bold text-foreground shrink-0">
-                {promoResult?.free ? "бесплатно" : `${baseDisplayPrice} ₽`}
-              </span>
+              {sale && !promoResult?.free ? (
+                <span className="flex shrink-0 flex-col items-end leading-tight">
+                  <span className="text-xs text-muted-foreground line-through">{singleOldPrice} ₽</span>
+                  <span className="text-sm font-bold text-foreground">{baseDisplayPrice} ₽</span>
+                </span>
+              ) : (
+                <span className="text-sm font-bold text-foreground shrink-0">
+                  {promoResult?.free ? "бесплатно" : `${baseDisplayPrice} ₽`}
+                </span>
+              )}
             </button>
 
             {!bumpTest && (
@@ -1001,8 +1013,8 @@ function InlinePaywall({
                 withChat && !withThreeReports && !withAbonement ? "border-primary bg-primary/5" : "border-border hover:border-muted-foreground/30"
               } ${loading ? "opacity-50 pointer-events-none" : ""}`}
             >
-              <span className={`absolute -top-2 right-3 rounded-full px-2 py-0.5 text-[10px] font-bold text-white ${comboPromo ? "bg-amber-500" : "bg-primary"}`}>
-                {comboPromo ? `−${Math.round((1 - comboDisplayPrice / comboOldPrice) * 100)}% сегодня` : "популярный"}
+              <span className={`absolute -top-2 right-3 rounded-full px-2 py-0.5 text-[10px] font-bold text-white ${sale ? "bg-amber-500" : "bg-primary"}`}>
+                {sale ? `−${Math.round((1 - comboDisplayPrice / comboOldPrice) * 100)}%` : "популярный"}
               </span>
               <div className={`h-4 w-4 shrink-0 rounded-full border-2 flex items-center justify-center ${
                 withChat && !withThreeReports && !withAbonement ? "border-primary" : "border-muted-foreground/40"
@@ -1011,13 +1023,8 @@ function InlinePaywall({
               </div>
               <div className="flex-1">
                 <p className="text-sm font-semibold text-foreground">Полный отчёт + консультация с AI-ассистентом</p>
-                {comboPromo && !promoResult?.free && (
-                  <p className="mt-0.5 flex items-center gap-1 text-xs font-medium text-amber-700">
-                    🔥 Акция до конца дня · <EndOfDayCountdown />
-                  </p>
-                )}
               </div>
-              {comboPromo && !promoResult?.free ? (
+              {sale && !promoResult?.free ? (
                 <span className="flex shrink-0 flex-col items-end leading-tight">
                   <span className="text-xs text-muted-foreground line-through">{comboOldPrice} ₽</span>
                   <span className="text-sm font-bold text-foreground">{comboDisplayPrice} ₽</span>
@@ -1240,6 +1247,13 @@ function InlinePaywall({
               onPay={() => { setExampleOpen(false); triggerPay() }}
               payLabel={`Получить полный отчёт — ${prices.single} ₽`}
             />
+          )}
+
+          {/* A/B ab_sale_v1: one shared urgency line for the −25% sale */}
+          {sale && !promoResult?.free && (
+            <p className="mb-2.5 flex items-center justify-center gap-1.5 text-sm font-medium text-amber-700">
+              🔥 Акция −25% · до конца дня <EndOfDayCountdown />
+            </p>
           )}
 
           {/* 1. CTA Button */}
@@ -1557,12 +1571,12 @@ interface PaywallStepProps {
   // Best-effort callback when the sample-report modal is opened (server-side
   // open tracking for ab_example_v1).
   onExampleOpen?: () => void
-  // A/B ab_combo_promo_v1 (combo urgency framing). true → struck 450→349 +
-  // "акция до конца дня" + countdown on the combo card. Price-neutral.
-  comboPromoTest?: boolean
+  // A/B ab_sale_v1 (−25% sale framing). true → struck prices on single (399→299)
+  // + combo (465→349) + "−25%" badges + "акция до конца дня" countdown. Price-neutral.
+  saleTest?: boolean
 }
 
-export function PaywallStep({ onPay, onPromo, loading, preview, abEmailBeforePay = false, prices, abPriceV1 = null, abCtaV1 = null, skipPreview = false, premiumTest = false, bumpTest = false, packTest = false, exampleTest = false, onExampleOpen, comboPromoTest = false }: PaywallStepProps) {
+export function PaywallStep({ onPay, onPromo, loading, preview, abEmailBeforePay = false, prices, abPriceV1 = null, abCtaV1 = null, skipPreview = false, premiumTest = false, bumpTest = false, packTest = false, exampleTest = false, onExampleOpen, saleTest = false }: PaywallStepProps) {
   const [promoVisible, setPromoVisible] = useState(false)
   const [promoCode, setPromoCode] = useState("")
   const [withChat, setWithChat] = useState(false)
@@ -1693,7 +1707,7 @@ export function PaywallStep({ onPay, onPromo, loading, preview, abEmailBeforePay
           packTest={packTest}
           exampleTest={exampleTest}
           onExampleOpen={onExampleOpen}
-          comboPromoTest={comboPromoTest}
+          saleTest={saleTest}
         />
       </div>
 
