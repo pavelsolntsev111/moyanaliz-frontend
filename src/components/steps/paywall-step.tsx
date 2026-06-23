@@ -972,6 +972,12 @@ function InlinePaywall({
               selector so the user can still pick combo with chat. */}
           {!promoResult?.is_pack && !premiumTest && (
           <div className="mb-4 space-y-2">
+            {/* A/B ab_sale_v1: shared −25% urgency line, placed above the tariffs */}
+            {sale && !promoResult?.free && (
+              <p className="mb-1 flex items-center justify-center gap-1.5 text-sm font-medium text-amber-700">
+                🔥 Акция −25% · до конца дня <EndOfDayCountdown />
+              </p>
+            )}
             {/* In the bump arm the chat add-on lives in a checkbox (withChat),
                 so the single card is "selected" whenever no pack is picked, and
                 clicking it must not clear the checkbox. */}
@@ -1247,13 +1253,6 @@ function InlinePaywall({
               onPay={() => { setExampleOpen(false); triggerPay() }}
               payLabel={`Получить полный отчёт — ${prices.single} ₽`}
             />
-          )}
-
-          {/* A/B ab_sale_v1: one shared urgency line for the −25% sale */}
-          {sale && !promoResult?.free && (
-            <p className="mb-2.5 flex items-center justify-center gap-1.5 text-sm font-medium text-amber-700">
-              🔥 Акция −25% · до конца дня <EndOfDayCountdown />
-            </p>
           )}
 
           {/* 1. CTA Button */}
