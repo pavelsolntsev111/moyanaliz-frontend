@@ -972,10 +972,11 @@ function InlinePaywall({
               selector so the user can still pick combo with chat. */}
           {!promoResult?.is_pack && !premiumTest && (
           <div className="mb-4 space-y-2">
-            {/* A/B ab_sale_v1: shared −25% urgency line, placed above the tariffs */}
+            {/* A/B ab_sale_v1: shared −25% urgency line, centered in the top zone
+                above the tariffs (mb balances the card's p-6/p-7 top padding). */}
             {sale && !promoResult?.free && (
-              <p className="mb-1 flex items-center justify-center gap-1.5 text-sm font-medium text-amber-700">
-                🔥 Акция −25% · до конца дня <EndOfDayCountdown />
+              <p className="mb-6 sm:mb-7 flex items-center justify-center gap-1.5 text-sm font-medium text-amber-700">
+                🔥 Акция −25% · до конца дня <EndOfDayCountdown /> 🔥
               </p>
             )}
             {/* In the bump arm the chat add-on lives in a checkbox (withChat),
