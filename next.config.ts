@@ -18,6 +18,22 @@ const nextConfig: NextConfig = {
         destination: "/blog/kaltsij-magnij-norma-kosti",
         permanent: true,
       },
+      // Consolidate duplicate-title auto-blog near-dupes (Yandex Webmaster flagged 3 pairs) → 301 to canonical
+      {
+        source: "/blog/kakie-analizy-sdat-pri-chastyh-sinyakah-na-tele",
+        destination: "/blog/kakie-analizy-sdat-pri-chastyh-sinyakah",
+        permanent: true,
+      },
+      {
+        source: "/blog/kakie-analizy-sdat-pri-chastyh-golovnyh-bolyah",
+        destination: "/blog/kakie-analizy-sdat-pri-golovnoj-boli",
+        permanent: true,
+      },
+      {
+        source: "/blog/kakie-analizy-sdat-pri-serdcebienii",
+        destination: "/blog/kakie-analizy-sdat-pri-uchashennom-serdcebienii",
+        permanent: true,
+      },
     ];
   },
 };
