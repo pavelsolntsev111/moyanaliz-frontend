@@ -191,6 +191,16 @@ export interface CabinetIndicator {
   ref_high: number | null;
   points: CabinetPoint[];
 }
+export interface CabinetAnalysisIndicator {
+  name: string;
+  value: string;
+  unit: string;
+  reference_raw: string;
+  ref_low: number | null;
+  ref_high: number | null;
+  status: string;
+  abnormal: boolean;
+}
 export interface CabinetAnalysis {
   order_id: string;
   date: string | null;
@@ -199,6 +209,7 @@ export interface CabinetAnalysis {
   total?: number | null;
   out_of_range?: number | null;
   pdf_url: string;
+  indicators?: CabinetAnalysisIndicator[];
 }
 export interface CabinetData {
   ok: boolean;
