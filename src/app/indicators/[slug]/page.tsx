@@ -4,6 +4,7 @@ import { ArrowLeft, ArrowUpRight } from "lucide-react";
 import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
 import { indicators, getIndicatorBySlug } from "@/lib/indicators-data";
+import { getIndicatorSources } from "@/lib/indicator-sources";
 import type { Metadata } from "next";
 
 interface Props {
@@ -90,6 +91,8 @@ export default async function IndicatorPage({ params }: Props) {
     .map((s) => indicators.find((i) => i.slug === s))
     .filter(Boolean);
 
+  const sources = getIndicatorSources(slug);
+
   const jsonLd = [
     {
       "@context": "https://schema.org",
@@ -103,6 +106,15 @@ export default async function IndicatorPage({ params }: Props) {
         name: ind.name,
         normalRange: `${ind.referenceRange.male} (${ind.unit})`,
       },
+      ...(sources.length > 0
+        ? {
+            citation: sources.map((s) => ({
+              "@type": "CreativeWork",
+              name: s.title,
+              url: s.url,
+            })),
+          }
+        : {}),
     },
     {
       "@context": "https://schema.org",
@@ -266,6 +278,36 @@ export default async function IndicatorPage({ params }: Props) {
                     </Link>
                   ))}
                 </div>
+              </section>
+            )}
+
+            {/* Sources / citations — E-E-A-T signal (verified authoritative links) */}
+            {sources.length > 0 && (
+              <section>
+                <h2 className="text-xl font-bold text-foreground mb-3">Источники</h2>
+                <p className="text-sm text-muted-foreground mb-4">
+                  Материал подготовлен с опорой на авторитетные медицинские источники. Нормы и
+                  интерпретация могут отличаться в зависимости от лаборатории и клинической ситуации.
+                </p>
+                <ul className="space-y-2">
+                  {sources.map((s, idx) => (
+                    <li key={idx} className="flex items-start gap-2.5 text-sm">
+                      <span className="mt-2 h-1.5 w-1.5 rounded-full bg-primary/40 shrink-0" />
+                      <span className="leading-relaxed">
+                        <a
+                          href={s.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-primary hover:underline inline-flex items-center gap-1"
+                        >
+                          {s.title}
+                          <ArrowUpRight className="h-3.5 w-3.5 shrink-0" />
+                        </a>
+                        <span className="text-muted-foreground"> — {s.publisher}</span>
+                      </span>
+                    </li>
+                  ))}
+                </ul>
               </section>
             )}
           </article>

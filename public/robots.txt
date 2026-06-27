@@ -1,4 +1,12 @@
 User-agent: *
 Allow: /
+
+# Yandex: схлопывать рекламные и сессионные параметры в канонический URL.
+# Без этого Яндекс индексирует дубли страниц с UTM-метками и click-id Директа
+# (yclid/ysclid), размывая сигналы ранжирования и краулинговый бюджет.
+# Директива Clean-param — Яндекс-специфичная; Google её игнорирует (это нормально).
+Clean-param: utm_source&utm_medium&utm_campaign&utm_term&utm_content&utm_referrer
+Clean-param: yclid&ysclid&gclid&fbclid&msclkid&_openstat&etext&ref&referrer&from&_ga
+
 Host: https://moyanaliz.ru
 Sitemap: https://moyanaliz.ru/sitemap.xml
