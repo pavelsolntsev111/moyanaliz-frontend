@@ -883,6 +883,18 @@ function FullReport({ status, orderId, hasEmail, onEmailSubmitted, chatPromoOffe
   const [promoCopied, setPromoCopied] = useState(false);
   useEffect(() => { ymGoal("analysis_viewed"); }, []);
 
+  // Remember a 100% multi-use pack/abonement code so the NEXT upload can offer a
+  // one-tap "free via your abonement" redeem on the paywall (bug b7b0b7e49c) —
+  // recognizes the returning buyer without an account (same browser).
+  useEffect(() => {
+    const tier = status.order_tier;
+    const isPack = tier === "abonement_paywall" || tier === "abonement" || tier === "three_reports" || tier === "five_reports";
+    if (!isPack || !status.promo_code) return;
+    try {
+      localStorage.setItem("moyanaliz_pack_code", JSON.stringify({ code: status.promo_code, ts: Date.now() }));
+    } catch { /* ignore */ }
+  }, [status.order_tier, status.promo_code]);
+
   const handleCopyPromo = () => {
     if (!status.promo_code) return;
     navigator.clipboard.writeText(status.promo_code.toUpperCase()).then(() => {
@@ -1029,6 +1041,13 @@ function FullReport({ status, orderId, hasEmail, onEmailSubmitted, chatPromoOffe
                     {promoCopied ? "Скопировано!" : "Копировать"}
                   </button>
                 </div>
+                <a
+                  href={`/?pack=${encodeURIComponent(status.promo_code)}`}
+                  className="mt-2.5 inline-flex items-center justify-center w-full rounded-lg px-3 py-2 text-xs font-semibold transition-colors"
+                  style={{ background: "#16a34a", color: "#fff" }}
+                >
+                  Расшифровать следующий анализ →
+                </a>
               </div>
             </div>
           </div>

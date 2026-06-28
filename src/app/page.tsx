@@ -32,6 +32,15 @@ export default function HomePage() {
     // (30d TTL). Piggy-backed onto /upload via uploadFile(). Replaces legacy
     // sessionStorage utm_params logic.
     captureAttribution();
+    // Cross-device pack/abonement redeem (bug b7b0b7e49c): a "расшифровать
+    // следующий анализ" link carries ?pack=CODE → stash it so the paywall shows
+    // the one-tap free banner even on a device opened fresh from email.
+    try {
+      const pack = new URLSearchParams(window.location.search).get("pack");
+      if (pack && pack.trim()) {
+        localStorage.setItem("moyanaliz_pack_code", JSON.stringify({ code: pack.trim(), ts: Date.now() }));
+      }
+    } catch { /* ignore */ }
   }, []);
   const [orderId, setOrderId] = useState<string>("");
   const [preview, setPreview] = useState<PreviewData | null>(null);

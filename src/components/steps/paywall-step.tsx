@@ -868,6 +868,30 @@ function InlinePaywall({
   const [promoError, setPromoError] = useState<string | null>(null)
   const [freePromoEmail, setFreePromoEmail] = useState("")
 
+  // Recognize a returning pack/abonement holder (bug b7b0b7e49c): if a valid
+  // 100% multi-use code was stored from a prior purchase, surface a one-tap
+  // "free via your abonement" banner instead of making them hunt for the faint
+  // «Есть промокод?» link and re-pay. ONLY fires for users who already hold such
+  // a code → zero impact on new-visitor conversion.
+  const [packCredit, setPackCredit] = useState<{ code: string; usesLeft: number } | null>(null)
+  useEffect(() => {
+    let code = ""
+    try {
+      const raw = localStorage.getItem("moyanaliz_pack_code")
+      code = (raw ? JSON.parse(raw)?.code : "")?.trim() || ""
+    } catch { /* ignore malformed */ }
+    if (!code) return
+    validatePromo(code)
+      .then((r) => {
+        if (r?.valid && r?.free && (r.uses_left ?? 0) > 0) {
+          setPackCredit({ code, usesLeft: r.uses_left as number })
+        } else {
+          try { localStorage.removeItem("moyanaliz_pack_code") } catch { /* ignore */ }
+        }
+      })
+      .catch(() => { /* offline / transient — just skip the banner */ })
+  }, [])
+
   const hasAbnormal = abnormalIndicators.length > 0
   const first = abnormalIndicators[0]
 
@@ -926,13 +950,14 @@ function InlinePaywall({
     }
   }
 
-  const handleValidatePromo = async () => {
-    if (!promoCode.trim()) return
+  const handleValidatePromo = async (codeArg?: string) => {
+    const code = (codeArg ?? promoCode).trim()
+    if (!code) return
     setPromoValidating(true)
     setPromoError(null)
     setPromoResult(null)
     try {
-      const result = await validatePromo(promoCode.trim())
+      const result = await validatePromo(code)
       if (result.valid && result.free) {
         // Pack/abonement codes (is_pack=true) always grant ONE single report.
         // Reset combo/3-pack selection so user doesn't think they're getting
@@ -958,6 +983,21 @@ function InlinePaywall({
     setPromoValidating(false)
   }
 
+  // One-tap redeem for a recognized pack/abonement holder: fill the code, open
+  // the promo section, validate (reveals the free-email field), scroll to it.
+  const applyPackCredit = () => {
+    if (!packCredit) return
+    setWithChat(false)
+    setWithThreeReports(false)
+    setWithAbonement(false)
+    setPromoCode(packCredit.code)
+    setPromoVisible(true)
+    handleValidatePromo(packCredit.code)
+    setTimeout(() => {
+      document.getElementById("promo-input-anchor")?.scrollIntoView({ behavior: "smooth", block: "center" })
+    }, 120)
+  }
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 24 }}
@@ -967,6 +1007,31 @@ function InlinePaywall({
     >
       <GradientCard glowColor="rgba(0,180,188,0.16)">
         <div className="p-6 sm:p-7">
+          {/* Returning pack/abonement holder — one-tap free redeem (bug b7b0b7e49c) */}
+          {packCredit && (
+            <div className="mb-5 rounded-2xl border-2 p-4" style={{ borderColor: "#86efac", background: "#f0fdf4" }}>
+              <div className="flex items-start gap-3">
+                <div className="shrink-0 w-10 h-10 rounded-xl flex items-center justify-center mt-0.5" style={{ background: "rgba(22,163,74,0.12)" }}>
+                  <Check className="h-5 w-5" style={{ color: "#16a34a" }} />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-semibold" style={{ color: "#15803d" }}>
+                    У вас активен абонемент — осталось расшифровок: {packCredit.usesLeft}
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-0.5 mb-2.5">
+                    Эта расшифровка бесплатно — платить повторно не нужно.
+                  </p>
+                  <button
+                    onClick={applyPackCredit}
+                    className="w-full sm:w-auto rounded-xl px-5 py-2.5 text-sm font-semibold text-white transition-opacity hover:opacity-90"
+                    style={{ background: "#16a34a" }}
+                  >
+                    Получить отчёт бесплатно по абонементу →
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
           {/* Tier selector — hidden for pack/abonement promos (they always
               redeem as ONE single report). Admin free codes ("111") keep the
               selector so the user can still pick combo with chat. */}
@@ -1323,7 +1388,7 @@ function InlinePaywall({
 
           {/* 4. Promo code input */}
           {promoVisible && (
-            <div className="mt-3">
+            <div className="mt-3" id="promo-input-anchor">
               <div className="flex gap-2">
                 <div className="relative flex-1">
                   <Tag className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
@@ -1340,7 +1405,7 @@ function InlinePaywall({
                   />
                 </div>
                 <button
-                  onClick={handleValidatePromo}
+                  onClick={() => handleValidatePromo()}
                   disabled={!promoCode.trim() || promoValidating || loading}
                   className="shrink-0 rounded-xl border-2 border-border px-4 py-2.5 text-sm font-medium text-foreground transition-colors hover:border-primary hover:text-primary disabled:cursor-not-allowed disabled:opacity-50"
                 >
