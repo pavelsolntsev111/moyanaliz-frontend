@@ -70,9 +70,11 @@ export interface UploadResponse {
   // top tariffs (single 399→299, combo 465→349) + countdown. Price-neutral.
   ab_sale_v1?: string | null;
   // A/B test ab_price_v2: "control" | "test" | null. "test" → REAL higher ladder
-  // (single 399 / combo 449 / 5-pack 599 / 10-pack 999). Drives `prices` below;
-  // the UI renders prices.* directly so it auto-updates per arm.
+  // (single 399 / combo 449 / 5-pack 599 / 10-pack 999). KILLED — pinned control.
   ab_price_v2?: string | null;
+  // A/B test ab_price_v3: "control" | "test" | null. "test" → LOWER ladder
+  // (single 199 / combo 299 / 5-pack 499 / 10-pack 699). Drives `prices` below.
+  ab_price_v3?: string | null;
   // Resolved prices for this bucket. UI MUST render these, not hardcoded values.
   prices?: PriceBundle;
 }
@@ -337,6 +339,8 @@ export interface OrderStatus {
   ab_sale_v1?: string | null;
   // A/B test ab_price_v2 (real price increase) — surfaced for YM tagging.
   ab_price_v2?: string | null;
+  // A/B test ab_price_v3 (price decrease) — surfaced for YM tagging.
+  ab_price_v3?: string | null;
   prices?: PriceBundle;
   claude_result_json?: {
     meta: {

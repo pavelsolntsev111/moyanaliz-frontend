@@ -1121,7 +1121,9 @@ function InlinePaywall({
               } ${loading ? "opacity-50 pointer-events-none" : ""}`}
             >
               <span className="absolute -top-2 right-3 rounded-full px-2 py-0.5 text-[10px] font-bold text-white" style={{ background: "#16a34a" }}>
-                {packTest ? "−70%" : "−50%"}
+                {/* discount vs buying 5 single reports — auto-scales per price arm
+                    (control 449/5×299 = −70%; ab_price_v3 test 499/5×199 = −50%) */}
+                −{Math.round((1 - prices.three_reports / (5 * prices.single)) * 100)}%
               </span>
               <div className={`h-4 w-4 shrink-0 rounded-full border-2 flex items-center justify-center ${
                 withThreeReports ? "border-emerald-600" : "border-muted-foreground/40"
@@ -1147,7 +1149,9 @@ function InlinePaywall({
               } ${loading ? "opacity-50 pointer-events-none" : ""}`}
             >
               <span className="absolute -top-2 right-3 rounded-full px-2 py-0.5 text-[10px] font-bold text-white" style={{ background: "#d97706" }}>
-                −77%
+                {/* discount vs buying 10 single reports — auto-scales per price arm
+                    (control 699/10×299 = −77%; ab_price_v3 test 699/10×199 = −65%) */}
+                −{Math.round((1 - prices.abonement / (10 * prices.single)) * 100)}%
               </span>
               <div className={`h-4 w-4 shrink-0 rounded-full border-2 flex items-center justify-center ${
                 withAbonement ? "border-amber-600" : "border-muted-foreground/40"

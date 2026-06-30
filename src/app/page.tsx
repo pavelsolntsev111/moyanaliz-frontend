@@ -75,9 +75,11 @@ export default function HomePage() {
   // A/B −25% sale test. "control"|"test"|null. test → struck prices on single
   // (399→299) + combo (465→349) + "акция до конца дня" countdown. Price-neutral.
   const [abSaleV1, setAbSaleV1] = useState<string | null>(null);
-  // A/B real price increase. "control"|"test"|null. test → higher ladder
-  // (single 399 / combo 449 / 5-pack 599 / 10-pack 999), rendered via `prices`.
+  // A/B real price increase (KILLED, pinned control). Kept for YM continuity.
   const [abPriceV2, setAbPriceV2] = useState<string | null>(null);
+  // A/B price decrease. "control"|"test"|null. test → lower ladder
+  // (single 199 / combo 299 / 5-pack 499 / 10-pack 699), rendered via `prices`.
+  const [abPriceV3, setAbPriceV3] = useState<string | null>(null);
   const [prices, setPrices] = useState<PriceBundle>(FALLBACK_PRICES);
   const [error, setError] = useState<string | null>(null);
   const [payLoading, setPayLoading] = useState(false);
@@ -93,7 +95,7 @@ export default function HomePage() {
   // before upload) so the front-funnel is splittable.
   // `price`/`cta` tests are closed (everyone control) but kept for continuity.
   // All params live on the same goal hit — Метрика «Параметры визитов» делит по любому.
-  const abParams = (group: boolean, priceGroup: string | null, ctaGroup: string | null, skipGroup: string | null, premiumGroup: string | null = abPremiumV1, bumpGroup: string | null = abBumpV1, packGroup: string | null = abPackV1, exampleGroup: string | null = abExampleV1, comboPromoGroup: string | null = abComboPromoV1, saleGroup: string | null = abSaleV1, priceV2Group: string | null = abPriceV2) => ({
+  const abParams = (group: boolean, priceGroup: string | null, ctaGroup: string | null, skipGroup: string | null, premiumGroup: string | null = abPremiumV1, bumpGroup: string | null = abBumpV1, packGroup: string | null = abPackV1, exampleGroup: string | null = abExampleV1, comboPromoGroup: string | null = abComboPromoV1, saleGroup: string | null = abSaleV1, priceV2Group: string | null = abPriceV2, priceV3Group: string | null = abPriceV3) => ({
     ab: group ? "B" : "A",
     price: priceGroup === "test" ? "test" : "control",
     cta: ctaGroup === "test" ? "test" : "control",
@@ -105,6 +107,7 @@ export default function HomePage() {
     combo_promo: comboPromoGroup === "test" ? "test" : "control",
     sale: saleGroup === "test" ? "test" : "control",
     price_v2: priceV2Group === "test" ? "test" : "control",
+    price_v3: priceV3Group === "test" ? "test" : "control",
   });
 
   const handleFileSelected = useCallback(async (f: File) => {
@@ -148,8 +151,9 @@ export default function HomePage() {
         setAbComboPromoV1(res.ab_combo_promo_v1 ?? null);
         setAbSaleV1(res.ab_sale_v1 ?? null);
         setAbPriceV2(res.ab_price_v2 ?? null);
+        setAbPriceV3(res.ab_price_v3 ?? null);
         if (res.prices) setPrices(res.prices);
-        ymGoal("file_uploaded", abParams(!!res.ab_email_before_pay, res.ab_price_v1 ?? null, res.ab_cta_v1 ?? null, res.ab_skip_preview ?? "test", res.ab_premium_v1 ?? null, res.ab_bump_v1 ?? null, res.ab_pack_v1 ?? null, res.ab_example_v1 ?? null, res.ab_combo_promo_v1 ?? null, res.ab_sale_v1 ?? null, res.ab_price_v2 ?? null));
+        ymGoal("file_uploaded", abParams(!!res.ab_email_before_pay, res.ab_price_v1 ?? null, res.ab_cta_v1 ?? null, res.ab_skip_preview ?? "test", res.ab_premium_v1 ?? null, res.ab_bump_v1 ?? null, res.ab_pack_v1 ?? null, res.ab_example_v1 ?? null, res.ab_combo_promo_v1 ?? null, res.ab_sale_v1 ?? null, res.ab_price_v2 ?? null, res.ab_price_v3 ?? null));
       }).catch(() => {
         // Don't bounce the user mid-read; ensureOrderId() surfaces the failure
         // on the pay/promo click and sends them back to re-upload.
@@ -175,6 +179,7 @@ export default function HomePage() {
       const comboPromoGroup = res.ab_combo_promo_v1 ?? null;
       const saleGroup = res.ab_sale_v1 ?? null;
       const priceV2Group = res.ab_price_v2 ?? null;
+      const priceV3Group = res.ab_price_v3 ?? null;
       setAbEmailBeforePay(ab);
       setAbPriceV1(priceGroup);
       setAbCtaV1(ctaGroup);
@@ -186,9 +191,10 @@ export default function HomePage() {
       setAbComboPromoV1(comboPromoGroup);
       setAbSaleV1(saleGroup);
       setAbPriceV2(priceV2Group);
+      setAbPriceV3(priceV3Group);
       if (res.prices) setPrices(res.prices);
       uploadDone.current = true;  // analyzing animation finishes → handleAnalyzingComplete
-      ymGoal("file_uploaded", abParams(ab, priceGroup, ctaGroup, skipGroup, premiumGroup, bumpGroup, packGroup, exampleGroup, comboPromoGroup, saleGroup, priceV2Group));
+      ymGoal("file_uploaded", abParams(ab, priceGroup, ctaGroup, skipGroup, premiumGroup, bumpGroup, packGroup, exampleGroup, comboPromoGroup, saleGroup, priceV2Group, priceV3Group));
     } catch (e) {
       setError(e instanceof Error ? e.message : "Ошибка загрузки");
       setStep("upload");
