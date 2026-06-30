@@ -94,6 +94,7 @@ export default function ResultPage({ params }: Props) {
       example: s.ab_example_v1 === "test" ? "test" : "control",
       combo_promo: s.ab_combo_promo_v1 === "test" ? "test" : "control",
       sale: s.ab_sale_v1 === "test" ? "test" : "control",
+      price_v2: s.ab_price_v2 === "test" ? "test" : "control",
     });
   }, [goalKey]);
 

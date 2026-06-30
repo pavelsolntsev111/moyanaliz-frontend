@@ -923,8 +923,12 @@ function InlinePaywall({
     setSaleUrl(new URLSearchParams(window.location.search).get("sale") === "1")
   }, [])
   const sale = saleTest || saleUrl
-  const singleOldPrice = 399
-  const comboOldPrice = 465
+  // Struck "regular" price = round(actual / 0.75) → a constant −25% frame that
+  // auto-scales with the arm's price. A/B ab_price_v2 raises prices.single/combo
+  // (299→399 / 349→449) so the struck anchors follow (399→532 / 465→599) with the
+  // badge staying −25%. Keeps charge↔display↔frame consistent without extra plumbing.
+  const singleOldPrice = Math.round(prices.single / 0.75)
+  const comboOldPrice = Math.round(prices.combo / 0.75)
 
   // Primary pay action — fires the same goals + onPay() as the main CTA, so the
   // example modal's footer button is identical to clicking «Получить полный отчёт».

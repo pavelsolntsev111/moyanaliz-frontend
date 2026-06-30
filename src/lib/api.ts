@@ -69,6 +69,10 @@ export interface UploadResponse {
   // A/B test ab_sale_v1: "control" | "test" | null. "test" → −25% sale frame on both
   // top tariffs (single 399→299, combo 465→349) + countdown. Price-neutral.
   ab_sale_v1?: string | null;
+  // A/B test ab_price_v2: "control" | "test" | null. "test" → REAL higher ladder
+  // (single 399 / combo 449 / 5-pack 599 / 10-pack 999). Drives `prices` below;
+  // the UI renders prices.* directly so it auto-updates per arm.
+  ab_price_v2?: string | null;
   // Resolved prices for this bucket. UI MUST render these, not hardcoded values.
   prices?: PriceBundle;
 }
@@ -331,6 +335,8 @@ export interface OrderStatus {
   ab_combo_promo_v1?: string | null;
   // A/B test ab_sale_v1 — surfaced for YM tagging on result-page goals.
   ab_sale_v1?: string | null;
+  // A/B test ab_price_v2 (real price increase) — surfaced for YM tagging.
+  ab_price_v2?: string | null;
   prices?: PriceBundle;
   claude_result_json?: {
     meta: {
