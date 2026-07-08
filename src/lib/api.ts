@@ -1,7 +1,7 @@
 import type { PreviewData } from "./types";
 import { getAttribution } from "./attribution";
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "https://moyanaliz-backend-production.up.railway.app";
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "https://api.moyanaliz.ru";
 
 async function request<T>(path: string, options?: RequestInit, retries = 2): Promise<T> {
   let lastError: unknown;

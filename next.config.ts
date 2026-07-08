@@ -5,7 +5,7 @@ const nextConfig: NextConfig = {
   images: { unoptimized: true },
   typescript: { ignoreBuildErrors: true },
   async rewrites() {
-    const api = process.env.NEXT_PUBLIC_API_URL || "https://moyanaliz-backend-production.up.railway.app";
+    const api = process.env.NEXT_PUBLIC_API_URL || "https://api.moyanaliz.ru";
     return [
       { source: "/admin", destination: `${api}/admin` },
       { source: "/admin/:path*", destination: `${api}/admin/:path*` },
