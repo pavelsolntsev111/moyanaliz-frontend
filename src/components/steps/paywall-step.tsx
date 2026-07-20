@@ -1304,7 +1304,8 @@ function InlinePaywall({
                 />
               </div>
               <p className="mt-1.5 text-[11px] text-muted-foreground leading-relaxed">
-                На этот email придёт PDF-отчёт и промокод -30% на следующий анализ
+                На этот email придёт PDF-отчёт и промокод -30% на следующий анализ.
+                Иногда присылаем акции и напоминания — отписаться можно из любого письма.
               </p>
             </div>
           )}

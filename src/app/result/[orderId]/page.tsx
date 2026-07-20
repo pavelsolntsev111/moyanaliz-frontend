@@ -287,6 +287,12 @@ function EmailCaptureCard({
             </button>
           </div>
           {emailError && <p className="mt-2 text-xs text-destructive">{emailError}</p>}
+          <p className="mt-2 text-[11px] leading-relaxed text-muted-foreground">
+            Кроме отчёта иногда присылаем промокоды и напоминания пересдать
+            анализы — отписаться можно из любого письма. Указывая email, вы
+            соглашаетесь с{" "}
+            <a href="/offer" className="underline hover:text-primary">офертой</a>.
+          </p>
         </>
       )}
     </div>
@@ -600,7 +606,10 @@ function EmailRequiredScreen({
       </div>
 
       <p className="mt-4 text-xs text-muted-foreground">
-        Email нужен только для отправки отчёта. Никакого спама.
+        На этот адрес придёт отчёт, а иногда — промокоды и напоминания
+        пересдать анализы. Отписаться можно из любого письма. Указывая email, вы
+        соглашаетесь с{" "}
+        <a href="/offer" className="underline hover:text-primary">офертой</a>.
       </p>
     </div>
   );
