@@ -18,6 +18,11 @@ const nextConfig: NextConfig = {
       { source: "/api/:path*", destination: `${upstream}/api/:path*` },
       { source: "/admin", destination: `${upstream}/admin` },
       { source: "/admin/:path*", destination: `${upstream}/admin/:path*` },
+      // Prod admin lives under ADMIN_URL_PREFIX=/ADM, not /admin — without this
+      // the owner loses EVERY dashboard exactly during a block: /ADM/support
+      // (refund queue), /ADM/support/bugs, /ADM/finances, /ADM/ab-tests, /ADM/metrics.
+      // Verified 21.07: /ADM/metrics → 404 via proxy, 200 direct.
+      { source: "/ADM/:path*", destination: `${upstream}/ADM/:path*` },
     ];
   },
   async redirects() {
