@@ -81,7 +81,7 @@ export default async function ArticlePage({ params }: Props) {
             <FormattedContent content={article.content} />
           </article>
 
-          {/* CTA */}
+          {/* CTA (end) */}
           <div className="mt-12 p-6 rounded-2xl bg-primary/5 border border-primary/10 text-center">
             <h3 className="font-semibold mb-2 text-foreground">
               Хотите расшифровать свои анализы?
@@ -91,11 +91,14 @@ export default async function ArticlePage({ params }: Props) {
               показателя за 2 минуты
             </p>
             <Link
-              href="/"
+              href="/?ref=blog"
               className="inline-block py-2.5 px-6 rounded-xl bg-primary text-primary-foreground font-semibold hover:opacity-90 transition"
             >
               Расшифровать анализы
             </Link>
+            <p className="mt-3 text-xs text-muted-foreground">
+              299 ₽ · без регистрации · результат сразу
+            </p>
           </div>
         </div>
       </main>
@@ -110,6 +113,7 @@ function FormattedContent({ content }: { content: string }) {
   const elements: React.ReactNode[] = [];
   let i = 0;
   let key = 0;
+  let ctaInserted = false;
 
   while (i < lines.length) {
     const line = lines[i];
@@ -120,6 +124,12 @@ function FormattedContent({ content }: { content: string }) {
       continue;
     }
     if (line.startsWith("## ")) {
+      // Bridge into the funnel early: place a CTA after the intro, before the
+      // first section — most readers leave before the end-of-article CTA (depth ~1.1).
+      if (!ctaInserted && elements.length > 0) {
+        elements.push(<InlineCTA key={key++} />);
+        ctaInserted = true;
+      }
       elements.push(<h2 key={key++}>{line.slice(3)}</h2>);
       i++;
       continue;
@@ -210,8 +220,33 @@ function FormattedContent({ content }: { content: string }) {
   return <>{elements}</>;
 }
 
+function InlineCTA() {
+  return (
+    <div className="not-prose my-8 p-4 sm:p-5 rounded-2xl bg-primary/5 border border-primary/10 flex flex-col sm:flex-row sm:items-center gap-3">
+      <div className="flex-1">
+        <p className="font-semibold text-foreground text-[15px] leading-snug m-0">
+          Есть на руках свой анализ? Расшифруем за 2 минуты
+        </p>
+        <p className="text-sm text-muted-foreground m-0 mt-1">
+          Загрузите PDF или фото — ИИ объяснит каждый показатель и отклонения. 299 ₽, без регистрации.
+        </p>
+      </div>
+      <Link
+        href="/?ref=blog"
+        className="shrink-0 inline-block py-2.5 px-5 rounded-xl bg-primary text-primary-foreground font-semibold text-sm text-center hover:opacity-90 transition"
+      >
+        Загрузить анализ
+      </Link>
+    </div>
+  );
+}
+
 function formatInline(text: string): string {
   return text
+    .replace(
+      /\[([^\]]+)\]\(([^)]+)\)/g,
+      '<a href="$2" class="text-primary underline underline-offset-2 hover:opacity-80">$1</a>'
+    )
     .replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>")
     .replace(/\*(.+?)\*/g, "<em>$1</em>");
 }
