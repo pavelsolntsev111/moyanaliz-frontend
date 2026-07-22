@@ -118,6 +118,10 @@ function FormattedContent({ content }: { content: string }) {
   while (i < lines.length) {
     const line = lines[i];
 
+    if (/^(-{3,}|\*{3,}|_{3,})$/.test(line.trim())) {
+      i++;
+      continue;
+    }
     if (line.startsWith("### ")) {
       elements.push(<h3 key={key++}>{line.slice(4)}</h3>);
       i++;
