@@ -6,19 +6,18 @@
  * Страница = макет окружения будущего портала о антибиотикорезистентности
  * (один экран: шапка + герой) + рабочий виджет расшифровки.
  *
- * ДИЗАЙН. Палитра заказчика (med-click.ru) сохранена, но взята сдержанно:
- * вместо плоской заливки #4000A8 — обсидиановая база #0D0A16 с послойными
- * радиальными свечениями, фирменный #7119FF живёт в акцентах и свечении, а не
- * в больших плоскостях; #00C3C8 приглушён до #00A9AE, чтобы читался на светлом.
- * Причина: демо должно узнаваться как ИХ портал — уводить в нейтральный
- * обсидиан+изумруд значило бы потерять смысл макета.
+ * ДИЗАЙН. Светлая схема: тема просветительская и медицинская, тёмный контур
+ * читался как «техно», а не как «здоровье». Герой — бумажный тон #F7F5FB с
+ * мягкими радиальными подсветками фирменных цветов заказчика (#7119FF, #00C3C8)
+ * вместо плоской заливки; отчёт — на чистом белом, отделён волосяной границей.
+ * Палитра med-click.ru сохранена, но живёт в акцентах, подсветках и линиях, а не
+ * в больших плоскостях.
  *
- * Поверхности — полупрозрачные (white/[0.05]) с backdrop-blur и волосяной
- * границей; тени мягкие послойные, без жёсткого чёрного бокса. Контент —
- * асимметричная сетка: липкая узкая колонка-сводка + широкая колонка отчёта,
- * никакого центрированного столбика одинаковых карточек. Таблица минимальна:
- * ни одной вертикальной линейки, только горизонтальные волосяные разделители
- * и переход на ховере.
+ * Поверхности — белое стекло (white/70 + backdrop-blur) с волосяной границей и
+ * мягкими послойными тенями, без жёстких чёрных боксов. Контент — асимметричная
+ * сетка: липкая узкая колонка-сводка + широкая колонка отчёта. Таблица
+ * минималистична: ни одной вертикальной линейки, только горизонтальные
+ * разделители и переход фона на ховере.
  *
  * Файл никуда не сохраняется — эндпоинт эфемерный (см. app/routers/demo_posev.py).
  */
@@ -86,31 +85,28 @@ interface ApiReject {
 
 const V: Record<
   Verdict,
-  { tile: string; chip: string; label: string; short: string; bar: string; panel: string }
+  { tile: string; chip: string; label: string; short: string; bar: string }
 > = {
   S: {
     tile: "bg-[#0B6E5D] text-white",
-    chip: "bg-[#EDF5F2] text-[#0B6E5D]",
+    chip: "bg-[#EAF4F1] text-[#0A6153]",
     label: "Чувствителен",
     short: "чувствителен",
     bar: "bg-[#0B6E5D]",
-    panel: "bg-[#EDF5F2]",
   },
   I: {
     tile: "bg-[#8A6A2A] text-white",
-    chip: "bg-[#F8F2E4] text-[#7C5A22]",
+    chip: "bg-[#F8F1E1] text-[#7A5920]",
     label: "Чувствителен при увел. экспозиции",
     short: "при увел. экспозиции",
     bar: "bg-[#B08A3C]",
-    panel: "bg-[#F8F2E4]",
   },
   R: {
     tile: "bg-[#8F3A2F] text-white",
-    chip: "bg-[#F8EDEB] text-[#8F3A2F]",
+    chip: "bg-[#F9ECE9] text-[#8A372C]",
     label: "Устойчив",
     short: "устойчив",
     bar: "bg-[#8F3A2F]",
-    panel: "bg-[#F8EDEB]",
   },
 };
 
@@ -133,14 +129,14 @@ const CSS = `
 .pd-display { font-family: var(--font-display), system-ui, sans-serif; letter-spacing: -0.02em; }
 .pd-eyebrow { font-size: 10.5px; letter-spacing: 0.16em; text-transform: uppercase; font-weight: 600; }
 .pd-row { transition: background-color .18s ease; }
-.pd-row:hover { background-color: rgba(21,19,27,.022); }
+.pd-row:hover { background-color: rgba(22,20,28,.022); }
 .pd-nav-link { transition: color .18s ease, border-color .18s ease; }
 .pd-jump { transition: color .18s ease, padding-left .18s ease; }
-.pd-jump:hover { color: #15131B; padding-left: 4px; }
-.pd-sample { transition: background-color .2s ease, border-color .2s ease, transform .2s ease; }
-.pd-sample:hover { background-color: rgba(255,255,255,.07); border-color: rgba(255,255,255,.18); transform: translateX(2px); }
+.pd-jump:hover { color: #16141C; padding-left: 4px; }
+.pd-sample { transition: background-color .2s ease, border-color .2s ease, transform .2s ease, box-shadow .2s ease; }
+.pd-sample:hover { border-color: rgba(101,18,224,.28); box-shadow: 0 6px 20px -8px rgba(22,20,28,.16); transform: translateX(2px); }
 .pd-drop { transition: border-color .2s ease, background-color .2s ease; }
-.pd-btn { transition: background-color .2s ease, transform .12s ease, box-shadow .2s ease; }
+.pd-btn { transition: background-color .2s ease, transform .12s ease, box-shadow .2s ease, border-color .2s ease; }
 .pd-btn:active { transform: translateY(1px); }
 .pd-fade { animation: pdFade .5s cubic-bezier(.2,.7,.2,1) both; }
 @keyframes pdFade { from { opacity: 0; transform: translateY(10px) } to { opacity: 1; transform: none } }
@@ -170,7 +166,7 @@ export default function PosevDemoClient() {
     <>
       <style>{CSS}</style>
       {checking ? (
-        <div className="min-h-screen bg-[#0D0A16]" />
+        <div className="min-h-screen bg-[#F7F5FB]" />
       ) : authed ? (
         <Portal password={password} />
       ) : (
@@ -188,29 +184,30 @@ export default function PosevDemoClient() {
 
 // ─────────────────────────── общие детали оболочки ───────────────────────────
 
+/** Мягкие подсветки фирменными цветами вместо плоской заливки. */
 function Glow() {
   return (
     <>
       <div
         aria-hidden
-        className="pointer-events-none absolute -right-40 -top-56 h-[640px] w-[640px] rounded-full"
+        className="pointer-events-none absolute -right-64 -top-80 h-[900px] w-[900px] rounded-full"
         style={{
           background:
-            "radial-gradient(circle at 40% 40%, rgba(113,25,255,.42), rgba(113,25,255,0) 62%)",
+            "radial-gradient(circle at 45% 45%, rgba(113,25,255,.11), rgba(113,25,255,.05) 46%, rgba(113,25,255,0) 72%)",
         }}
       />
       <div
         aria-hidden
-        className="pointer-events-none absolute -left-52 top-24 h-[520px] w-[520px] rounded-full"
+        className="pointer-events-none absolute -left-64 top-24 h-[700px] w-[700px] rounded-full"
         style={{
           background:
-            "radial-gradient(circle at 50% 50%, rgba(0,195,200,.16), rgba(0,195,200,0) 66%)",
+            "radial-gradient(circle at 50% 50%, rgba(0,195,200,.13), rgba(0,195,200,.04) 48%, rgba(0,195,200,0) 74%)",
         }}
       />
       <div
         aria-hidden
-        className="pointer-events-none absolute inset-x-0 bottom-0 h-40"
-        style={{ background: "linear-gradient(to bottom, rgba(13,10,22,0), rgba(13,10,22,.9))" }}
+        className="pointer-events-none absolute inset-x-0 bottom-0 h-48"
+        style={{ background: "linear-gradient(to bottom, rgba(255,255,255,0), rgba(255,255,255,.85))" }}
       />
     </>
   );
@@ -220,7 +217,11 @@ function LogoMark({ size = "md" }: { size?: "sm" | "md" }) {
   const box = size === "sm" ? "h-9 w-9 text-[10px]" : "h-11 w-11 text-[11px]";
   return (
     <div
-      className={`${box} pd-display grid shrink-0 place-items-center rounded-xl border border-white/15 bg-white/[0.07] font-extrabold tracking-[0.04em] text-white backdrop-blur`}
+      className={`${box} pd-display grid shrink-0 place-items-center rounded-xl font-extrabold tracking-[0.04em] text-white`}
+      style={{
+        background: "linear-gradient(140deg, #7119FF, #4B10C8)",
+        boxShadow: "0 6px 18px -6px rgba(75,16,200,.5)",
+      }}
     >
       АМР
     </div>
@@ -254,30 +255,30 @@ function Gate({ onPass }: { onPass: (pw: string) => void }) {
   };
 
   return (
-    <main className="relative flex min-h-screen items-center overflow-hidden bg-[#0D0A16] px-6 py-16">
+    <main className="relative flex min-h-screen items-center overflow-hidden bg-[#F7F5FB] px-6 py-16 text-[#16141C]">
       <Glow />
       <div className="relative mx-auto grid w-full max-w-[1000px] gap-14 lg:grid-cols-12 lg:items-center">
         <div className="lg:col-span-6">
           <div className="mb-8 flex items-center gap-3">
             <LogoMark size="sm" />
-            <span className="pd-eyebrow text-white/45">портал о антибиотикорезистентности</span>
+            <span className="pd-eyebrow text-[#77747F]">портал о антибиотикорезистентности</span>
           </div>
-          <h1 className="pd-display text-[38px] font-extrabold leading-[1.06] text-white sm:text-[46px]">
+          <h1 className="pd-display text-[38px] font-extrabold leading-[1.06] sm:text-[46px]">
             Демо расшифровки
             <br />
             бак-посева
           </h1>
-          <p className="mt-6 max-w-[42ch] text-[15.5px] leading-relaxed text-white/55">
+          <p className="mt-6 max-w-[42ch] text-[15.5px] leading-relaxed text-[#5A5764]">
             Закрытая сборка для команды Med-Click. Страница не индексируется, доступ по паролю.
           </p>
         </div>
 
         <form
           onSubmit={submit}
-          className="rounded-2xl border border-white/10 bg-white/[0.055] p-8 backdrop-blur-xl lg:col-span-6"
-          style={{ boxShadow: "0 30px 80px -30px rgba(0,0,0,.75)" }}
+          className="rounded-2xl border border-black/[0.07] bg-white/80 p-8 backdrop-blur-xl lg:col-span-6"
+          style={{ boxShadow: "0 18px 50px -20px rgba(22,20,28,.22), 0 2px 6px rgba(22,20,28,.03)" }}
         >
-          <label htmlFor="pd-pw" className="pd-eyebrow block text-white/45">
+          <label htmlFor="pd-pw" className="pd-eyebrow block text-[#77747F]">
             Пароль доступа
           </label>
           <input
@@ -286,16 +287,17 @@ function Gate({ onPass }: { onPass: (pw: string) => void }) {
             value={value}
             onChange={(e) => setValue(e.target.value)}
             autoFocus
-            className={`mt-3 w-full rounded-xl border bg-white/[0.04] px-4 py-3.5 text-[15px] text-white outline-none placeholder:text-white/25 focus:border-[#00C3C8]/50 ${
-              error ? "border-[#C2665C]/60" : "border-white/12"
+            className={`mt-3 w-full rounded-xl border bg-white px-4 py-3.5 text-[15px] outline-none placeholder:text-[#B4B1BC] focus:border-[#7119FF]/45 ${
+              error ? "border-[#8F3A2F]/45" : "border-black/[0.1]"
             }`}
             placeholder="••••••••"
           />
-          {error && <p className="mt-3 text-[13px] text-[#E7A79F]">{error}</p>}
+          {error && <p className="mt-3 text-[13px] text-[#8F3A2F]">{error}</p>}
           <button
             type="submit"
             disabled={busy || !value}
-            className="pd-btn pd-eyebrow mt-6 w-full rounded-xl bg-white px-6 py-4 text-[#15131B] hover:bg-white/90 disabled:cursor-default disabled:border disabled:border-white/10 disabled:bg-white/[0.06] disabled:text-white/30"
+            className="pd-btn pd-eyebrow mt-6 w-full rounded-xl bg-[#5B12CF] px-6 py-4 text-white hover:bg-[#4B10C8] disabled:cursor-default disabled:bg-[#E7E3F2] disabled:text-[#A9A5B6]"
+            style={{ boxShadow: busy || !value ? "none" : "0 10px 26px -12px rgba(75,16,200,.6)" }}
           >
             {busy ? "проверяем…" : "войти"}
           </button>
@@ -371,15 +373,15 @@ function Portal({ password }: { password: string }) {
   );
 
   return (
-    <main className="min-h-screen bg-[#FAF9F8] text-[#15131B]">
-      {/* ── шапка + герой: один экран окружения портала ── */}
-      {/* Герой держит ровно один экран: до загрузки бланка светлая зона отчёта
-          не должна показываться обрезком под сгибом. */}
-      <section className="relative flex min-h-[100svh] flex-col overflow-hidden bg-[#0D0A16] text-white">
+    <main className="min-h-screen bg-white text-[#16141C]">
+      {/* ── шапка + герой: один экран окружения портала ──
+          Герой держит ровно один экран: до загрузки бланка зона отчёта не
+          должна показываться обрезком под сгибом. */}
+      <section className="relative flex min-h-[100svh] flex-col overflow-hidden bg-[#F7F5FB]">
         <Glow />
 
-        <div className="relative border-b border-white/[0.06] bg-black/25">
-          <p className="mx-auto max-w-[1240px] px-6 py-2.5 text-[11.5px] text-white/40 lg:px-10">
+        <div className="relative border-b border-black/[0.05] bg-white/50">
+          <p className="mx-auto max-w-[1240px] px-6 py-2.5 text-[11.5px] text-[#8A8794] lg:px-10">
             Демо-макет для Med-Click · название и логотип портала — заглушка · движок расшифровки —
             «Мой Анализ»
           </p>
@@ -390,10 +392,10 @@ function Portal({ password }: { password: string }) {
             <div className="flex items-center gap-3.5">
               <LogoMark />
               <div>
-                <div className="pd-display text-[13.5px] font-extrabold tracking-[0.06em] text-white">
+                <div className="pd-display text-[13.5px] font-extrabold tracking-[0.06em]">
                   ПОРТАЛ О АНТИБИОТИКОРЕЗИСТЕНТНОСТИ
                 </div>
-                <div className="mt-1 text-[11px] text-white/35">рабочее название · макет</div>
+                <div className="mt-1 text-[11px] text-[#8A8794]">рабочее название · макет</div>
               </div>
             </div>
 
@@ -404,8 +406,8 @@ function Portal({ password }: { password: string }) {
                     key={item}
                     className={`pd-nav-link cursor-default border-b pb-1 ${
                       idx === 3
-                        ? "border-[#00C3C8] text-white"
-                        : "border-transparent text-white/55 hover:text-white/85"
+                        ? "border-[#00A9AE] text-[#16141C]"
+                        : "border-transparent text-[#5A5764] hover:text-[#16141C]"
                     }`}
                   >
                     {item}
@@ -416,40 +418,41 @@ function Portal({ password }: { password: string }) {
 
             <button
               type="button"
-              className="pd-btn pd-eyebrow cursor-default rounded-xl border border-white/15 bg-white/[0.06] px-5 py-3.5 text-white/85 backdrop-blur"
+              className="pd-btn pd-eyebrow cursor-default rounded-xl bg-[#5B12CF] px-5 py-3.5 text-white"
+              style={{ boxShadow: "0 10px 26px -14px rgba(75,16,200,.7)" }}
             >
               личный кабинет
             </button>
           </header>
 
-          <div className="grid flex-1 gap-14 pb-20 pt-6 lg:grid-cols-12 lg:gap-16 lg:content-center">
+          <div className="grid flex-1 gap-14 pb-20 pt-6 lg:grid-cols-12 lg:content-center lg:gap-16">
             <div className="lg:col-span-7">
               <div className="mb-7 flex items-center gap-3">
-                <span className="h-px w-9 bg-[#00C3C8]" />
-                <span className="pd-eyebrow text-[#8FE9EB]">сервис портала</span>
+                <span className="h-px w-9 bg-[#00A9AE]" />
+                <span className="pd-eyebrow text-[#00807F]">сервис портала</span>
               </div>
 
-              <h1 className="pd-display text-[34px] font-extrabold leading-[1.05] text-white sm:text-[46px] lg:text-[58px] lg:leading-[1.03]">
+              <h1 className="pd-display text-[34px] font-extrabold leading-[1.05] sm:text-[46px] lg:text-[58px] lg:leading-[1.03]">
                 Разберитесь
                 <br />
                 в своём бак-посеве
               </h1>
 
-              <p className="mt-7 max-w-[48ch] text-[16.5px] leading-[1.7] text-white/60">
+              <p className="mt-7 max-w-[48ch] text-[16.5px] leading-[1.7] text-[#5A5764]">
                 Загрузите бланк посева — сервис объяснит, что за микроб выделен, что означают буквы
                 S, I и R в таблице чувствительности и о чём говорит устойчивость. Понятным языком и
                 без назначений: препарат подбирает врач.
               </p>
 
-              <dl className="mt-12 grid gap-y-7 border-t border-white/10 pt-8 sm:grid-cols-3 sm:gap-x-8">
+              <dl className="mt-12 grid gap-y-7 border-t border-black/[0.08] pt-8 sm:grid-cols-3 sm:gap-x-8">
                 {[
                   ["Приватность", "Файл обрабатывается и удаляется, не сохраняется"],
                   ["Обезличивание", "Имя пациента и лаборатория не извлекаются"],
                   ["Стандарт", "Категории чувствительности — по критериям EUCAST"],
                 ].map(([k, v], i) => (
-                  <div key={k} className={i ? "sm:border-l sm:border-white/10 sm:pl-8" : ""}>
-                    <dt className="pd-eyebrow text-white/40">{k}</dt>
-                    <dd className="mt-2.5 text-[13.5px] leading-relaxed text-white/70">{v}</dd>
+                  <div key={k} className={i ? "sm:border-l sm:border-black/[0.08] sm:pl-8" : ""}>
+                    <dt className="pd-eyebrow text-[#77747F]">{k}</dt>
+                    <dd className="mt-2.5 text-[13.5px] leading-relaxed text-[#4A4753]">{v}</dd>
                   </div>
                 ))}
               </dl>
@@ -486,7 +489,7 @@ function Portal({ password }: { password: string }) {
         </div>
       )}
 
-      <footer className="border-t border-black/[0.07] px-6 py-10 lg:px-10">
+      <footer className="border-t border-black/[0.07] bg-[#FBFAFC] px-6 py-10 lg:px-10">
         <p className="mx-auto max-w-[1240px] text-[12.5px] leading-relaxed text-[#8A8794]">
           Демонстрационная сборка. Виджет встраивается в портал как iframe или вызывается по API —
           оформление подгоняется под финальный дизайн.
@@ -522,22 +525,22 @@ function Widget({
 
   return (
     <div
-      className="pd-noprint rounded-2xl border border-white/10 bg-white/[0.055] p-7 backdrop-blur-xl"
-      style={{ boxShadow: "0 30px 80px -30px rgba(0,0,0,.7)" }}
+      className="pd-noprint rounded-2xl border border-black/[0.07] bg-white/85 p-7 backdrop-blur-xl"
+      style={{ boxShadow: "0 22px 60px -24px rgba(22,20,28,.28), 0 2px 8px rgba(22,20,28,.04)" }}
     >
       <div className="flex items-baseline justify-between gap-4">
-        <h2 className="pd-display text-[19px] font-extrabold text-white">Расшифровка посева</h2>
-        <span className="text-[11.5px] text-white/35">до 20 МБ</span>
+        <h2 className="pd-display text-[19px] font-extrabold">Расшифровка посева</h2>
+        <span className="text-[11.5px] text-[#8A8794]">до 20 МБ</span>
       </div>
 
       {busy ? (
         <div className="mt-7">
-          <div className="h-[3px] w-full overflow-hidden rounded-full bg-white/10">
+          <div className="h-[3px] w-full overflow-hidden rounded-full bg-black/[0.07]">
             <div
               className="h-full rounded-full"
               style={{
                 width: `${Math.min(92, (stage + 1) * (100 / STAGES.length))}%`,
-                background: "linear-gradient(90deg, #00C3C8, #7119FF)",
+                background: "linear-gradient(90deg, #00A9AE, #7119FF)",
                 transition: "width .7s cubic-bezier(.4,0,.2,1)",
               }}
             />
@@ -547,12 +550,12 @@ function Widget({
               <li
                 key={s}
                 className={`flex items-center gap-3 text-[13.5px] ${
-                  i <= stage ? "text-white/85" : "text-white/25"
+                  i <= stage ? "text-[#2C2936]" : "text-[#B4B1BC]"
                 }`}
               >
                 <span
                   className={`h-1.5 w-1.5 shrink-0 rounded-full ${
-                    i < stage ? "bg-[#00C3C8]" : i === stage ? "bg-[#A472FF]" : "bg-white/20"
+                    i < stage ? "bg-[#00A9AE]" : i === stage ? "bg-[#7119FF]" : "bg-black/15"
                   }`}
                 />
                 {s}
@@ -560,7 +563,7 @@ function Widget({
             ))}
           </ul>
           {fileName && (
-            <p className="mt-7 border-t border-white/10 pt-4 text-[11.5px] leading-relaxed text-white/35">
+            <p className="mt-7 border-t border-black/[0.07] pt-4 text-[11.5px] leading-relaxed text-[#8A8794]">
               {fileName} — обрабатывается в памяти, не сохраняется
             </p>
           )}
@@ -582,8 +585,8 @@ function Widget({
             onClick={() => inputRef.current?.click()}
             className={`pd-drop mt-7 cursor-pointer rounded-xl border border-dashed px-6 py-10 text-center ${
               drag
-                ? "border-[#00C3C8]/60 bg-white/[0.07]"
-                : "border-white/15 bg-white/[0.025] hover:border-white/25 hover:bg-white/[0.045]"
+                ? "border-[#7119FF]/45 bg-[#7119FF]/[0.05]"
+                : "border-black/[0.13] bg-black/[0.012] hover:border-black/25 hover:bg-black/[0.025]"
             }`}
           >
             <svg
@@ -594,20 +597,13 @@ function Widget({
               aria-hidden
               className="mx-auto mb-4"
             >
-              <circle cx="12" cy="12" r="8.4" stroke="rgba(255,255,255,.5)" strokeWidth="1.4" />
-              <path
-                d="M4.4 9.6h15.2"
-                stroke="rgba(255,255,255,.5)"
-                strokeWidth="1.4"
-                strokeLinecap="round"
-              />
-              <circle cx="9.4" cy="14.6" r="1.5" fill="#00C3C8" />
-              <circle cx="14.2" cy="13.2" r="1.1" fill="#A472FF" />
+              <circle cx="12" cy="12" r="8.4" stroke="#9A96A6" strokeWidth="1.4" />
+              <path d="M4.4 9.6h15.2" stroke="#9A96A6" strokeWidth="1.4" strokeLinecap="round" />
+              <circle cx="9.4" cy="14.6" r="1.5" fill="#00A9AE" />
+              <circle cx="14.2" cy="13.2" r="1.1" fill="#7119FF" />
             </svg>
-            <p className="text-[14.5px] font-semibold text-white/90">
-              Перетащите бланк или выберите файл
-            </p>
-            <p className="mt-1.5 text-[12px] text-white/35">PDF, JPG, PNG, HEIC</p>
+            <p className="text-[14.5px] font-semibold">Перетащите бланк или выберите файл</p>
+            <p className="mt-1.5 text-[12px] text-[#8A8794]">PDF, JPG, PNG, HEIC</p>
             <input
               ref={inputRef}
               type="file"
@@ -622,17 +618,17 @@ function Widget({
           </div>
 
           <div className="mt-7">
-            <p className="pd-eyebrow text-white/35">образцы бланков</p>
+            <p className="pd-eyebrow text-[#77747F]">образцы бланков</p>
             <div className="mt-3.5 space-y-2">
               {SAMPLES.map((s) => (
                 <button
                   key={s.file}
                   type="button"
                   onClick={() => onSample(s.file)}
-                  className="pd-sample flex w-full items-center justify-between rounded-xl border border-white/10 bg-white/[0.03] px-4 py-3.5 text-left"
+                  className="pd-sample flex w-full items-center justify-between rounded-xl border border-black/[0.08] bg-white px-4 py-3.5 text-left"
                 >
-                  <span className="text-[13.5px] font-semibold text-white/90">{s.label}</span>
-                  <span className="text-[11.5px] text-white/40">{s.meta}</span>
+                  <span className="text-[13.5px] font-semibold">{s.label}</span>
+                  <span className="text-[11.5px] text-[#8A8794]">{s.meta}</span>
                 </button>
               ))}
             </div>
@@ -642,17 +638,15 @@ function Widget({
             <p
               className={`mt-6 rounded-xl border px-4 py-3.5 text-[13px] leading-relaxed ${
                 rejected
-                  ? "border-[#B08A3C]/35 bg-[#B08A3C]/10 text-[#EBD9AE]"
-                  : "border-[#C2665C]/35 bg-[#C2665C]/10 text-[#EFB8B0]"
+                  ? "border-[#E4D2A8] bg-[#FBF5E7] text-[#7A5920]"
+                  : "border-[#E8C4BD] bg-[#FBEEEB] text-[#8A372C]"
               }`}
             >
               {rejected || error}
             </p>
           )}
 
-          {hasReport && (
-            <p className="mt-6 text-[12.5px] text-white/35">Расшифровка ниже ↓</p>
-          )}
+          {hasReport && <p className="mt-6 text-[12.5px] text-[#8A8794]">Расшифровка ниже ↓</p>}
         </>
       )}
     </div>
@@ -698,7 +692,7 @@ function Section({
   return (
     <section id={id} className="scroll-mt-8">
       <div className="mb-6 border-t border-black/[0.09] pt-5">
-        <p className="pd-eyebrow text-[#A5A2AE]">{eyebrow}</p>
+        <p className="pd-eyebrow text-[#9A96A6]">{eyebrow}</p>
         <h2 className="pd-display mt-2 text-[24px] font-extrabold leading-tight">{title}</h2>
       </div>
       {children}
@@ -719,7 +713,6 @@ function Result({
   const tested = r.tested || 0;
   const sexLabel =
     report.patient?.sex === "male" ? "мужской" : report.patient?.sex === "female" ? "женский" : null;
-  const first = report.pathogens?.[0];
 
   const jumps = useMemo(
     () =>
@@ -737,14 +730,14 @@ function Result({
   );
 
   return (
-    <div className="pd-fade border-t border-black/[0.07] bg-[#FAF9F8]">
+    <div className="pd-fade border-t border-black/[0.07] bg-white">
       <div className="mx-auto grid max-w-[1240px] gap-12 px-6 py-16 lg:grid-cols-[268px_minmax(0,1fr)] lg:gap-16 lg:px-10">
-        {/* ── липкая колонка-сводка ── */}
-        {/* min-w-0 обязателен: без него грид-трек раздувается под min-w таблицы
+        {/* ── липкая колонка-сводка ──
+            min-w-0 обязателен: без него грид-трек раздувается под min-w таблицы
             антибиотикограммы и на мобильном появляется горизонтальный скролл
             всей страницы вместо прокрутки внутри таблицы. */}
         <aside className="pd-rail min-w-0 lg:sticky lg:top-8 lg:self-start">
-          <p className="pd-eyebrow text-[#A5A2AE]">результат</p>
+          <p className="pd-eyebrow text-[#9A96A6]">результат</p>
           <h2 className="pd-display mt-2.5 text-[19px] font-extrabold leading-snug">
             {report.doc_kind || "Бактериологический посев"}
           </h2>
@@ -776,7 +769,7 @@ function Result({
 
           {tested > 0 && (
             <div className="mt-7 border-t border-black/[0.09] pt-5">
-              <p className="pd-eyebrow text-[#A5A2AE]">из {tested} препаратов</p>
+              <p className="pd-eyebrow text-[#9A96A6]">из {tested} препаратов</p>
               <div className="mt-4 space-y-2.5">
                 {(["S", "I", "R"] as Verdict[]).map((v) => {
                   const val = (v === "S" ? r.s : v === "I" ? r.i : r.r) ?? 0;
@@ -799,7 +792,7 @@ function Result({
                 })}
               </div>
               {r.multi_resistant && (
-                <p className="mt-5 rounded-xl bg-[#F8EDEB] px-4 py-3 text-[12.5px] leading-relaxed text-[#8F3A2F]">
+                <p className="mt-5 rounded-xl bg-[#F9ECE9] px-4 py-3 text-[12.5px] leading-relaxed text-[#8A372C]">
                   Устойчивость к {r.r_classes} классам препаратов — картина множественной
                   устойчивости.
                 </p>
@@ -824,7 +817,7 @@ function Result({
         <div className="min-w-0 space-y-14">
           {report.plain_summary && (
             <section id="summary" className="scroll-mt-8">
-              <p className="pd-eyebrow mb-4 text-[#A5A2AE]">кратко</p>
+              <p className="pd-eyebrow mb-4 text-[#9A96A6]">кратко</p>
               <p className="pd-display max-w-[62ch] text-[21px] font-medium leading-[1.5] tracking-[-0.01em]">
                 {report.plain_summary}
               </p>
@@ -883,7 +876,7 @@ function Result({
                         {["Препарат", "Класс", "МПК, мг/л", "Категория"].map((h) => (
                           <th
                             key={h}
-                            className="pd-eyebrow whitespace-nowrap pb-3 pr-4 text-left font-semibold text-[#A5A2AE]"
+                            className="pd-eyebrow whitespace-nowrap pb-3 pr-4 text-left font-semibold text-[#9A96A6]"
                           >
                             {h}
                           </th>
@@ -897,7 +890,7 @@ function Result({
                           <td className="py-3.5 pr-4 text-[13px] text-[#6B6875]">
                             {it.drug_class || "—"}
                           </td>
-                          <td className="py-3.5 pr-4 whitespace-nowrap tabular-nums">
+                          <td className="whitespace-nowrap py-3.5 pr-4 tabular-nums">
                             {it.mic || "—"}
                           </td>
                           <td className="py-3.5">
@@ -966,7 +959,7 @@ function Result({
               <ol className="space-y-6">
                 {report.amr_notes.map((n, i) => (
                   <li key={i} className="flex gap-5">
-                    <span className="pd-display shrink-0 text-[20px] font-extrabold text-[#7119FF]/35 tabular-nums">
+                    <span className="pd-display shrink-0 text-[20px] font-extrabold tabular-nums text-[#7119FF]/40">
                       {String(i + 1).padStart(2, "0")}
                     </span>
                     <p className="max-w-[66ch] text-[14.5px] leading-[1.75]">{n}</p>
@@ -981,7 +974,7 @@ function Result({
               <div className="grid gap-10 lg:grid-cols-2 lg:gap-12">
                 {!!report.questions_for_doctor?.length && (
                   <div>
-                    <p className="pd-eyebrow mb-4 text-[#A5A2AE]">о чём спросить</p>
+                    <p className="pd-eyebrow mb-4 text-[#9A96A6]">о чём спросить</p>
                     <ul className="space-y-3.5">
                       {report.questions_for_doctor.map((q, i) => (
                         <li
@@ -995,13 +988,13 @@ function Result({
                   </div>
                 )}
                 {!!report.red_flags?.length && (
-                  <div className="rounded-2xl bg-[#F8EDEB]/70 p-7">
-                    <p className="pd-eyebrow mb-4 text-[#8F3A2F]/70">срочно к врачу</p>
+                  <div className="rounded-2xl bg-[#FBEEEB]/70 p-7">
+                    <p className="pd-eyebrow mb-4 text-[#8A372C]/75">срочно к врачу</p>
                     <ul className="space-y-3.5">
                       {report.red_flags.map((f, i) => (
                         <li
                           key={i}
-                          className="border-t border-[#8F3A2F]/12 pt-3.5 text-[13.5px] leading-[1.65] text-[#5E2A22]"
+                          className="border-t border-[#8F3A2F]/15 pt-3.5 text-[13.5px] leading-[1.65] text-[#5E2A22]"
                         >
                           {f}
                         </li>
@@ -1030,15 +1023,15 @@ function Result({
             <button
               type="button"
               onClick={onReset}
-              className="pd-btn pd-eyebrow rounded-xl bg-[#15121F] px-6 py-4 text-white hover:bg-[#241D38]"
-              style={{ boxShadow: "0 8px 30px rgba(21,18,31,.12)" }}
+              className="pd-btn pd-eyebrow rounded-xl bg-[#5B12CF] px-6 py-4 text-white hover:bg-[#4B10C8]"
+              style={{ boxShadow: "0 12px 30px -14px rgba(75,16,200,.65)" }}
             >
               разобрать другой бланк
             </button>
             <button
               type="button"
               onClick={() => window.print()}
-              className="pd-btn pd-eyebrow rounded-xl border border-black/10 bg-white px-6 py-4 text-[#15131B] hover:bg-black/[0.02]"
+              className="pd-btn pd-eyebrow rounded-xl border border-black/10 bg-white px-6 py-4 hover:bg-black/[0.02]"
             >
               сохранить в pdf
             </button>
