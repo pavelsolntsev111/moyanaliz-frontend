@@ -929,33 +929,11 @@ function Result({
                 {report.patient?.age != null && <>, возраст: {report.patient.age}</>}
               </div>
             </div>
-            <div
-              style={{
-                display: "flex",
-                flexDirection: "column",
-                gap: 8,
-                alignItems: "flex-end",
-              }}
-              className="posev-noprint"
-            >
-              <span
-                style={{
-                  background: "#E4F8F8",
-                  color: "#00726F",
-                  fontSize: 11.5,
-                  fontWeight: 700,
-                  padding: "6px 11px",
-                  borderRadius: 6,
-                }}
-              >
-                ФАЙЛ УДАЛЁН · НЕ СОХРАНЁН
+            {meta?.elapsed_ms != null && (
+              <span className="posev-noprint" style={{ fontSize: 11.5, color: C.grey }}>
+                разобрано за {(meta.elapsed_ms / 1000).toFixed(1)} с
               </span>
-              {meta?.elapsed_ms != null && (
-                <span style={{ fontSize: 11.5, color: C.grey }}>
-                  разобрано за {(meta.elapsed_ms / 1000).toFixed(1)} с
-                </span>
-              )}
-            </div>
+            )}
           </div>
         </div>
 
