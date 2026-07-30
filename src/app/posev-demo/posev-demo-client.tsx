@@ -6,15 +6,24 @@
  * Страница = макет окружения будущего портала о антибиотикорезистентности
  * (один экран: шапка + герой) + рабочий виджет расшифровки.
  *
- * Палитра и типографика взяты с med-click.ru: #4000A8 герой, #7119FF кнопки,
- * #00C3C8 акцент, Manrope на заголовки, Raleway на текст. Логотип и название
- * портала — ЗАГЛУШКА: подставлять реальный бренд заказчика или ведомств в
- * демо нельзя, поэтому вверху висит плашка «демо-макет».
+ * ДИЗАЙН. Палитра заказчика (med-click.ru) сохранена, но взята сдержанно:
+ * вместо плоской заливки #4000A8 — обсидиановая база #0D0A16 с послойными
+ * радиальными свечениями, фирменный #7119FF живёт в акцентах и свечении, а не
+ * в больших плоскостях; #00C3C8 приглушён до #00A9AE, чтобы читался на светлом.
+ * Причина: демо должно узнаваться как ИХ портал — уводить в нейтральный
+ * обсидиан+изумруд значило бы потерять смысл макета.
+ *
+ * Поверхности — полупрозрачные (white/[0.05]) с backdrop-blur и волосяной
+ * границей; тени мягкие послойные, без жёсткого чёрного бокса. Контент —
+ * асимметричная сетка: липкая узкая колонка-сводка + широкая колонка отчёта,
+ * никакого центрированного столбика одинаковых карточек. Таблица минимальна:
+ * ни одной вертикальной линейки, только горизонтальные волосяные разделители
+ * и переход на ховере.
  *
  * Файл никуда не сохраняется — эндпоинт эфемерный (см. app/routers/demo_posev.py).
  */
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 // ─────────────────────────── типы ответа бэкенда ───────────────────────────
 
@@ -73,32 +82,36 @@ interface ApiReject {
   meta?: { model?: string; elapsed_ms?: number };
 }
 
-// ─────────────────────────── палитра заказчика ───────────────────────────
+// ─── категории чувствительности: приглушённые тона, не сигнальный светофор ───
 
-const C = {
-  deep: "#4000A8",
-  purple: "#7119FF",
-  teal: "#00C3C8",
-  ink: "#1E1D22",
-  grey: "#7B7B7B",
-  line: "#E7E7E7",
-  bg: "#F4F4F4",
-};
-
-// short — для счётчиков. У S и I полные подписи начинаются одинаково
-// («Чувствителен…»), и сокращение по первому слову делало их неразличимыми.
-const VERDICT_STYLE: Record<
+const V: Record<
   Verdict,
-  { bg: string; fg: string; label: string; short: string }
+  { tile: string; chip: string; label: string; short: string; bar: string; panel: string }
 > = {
-  S: { bg: "#E4F8F8", fg: "#00726F", label: "Чувствителен", short: "ЧУВСТВИТЕЛЕН" },
-  I: {
-    bg: "#FFF3DF",
-    fg: "#8A5200",
-    label: "Чувствителен при увел. экспозиции",
-    short: "ПРИ УВЕЛ. ЭКСПОЗИЦИИ",
+  S: {
+    tile: "bg-[#0B6E5D] text-white",
+    chip: "bg-[#EDF5F2] text-[#0B6E5D]",
+    label: "Чувствителен",
+    short: "чувствителен",
+    bar: "bg-[#0B6E5D]",
+    panel: "bg-[#EDF5F2]",
   },
-  R: { bg: "#FDE7E7", fg: "#AE2018", label: "Устойчив", short: "УСТОЙЧИВ" },
+  I: {
+    tile: "bg-[#8A6A2A] text-white",
+    chip: "bg-[#F8F2E4] text-[#7C5A22]",
+    label: "Чувствителен при увел. экспозиции",
+    short: "при увел. экспозиции",
+    bar: "bg-[#B08A3C]",
+    panel: "bg-[#F8F2E4]",
+  },
+  R: {
+    tile: "bg-[#8F3A2F] text-white",
+    chip: "bg-[#F8EDEB] text-[#8F3A2F]",
+    label: "Устойчив",
+    short: "устойчив",
+    bar: "bg-[#8F3A2F]",
+    panel: "bg-[#F8EDEB]",
+  },
 };
 
 const STAGES = [
@@ -110,11 +123,32 @@ const STAGES = [
 ];
 
 const SAMPLES = [
-  { file: "/demo/posev-sample-1.png", label: "Посев мочи · E. coli" },
-  { file: "/demo/posev-sample-2.png", label: "Посев раны · MRSA + фаги" },
+  { file: "/demo/posev-sample-1.png", label: "Посев мочи", meta: "E. coli · БЛРС" },
+  { file: "/demo/posev-sample-2.png", label: "Посев раны", meta: "MRSA · бактериофаги" },
 ];
 
 const AUTH_KEY = "posev_demo_ok";
+
+const CSS = `
+.pd-display { font-family: var(--font-display), system-ui, sans-serif; letter-spacing: -0.02em; }
+.pd-eyebrow { font-size: 10.5px; letter-spacing: 0.16em; text-transform: uppercase; font-weight: 600; }
+.pd-row { transition: background-color .18s ease; }
+.pd-row:hover { background-color: rgba(21,19,27,.022); }
+.pd-nav-link { transition: color .18s ease, border-color .18s ease; }
+.pd-jump { transition: color .18s ease, padding-left .18s ease; }
+.pd-jump:hover { color: #15131B; padding-left: 4px; }
+.pd-sample { transition: background-color .2s ease, border-color .2s ease, transform .2s ease; }
+.pd-sample:hover { background-color: rgba(255,255,255,.07); border-color: rgba(255,255,255,.18); transform: translateX(2px); }
+.pd-drop { transition: border-color .2s ease, background-color .2s ease; }
+.pd-btn { transition: background-color .2s ease, transform .12s ease, box-shadow .2s ease; }
+.pd-btn:active { transform: translateY(1px); }
+.pd-fade { animation: pdFade .5s cubic-bezier(.2,.7,.2,1) both; }
+@keyframes pdFade { from { opacity: 0; transform: translateY(10px) } to { opacity: 1; transform: none } }
+@media print {
+  .pd-noprint { display: none !important; }
+  .pd-rail { display: none !important; }
+}
+`;
 
 // ═══════════════════════════════ страница ═══════════════════════════════
 
@@ -132,19 +166,65 @@ export default function PosevDemoClient() {
     setChecking(false);
   }, []);
 
-  if (checking) return <div style={{ minHeight: "100vh", background: C.deep }} />;
-  if (!authed) {
-    return (
-      <Gate
-        onPass={(pw) => {
-          sessionStorage.setItem(AUTH_KEY, pw);
-          setPassword(pw);
-          setAuthed(true);
+  return (
+    <>
+      <style>{CSS}</style>
+      {checking ? (
+        <div className="min-h-screen bg-[#0D0A16]" />
+      ) : authed ? (
+        <Portal password={password} />
+      ) : (
+        <Gate
+          onPass={(pw) => {
+            sessionStorage.setItem(AUTH_KEY, pw);
+            setPassword(pw);
+            setAuthed(true);
+          }}
+        />
+      )}
+    </>
+  );
+}
+
+// ─────────────────────────── общие детали оболочки ───────────────────────────
+
+function Glow() {
+  return (
+    <>
+      <div
+        aria-hidden
+        className="pointer-events-none absolute -right-40 -top-56 h-[640px] w-[640px] rounded-full"
+        style={{
+          background:
+            "radial-gradient(circle at 40% 40%, rgba(113,25,255,.42), rgba(113,25,255,0) 62%)",
         }}
       />
-    );
-  }
-  return <Portal password={password} />;
+      <div
+        aria-hidden
+        className="pointer-events-none absolute -left-52 top-24 h-[520px] w-[520px] rounded-full"
+        style={{
+          background:
+            "radial-gradient(circle at 50% 50%, rgba(0,195,200,.16), rgba(0,195,200,0) 66%)",
+        }}
+      />
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-x-0 bottom-0 h-40"
+        style={{ background: "linear-gradient(to bottom, rgba(13,10,22,0), rgba(13,10,22,.9))" }}
+      />
+    </>
+  );
+}
+
+function LogoMark({ size = "md" }: { size?: "sm" | "md" }) {
+  const box = size === "sm" ? "h-9 w-9 text-[10px]" : "h-11 w-11 text-[11px]";
+  return (
+    <div
+      className={`${box} pd-display grid shrink-0 place-items-center rounded-xl border border-white/15 bg-white/[0.07] font-extrabold tracking-[0.04em] text-white backdrop-blur`}
+    >
+      АМР
+    </div>
+  );
 }
 
 // ─────────────────────────── пароль ───────────────────────────
@@ -174,117 +254,58 @@ function Gate({ onPass }: { onPass: (pw: string) => void }) {
   };
 
   return (
-    <main
-      style={{
-        minHeight: "100vh",
-        background: C.deep,
-        fontFamily: "var(--font-mc-body), sans-serif",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        padding: 24,
-      }}
-    >
-      <form
-        onSubmit={submit}
-        style={{
-          background: "#fff",
-          borderRadius: 12,
-          padding: "36px 32px",
-          width: "100%",
-          maxWidth: 420,
-          boxShadow: "0 24px 60px rgba(0,0,0,.25)",
-        }}
-      >
-        <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 22 }}>
-          <LogoMark />
-          <div style={{ fontSize: 11, letterSpacing: ".08em", color: C.grey, fontWeight: 700 }}>
-            ДЕМО · РАСШИФРОВКА БАК-ПОСЕВА
+    <main className="relative flex min-h-screen items-center overflow-hidden bg-[#0D0A16] px-6 py-16">
+      <Glow />
+      <div className="relative mx-auto grid w-full max-w-[1000px] gap-14 lg:grid-cols-12 lg:items-center">
+        <div className="lg:col-span-6">
+          <div className="mb-8 flex items-center gap-3">
+            <LogoMark size="sm" />
+            <span className="pd-eyebrow text-white/45">портал о антибиотикорезистентности</span>
           </div>
+          <h1 className="pd-display text-[38px] font-extrabold leading-[1.06] text-white sm:text-[46px]">
+            Демо расшифровки
+            <br />
+            бак-посева
+          </h1>
+          <p className="mt-6 max-w-[42ch] text-[15.5px] leading-relaxed text-white/55">
+            Закрытая сборка для команды Med-Click. Страница не индексируется, доступ по паролю.
+          </p>
         </div>
-        <h1
-          style={{
-            fontFamily: "var(--font-mc-head), sans-serif",
-            fontSize: 24,
-            fontWeight: 800,
-            color: C.ink,
-            margin: "0 0 8px",
-          }}
+
+        <form
+          onSubmit={submit}
+          className="rounded-2xl border border-white/10 bg-white/[0.055] p-8 backdrop-blur-xl lg:col-span-6"
+          style={{ boxShadow: "0 30px 80px -30px rgba(0,0,0,.75)" }}
         >
-          Демо закрыто паролем
-        </h1>
-        <p style={{ fontSize: 14, color: C.grey, margin: "0 0 22px", lineHeight: 1.5 }}>
-          Страница не индексируется и доступна только по паролю.
-        </p>
-        <input
-          type="password"
-          value={value}
-          onChange={(e) => setValue(e.target.value)}
-          placeholder="Пароль"
-          autoFocus
-          style={{
-            width: "100%",
-            padding: "14px 16px",
-            fontSize: 15,
-            border: `1px solid ${error ? "#AE2018" : C.line}`,
-            borderRadius: 8,
-            outline: "none",
-            fontFamily: "inherit",
-          }}
-        />
-        {error && (
-          <div style={{ color: "#AE2018", fontSize: 13, marginTop: 8 }}>{error}</div>
-        )}
-        <button
-          type="submit"
-          disabled={busy || !value}
-          style={{
-            marginTop: 18,
-            width: "100%",
-            padding: "15px 24px",
-            background: busy || !value ? "#C9BCE8" : C.purple,
-            color: "#fff",
-            border: "none",
-            borderRadius: 8,
-            fontSize: 12,
-            fontWeight: 700,
-            letterSpacing: ".02em",
-            cursor: busy || !value ? "default" : "pointer",
-            fontFamily: "inherit",
-          }}
-        >
-          {busy ? "ПРОВЕРЯЕМ…" : "ВОЙТИ"}
-        </button>
-      </form>
+          <label htmlFor="pd-pw" className="pd-eyebrow block text-white/45">
+            Пароль доступа
+          </label>
+          <input
+            id="pd-pw"
+            type="password"
+            value={value}
+            onChange={(e) => setValue(e.target.value)}
+            autoFocus
+            className={`mt-3 w-full rounded-xl border bg-white/[0.04] px-4 py-3.5 text-[15px] text-white outline-none placeholder:text-white/25 focus:border-[#00C3C8]/50 ${
+              error ? "border-[#C2665C]/60" : "border-white/12"
+            }`}
+            placeholder="••••••••"
+          />
+          {error && <p className="mt-3 text-[13px] text-[#E7A79F]">{error}</p>}
+          <button
+            type="submit"
+            disabled={busy || !value}
+            className="pd-btn pd-eyebrow mt-6 w-full rounded-xl bg-white px-6 py-4 text-[#15131B] hover:bg-white/90 disabled:cursor-default disabled:border disabled:border-white/10 disabled:bg-white/[0.06] disabled:text-white/30"
+          >
+            {busy ? "проверяем…" : "войти"}
+          </button>
+        </form>
+      </div>
     </main>
   );
 }
 
 // ─────────────────────────── макет портала ───────────────────────────
-
-function LogoMark() {
-  return (
-    <div
-      style={{
-        width: 38,
-        height: 38,
-        borderRadius: 8,
-        background: `linear-gradient(135deg, ${C.teal}, ${C.purple})`,
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        color: "#fff",
-        fontFamily: "var(--font-mc-head), sans-serif",
-        fontWeight: 800,
-        fontSize: 13,
-        letterSpacing: ".02em",
-        flexShrink: 0,
-      }}
-    >
-      АМР
-    </div>
-  );
-}
 
 function Portal({ password }: { password: string }) {
   const [report, setReport] = useState<PosevReport | null>(null);
@@ -301,9 +322,7 @@ function Portal({ password }: { password: string }) {
   useEffect(() => {
     if (!busy) return;
     setStage(0);
-    const id = setInterval(() => {
-      setStage((s) => (s < STAGES.length - 1 ? s + 1 : s));
-    }, 3200);
+    const id = setInterval(() => setStage((s) => (s < STAGES.length - 1 ? s + 1 : s)), 3200);
     return () => clearInterval(id);
   }, [busy]);
 
@@ -321,9 +340,7 @@ function Portal({ password }: { password: string }) {
         const res = await fetch("/api/v1/demo/posev", { method: "POST", body: form });
         const data = (await res.json()) as ApiOk | ApiReject | { detail?: string };
         if (!res.ok) {
-          throw new Error(
-            ("detail" in data && data.detail) || "Не удалось обработать файл"
-          );
+          throw new Error(("detail" in data && data.detail) || "Не удалось обработать файл");
         }
         if ("ok" in data && data.ok) {
           setReport(data.report);
@@ -354,240 +371,127 @@ function Portal({ password }: { password: string }) {
   );
 
   return (
-    <main
-      style={{
-        fontFamily: "var(--font-mc-body), sans-serif",
-        color: C.ink,
-        background: "#fff",
-        minHeight: "100vh",
-      }}
-    >
-      {/* плашка: это макет, а не живой портал */}
-      <div
-        style={{
-          background: C.ink,
-          color: "rgba(255,255,255,.72)",
-          fontSize: 12,
-          padding: "8px 20px",
-          textAlign: "center",
-        }}
-      >
-        Демо-макет для Med-Click · название и логотип портала — заглушка · движок расшифровки —
-        «Мой Анализ»
-      </div>
-
+    <main className="min-h-screen bg-[#FAF9F8] text-[#15131B]">
       {/* ── шапка + герой: один экран окружения портала ── */}
-      <section style={{ background: C.deep, color: "#fff", position: "relative", overflow: "hidden" }}>
-        <div
-          aria-hidden
-          style={{
-            position: "absolute",
-            right: -180,
-            top: -120,
-            width: 620,
-            height: 620,
-            borderRadius: "50%",
-            background: "radial-gradient(circle at 30% 30%, rgba(0,195,200,.35), transparent 62%)",
-            pointerEvents: "none",
-          }}
-        />
-        <div style={{ maxWidth: 1240, margin: "0 auto", padding: "0 24px", position: "relative" }}>
-          <header
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: 26,
-              padding: "22px 0",
-              flexWrap: "wrap",
-            }}
-          >
-            <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+      {/* Герой держит ровно один экран: до загрузки бланка светлая зона отчёта
+          не должна показываться обрезком под сгибом. */}
+      <section className="relative flex min-h-[100svh] flex-col overflow-hidden bg-[#0D0A16] text-white">
+        <Glow />
+
+        <div className="relative border-b border-white/[0.06] bg-black/25">
+          <p className="mx-auto max-w-[1240px] px-6 py-2.5 text-[11.5px] text-white/40 lg:px-10">
+            Демо-макет для Med-Click · название и логотип портала — заглушка · движок расшифровки —
+            «Мой Анализ»
+          </p>
+        </div>
+
+        <div className="relative mx-auto flex w-full max-w-[1240px] flex-1 flex-col px-6 lg:px-10">
+          <header className="flex flex-wrap items-center gap-x-10 gap-y-5 py-7">
+            <div className="flex items-center gap-3.5">
               <LogoMark />
               <div>
-                <div
-                  style={{
-                    fontFamily: "var(--font-mc-head), sans-serif",
-                    fontWeight: 800,
-                    fontSize: 15,
-                    letterSpacing: ".04em",
-                  }}
-                >
+                <div className="pd-display text-[13.5px] font-extrabold tracking-[0.06em] text-white">
                   ПОРТАЛ О АНТИБИОТИКОРЕЗИСТЕНТНОСТИ
                 </div>
-                <div style={{ fontSize: 11, color: "rgba(255,255,255,.55)", marginTop: 2 }}>
-                  рабочее название · макет
-                </div>
+                <div className="mt-1 text-[11px] text-white/35">рабочее название · макет</div>
               </div>
             </div>
-            <nav
-              style={{
-                display: "flex",
-                gap: 22,
-                fontSize: 13,
-                fontWeight: 500,
-                color: "rgba(255,255,255,.86)",
-                marginLeft: "auto",
-                flexWrap: "wrap",
-              }}
-            >
+
+            <nav className="ml-auto flex flex-wrap items-center gap-7 text-[13px]">
               {["О проблеме", "Антибиотики", "Бактериофаги", "Расшифровать анализ", "Врачам"].map(
                 (item, idx) => (
                   <span
                     key={item}
-                    style={{
-                      cursor: "default",
-                      borderBottom: idx === 3 ? `2px solid ${C.teal}` : "2px solid transparent",
-                      paddingBottom: 3,
-                    }}
+                    className={`pd-nav-link cursor-default border-b pb-1 ${
+                      idx === 3
+                        ? "border-[#00C3C8] text-white"
+                        : "border-transparent text-white/55 hover:text-white/85"
+                    }`}
                   >
                     {item}
                   </span>
                 )
               )}
             </nav>
+
             <button
               type="button"
-              style={{
-                padding: "13px 22px",
-                background: C.purple,
-                color: "#fff",
-                border: "none",
-                borderRadius: 8,
-                fontSize: 12,
-                fontWeight: 700,
-                cursor: "default",
-                fontFamily: "inherit",
-              }}
+              className="pd-btn pd-eyebrow cursor-default rounded-xl border border-white/15 bg-white/[0.06] px-5 py-3.5 text-white/85 backdrop-blur"
             >
-              ЛИЧНЫЙ КАБИНЕТ
+              личный кабинет
             </button>
           </header>
 
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "minmax(300px, 1fr) minmax(320px, 480px)",
-              gap: 48,
-              alignItems: "start",
-              padding: "34px 0 56px",
-            }}
-            className="posev-hero"
-          >
-            <div>
-              <div
-                style={{
-                  display: "inline-block",
-                  background: "rgba(0,195,200,.18)",
-                  border: `1px solid rgba(0,195,200,.5)`,
-                  color: "#9CF6F8",
-                  fontSize: 11,
-                  fontWeight: 700,
-                  letterSpacing: ".06em",
-                  padding: "6px 12px",
-                  borderRadius: 6,
-                  marginBottom: 18,
-                }}
-              >
-                СЕРВИС ПОРТАЛА
+          <div className="grid flex-1 gap-14 pb-20 pt-6 lg:grid-cols-12 lg:gap-16 lg:content-center">
+            <div className="lg:col-span-7">
+              <div className="mb-7 flex items-center gap-3">
+                <span className="h-px w-9 bg-[#00C3C8]" />
+                <span className="pd-eyebrow text-[#8FE9EB]">сервис портала</span>
               </div>
-              <h1
-                style={{
-                  fontFamily: "var(--font-mc-head), sans-serif",
-                  fontWeight: 800,
-                  fontSize: 40,
-                  lineHeight: 1.12,
-                  margin: "0 0 16px",
-                }}
-              >
+
+              <h1 className="pd-display text-[34px] font-extrabold leading-[1.05] text-white sm:text-[46px] lg:text-[58px] lg:leading-[1.03]">
                 Разберитесь
                 <br />
                 в своём бак-посеве
               </h1>
-              <p
-                style={{
-                  fontSize: 16,
-                  lineHeight: 1.6,
-                  color: "rgba(255,255,255,.82)",
-                  margin: "0 0 26px",
-                  maxWidth: 480,
-                }}
-              >
-                Загрузите бланк посева — сервис объяснит, что за микроб выделен, что означают
-                буквы S, I и R в таблице чувствительности и о чём говорит устойчивость. Понятным
-                языком и без назначений: препарат подбирает врач.
+
+              <p className="mt-7 max-w-[48ch] text-[16.5px] leading-[1.7] text-white/60">
+                Загрузите бланк посева — сервис объяснит, что за микроб выделен, что означают буквы
+                S, I и R в таблице чувствительности и о чём говорит устойчивость. Понятным языком и
+                без назначений: препарат подбирает врач.
               </p>
-              <ul style={{ listStyle: "none", padding: 0, margin: 0, display: "grid", gap: 10 }}>
+
+              <dl className="mt-12 grid gap-y-7 border-t border-white/10 pt-8 sm:grid-cols-3 sm:gap-x-8">
                 {[
-                  "Файл не сохраняется — обрабатывается и удаляется",
-                  "Имя пациента и лаборатория не извлекаются",
-                  "Категории чувствительности — по критериям EUCAST",
-                ].map((t) => (
-                  <li
-                    key={t}
-                    style={{
-                      display: "flex",
-                      gap: 10,
-                      fontSize: 14,
-                      color: "rgba(255,255,255,.9)",
-                      alignItems: "flex-start",
-                    }}
-                  >
-                    <span style={{ color: C.teal, fontWeight: 700, lineHeight: 1.5 }}>✓</span>
-                    <span style={{ lineHeight: 1.5 }}>{t}</span>
-                  </li>
+                  ["Приватность", "Файл обрабатывается и удаляется, не сохраняется"],
+                  ["Обезличивание", "Имя пациента и лаборатория не извлекаются"],
+                  ["Стандарт", "Категории чувствительности — по критериям EUCAST"],
+                ].map(([k, v], i) => (
+                  <div key={k} className={i ? "sm:border-l sm:border-white/10 sm:pl-8" : ""}>
+                    <dt className="pd-eyebrow text-white/40">{k}</dt>
+                    <dd className="mt-2.5 text-[13.5px] leading-relaxed text-white/70">{v}</dd>
+                  </div>
                 ))}
-              </ul>
+              </dl>
             </div>
 
-            <Widget
-              busy={busy}
-              stage={stage}
-              fileName={fileName}
-              error={error}
-              rejected={rejected}
-              hasReport={!!report}
-              onFile={analyze}
-              onSample={loadSample}
-            />
+            <div className="lg:col-span-5">
+              <Widget
+                busy={busy}
+                stage={stage}
+                fileName={fileName}
+                error={error}
+                rejected={rejected}
+                hasReport={!!report}
+                onFile={analyze}
+                onSample={loadSample}
+              />
+            </div>
           </div>
         </div>
       </section>
 
       {report && (
         <div ref={resultRef}>
-          <Result report={report} meta={meta} onReset={() => {
-            setReport(null);
-            setMeta(null);
-            setFileName(null);
-            window.scrollTo({ top: 0, behavior: "smooth" });
-          }} />
+          <Result
+            report={report}
+            meta={meta}
+            onReset={() => {
+              setReport(null);
+              setMeta(null);
+              setFileName(null);
+              window.scrollTo({ top: 0, behavior: "smooth" });
+            }}
+          />
         </div>
       )}
 
-      <footer
-        style={{
-          background: C.bg,
-          borderTop: `1px solid ${C.line}`,
-          padding: "26px 24px",
-          fontSize: 12.5,
-          color: C.grey,
-          textAlign: "center",
-          lineHeight: 1.6,
-        }}
-      >
-        Демонстрационная сборка. Виджет встраивается в портал как iframe/скрипт или вызывается по
-        API — оформление подгоняется под финальный дизайн.
+      <footer className="border-t border-black/[0.07] px-6 py-10 lg:px-10">
+        <p className="mx-auto max-w-[1240px] text-[12.5px] leading-relaxed text-[#8A8794]">
+          Демонстрационная сборка. Виджет встраивается в портал как iframe или вызывается по API —
+          оформление подгоняется под финальный дизайн.
+        </p>
       </footer>
-
-      <style>{`
-        @media (max-width: 900px) {
-          .posev-hero { grid-template-columns: 1fr !important; gap: 28px !important; }
-          .posev-hero h1 { font-size: 30px !important; }
-        }
-        @media print {
-          .posev-noprint { display: none !important; }
-        }
-      `}</style>
     </main>
   );
 }
@@ -618,80 +522,47 @@ function Widget({
 
   return (
     <div
-      className="posev-noprint"
-      style={{
-        background: "#fff",
-        borderRadius: 14,
-        padding: 26,
-        color: C.ink,
-        boxShadow: "0 26px 60px rgba(0,0,0,.28)",
-      }}
+      className="pd-noprint rounded-2xl border border-white/10 bg-white/[0.055] p-7 backdrop-blur-xl"
+      style={{ boxShadow: "0 30px 80px -30px rgba(0,0,0,.7)" }}
     >
-      <div
-        style={{
-          fontFamily: "var(--font-mc-head), sans-serif",
-          fontWeight: 800,
-          fontSize: 19,
-          marginBottom: 4,
-        }}
-      >
-        Расшифровка бак-посева
-      </div>
-      <div style={{ fontSize: 13, color: C.grey, marginBottom: 18 }}>
-        PDF или фото бланка · до 20 МБ
+      <div className="flex items-baseline justify-between gap-4">
+        <h2 className="pd-display text-[19px] font-extrabold text-white">Расшифровка посева</h2>
+        <span className="text-[11.5px] text-white/35">до 20 МБ</span>
       </div>
 
       {busy ? (
-        <div style={{ padding: "6px 0 4px" }}>
-          <div
-            style={{
-              height: 6,
-              background: C.bg,
-              borderRadius: 99,
-              overflow: "hidden",
-              marginBottom: 18,
-            }}
-          >
+        <div className="mt-7">
+          <div className="h-[3px] w-full overflow-hidden rounded-full bg-white/10">
             <div
+              className="h-full rounded-full"
               style={{
-                height: "100%",
                 width: `${Math.min(92, (stage + 1) * (100 / STAGES.length))}%`,
-                background: `linear-gradient(90deg, ${C.teal}, ${C.purple})`,
-                borderRadius: 99,
-                transition: "width .6s ease",
+                background: "linear-gradient(90deg, #00C3C8, #7119FF)",
+                transition: "width .7s cubic-bezier(.4,0,.2,1)",
               }}
             />
           </div>
-          <div style={{ display: "grid", gap: 9 }}>
+          <ul className="mt-7 space-y-3.5">
             {STAGES.map((s, i) => (
-              <div
+              <li
                 key={s}
-                style={{
-                  display: "flex",
-                  gap: 9,
-                  fontSize: 13.5,
-                  color: i <= stage ? C.ink : "#B6B6BE",
-                  alignItems: "center",
-                }}
+                className={`flex items-center gap-3 text-[13.5px] ${
+                  i <= stage ? "text-white/85" : "text-white/25"
+                }`}
               >
                 <span
-                  style={{
-                    width: 16,
-                    textAlign: "center",
-                    color: i < stage ? C.teal : i === stage ? C.purple : "#D5D5DC",
-                    fontWeight: 700,
-                  }}
-                >
-                  {i < stage ? "✓" : "•"}
-                </span>
+                  className={`h-1.5 w-1.5 shrink-0 rounded-full ${
+                    i < stage ? "bg-[#00C3C8]" : i === stage ? "bg-[#A472FF]" : "bg-white/20"
+                  }`}
+                />
                 {s}
-              </div>
+              </li>
             ))}
-          </div>
+          </ul>
           {fileName && (
-            <div style={{ fontSize: 12, color: C.grey, marginTop: 16 }}>
-              Файл: {fileName} — обрабатывается в памяти, не сохраняется
-            </div>
+            <p className="mt-7 border-t border-white/10 pt-4 text-[11.5px] leading-relaxed text-white/35">
+              {fileName} — обрабатывается в памяти, не сохраняется
+            </p>
           )}
         </div>
       ) : (
@@ -709,42 +580,34 @@ function Widget({
               if (f) onFile(f);
             }}
             onClick={() => inputRef.current?.click()}
-            style={{
-              border: `2px dashed ${drag ? C.purple : "#D8D8E0"}`,
-              background: drag ? "#F6F1FF" : "#FCFCFD",
-              borderRadius: 10,
-              padding: "30px 18px",
-              textAlign: "center",
-              cursor: "pointer",
-              transition: "all .15s ease",
-            }}
+            className={`pd-drop mt-7 cursor-pointer rounded-xl border border-dashed px-6 py-10 text-center ${
+              drag
+                ? "border-[#00C3C8]/60 bg-white/[0.07]"
+                : "border-white/15 bg-white/[0.025] hover:border-white/25 hover:bg-white/[0.045]"
+            }`}
           >
-            <div
-              style={{
-                width: 46,
-                height: 46,
-                margin: "0 auto 12px",
-                borderRadius: 12,
-                background: "#F1EBFF",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-              }}
+            <svg
+              width="26"
+              height="26"
+              viewBox="0 0 24 24"
+              fill="none"
+              aria-hidden
+              className="mx-auto mb-4"
             >
-              {/* Иконка «чашка Петри» вектором: эмодзи 🧫 на разных ОС рисуется
-                  по-своему и в макете выглядело мутным пятном. */}
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" aria-hidden>
-                <circle cx="12" cy="12" r="8.4" stroke={C.purple} strokeWidth="1.7" />
-                <path d="M4.4 9.6h15.2" stroke={C.purple} strokeWidth="1.7" strokeLinecap="round" />
-                <circle cx="9.4" cy="14.6" r="1.5" fill={C.teal} />
-                <circle cx="14.2" cy="13.2" r="1.1" fill={C.teal} />
-                <circle cx="12.6" cy="16.8" r="0.9" fill={C.purple} opacity="0.5" />
-              </svg>
-            </div>
-            <div style={{ fontWeight: 700, fontSize: 14.5, marginBottom: 4 }}>
-              Перетащите бланк или нажмите
-            </div>
-            <div style={{ fontSize: 12.5, color: C.grey }}>PDF, JPG, PNG, HEIC</div>
+              <circle cx="12" cy="12" r="8.4" stroke="rgba(255,255,255,.5)" strokeWidth="1.4" />
+              <path
+                d="M4.4 9.6h15.2"
+                stroke="rgba(255,255,255,.5)"
+                strokeWidth="1.4"
+                strokeLinecap="round"
+              />
+              <circle cx="9.4" cy="14.6" r="1.5" fill="#00C3C8" />
+              <circle cx="14.2" cy="13.2" r="1.1" fill="#A472FF" />
+            </svg>
+            <p className="text-[14.5px] font-semibold text-white/90">
+              Перетащите бланк или выберите файл
+            </p>
+            <p className="mt-1.5 text-[12px] text-white/35">PDF, JPG, PNG, HEIC</p>
             <input
               ref={inputRef}
               type="file"
@@ -754,60 +617,41 @@ function Widget({
                 if (f) onFile(f);
                 e.target.value = "";
               }}
-              style={{ display: "none" }}
+              className="hidden"
             />
           </div>
 
-          <div style={{ marginTop: 16 }}>
-            <div style={{ fontSize: 12, color: C.grey, marginBottom: 8 }}>
-              Нет бланка под рукой — откройте образец:
-            </div>
-            <div style={{ display: "grid", gap: 8 }}>
+          <div className="mt-7">
+            <p className="pd-eyebrow text-white/35">образцы бланков</p>
+            <div className="mt-3.5 space-y-2">
               {SAMPLES.map((s) => (
                 <button
                   key={s.file}
                   type="button"
                   onClick={() => onSample(s.file)}
-                  style={{
-                    textAlign: "left",
-                    padding: "11px 14px",
-                    border: `1px solid ${C.line}`,
-                    background: "#fff",
-                    borderRadius: 8,
-                    fontSize: 13,
-                    fontWeight: 600,
-                    color: C.ink,
-                    cursor: "pointer",
-                    fontFamily: "inherit",
-                  }}
+                  className="pd-sample flex w-full items-center justify-between rounded-xl border border-white/10 bg-white/[0.03] px-4 py-3.5 text-left"
                 >
-                  {s.label}
+                  <span className="text-[13.5px] font-semibold text-white/90">{s.label}</span>
+                  <span className="text-[11.5px] text-white/40">{s.meta}</span>
                 </button>
               ))}
             </div>
           </div>
 
           {(error || rejected) && (
-            <div
-              style={{
-                marginTop: 16,
-                padding: "12px 14px",
-                background: rejected ? "#FFF7E6" : "#FDE7E7",
-                border: `1px solid ${rejected ? "#F0D9A8" : "#F3C7C4"}`,
-                borderRadius: 8,
-                fontSize: 13,
-                lineHeight: 1.5,
-                color: rejected ? "#8A5200" : "#AE2018",
-              }}
+            <p
+              className={`mt-6 rounded-xl border px-4 py-3.5 text-[13px] leading-relaxed ${
+                rejected
+                  ? "border-[#B08A3C]/35 bg-[#B08A3C]/10 text-[#EBD9AE]"
+                  : "border-[#C2665C]/35 bg-[#C2665C]/10 text-[#EFB8B0]"
+              }`}
             >
               {rejected || error}
-            </div>
+            </p>
           )}
 
           {hasReport && (
-            <div style={{ marginTop: 14, fontSize: 12.5, color: C.grey }}>
-              Расшифровка ниже ↓
-            </div>
+            <p className="mt-6 text-[12.5px] text-white/35">Расшифровка ниже ↓</p>
           )}
         </>
       )}
@@ -817,63 +661,41 @@ function Widget({
 
 // ─────────────────────────── результат ───────────────────────────
 
-function Card({
-  title,
-  children,
-  accent,
-}: {
-  title?: string;
-  children: React.ReactNode;
-  accent?: string;
-}) {
+function Chip({ v }: { v: Verdict }) {
+  const st = V[v];
   return (
-    <section
-      style={{
-        background: "#fff",
-        border: `1px solid ${C.line}`,
-        borderLeft: accent ? `4px solid ${accent}` : `1px solid ${C.line}`,
-        borderRadius: 10,
-        padding: "20px 22px",
-      }}
+    <span
+      className={`inline-flex items-center gap-2 rounded-lg py-1 pl-1 pr-2.5 text-[12px] font-semibold ${st.chip}`}
     >
-      {title && (
-        <h3
-          style={{
-            fontFamily: "var(--font-mc-head), sans-serif",
-            fontSize: 15,
-            fontWeight: 800,
-            margin: "0 0 12px",
-            letterSpacing: ".01em",
-          }}
-        >
-          {title}
-        </h3>
-      )}
-      {children}
-    </section>
+      <span
+        className={`grid h-[19px] w-[19px] place-items-center rounded-md text-[11px] font-extrabold ${st.tile}`}
+      >
+        {v}
+      </span>
+      {st.label}
+    </span>
   );
 }
 
-function Chip({ v }: { v: Verdict }) {
-  const st = VERDICT_STYLE[v];
+function Section({
+  id,
+  eyebrow,
+  title,
+  children,
+}: {
+  id: string;
+  eyebrow: string;
+  title: string;
+  children: React.ReactNode;
+}) {
   return (
-    <span
-      style={{
-        display: "inline-flex",
-        alignItems: "center",
-        gap: 6,
-        background: st.bg,
-        color: st.fg,
-        borderRadius: 6,
-        padding: "4px 9px",
-        fontSize: 12,
-        fontWeight: 700,
-        whiteSpace: "nowrap",
-      }}
-    >
-      <b style={{ fontSize: 13 }}>{v}</b>
-      <span style={{ fontWeight: 600 }}>{st.label}</span>
-    </span>
+    <section id={id} className="scroll-mt-8">
+      <div className="mb-6 border-t border-black/[0.09] pt-5">
+        <p className="pd-eyebrow text-[#A5A2AE]">{eyebrow}</p>
+        <h2 className="pd-display mt-2 text-[24px] font-extrabold leading-tight">{title}</h2>
+      </div>
+      {children}
+    </section>
   );
 }
 
@@ -887,408 +709,333 @@ function Result({
   onReset: () => void;
 }) {
   const r = report.resistance || {};
+  const tested = r.tested || 0;
   const sexLabel =
     report.patient?.sex === "male" ? "мужской" : report.patient?.sex === "female" ? "женский" : null;
+  const first = report.pathogens?.[0];
+
+  const jumps = useMemo(
+    () =>
+      [
+        report.plain_summary && ["summary", "Кратко"],
+        report.pathogens?.length && ["growth", "Что выросло"],
+        report.antibiogram?.length && ["abx", "Чувствительность"],
+        tested > 0 && ["resistance", "Устойчивость"],
+        report.phages?.length && ["phages", "Бактериофаги"],
+        report.sir_explainer?.length && ["sir", "S, I и R"],
+        report.amr_notes?.length && ["amr", "Про устойчивость"],
+        (report.questions_for_doctor?.length || report.red_flags?.length) && ["ask", "Врачу"],
+      ].filter(Boolean) as [string, string][],
+    [report, tested]
+  );
 
   return (
-    <div style={{ background: C.bg, padding: "40px 24px 56px" }}>
-      <div style={{ maxWidth: 1000, margin: "0 auto", display: "grid", gap: 16 }}>
-        {/* шапка результата */}
-        <div
-          style={{
-            background: "#fff",
-            border: `1px solid ${C.line}`,
-            borderRadius: 10,
-            padding: "22px 24px",
-          }}
-        >
-          <div
-            style={{
-              display: "flex",
-              justifyContent: "space-between",
-              gap: 16,
-              flexWrap: "wrap",
-              alignItems: "flex-start",
-            }}
-          >
-            <div>
-              <h2
-                style={{
-                  fontFamily: "var(--font-mc-head), sans-serif",
-                  fontSize: 22,
-                  fontWeight: 800,
-                  margin: "0 0 6px",
-                }}
-              >
-                {report.doc_kind || "Бактериологический посев"}
-              </h2>
-              <div style={{ fontSize: 13.5, color: C.grey, lineHeight: 1.7 }}>
-                {report.material && <>Биоматериал: {report.material}<br /></>}
-                {report.collected_at && <>Дата взятия: {report.collected_at} · </>}
-                {sexLabel && <>пол: {sexLabel}</>}
-                {report.patient?.age != null && <>, возраст: {report.patient.age}</>}
+    <div className="pd-fade border-t border-black/[0.07] bg-[#FAF9F8]">
+      <div className="mx-auto grid max-w-[1240px] gap-12 px-6 py-16 lg:grid-cols-[268px_minmax(0,1fr)] lg:gap-16 lg:px-10">
+        {/* ── липкая колонка-сводка ── */}
+        {/* min-w-0 обязателен: без него грид-трек раздувается под min-w таблицы
+            антибиотикограммы и на мобильном появляется горизонтальный скролл
+            всей страницы вместо прокрутки внутри таблицы. */}
+        <aside className="pd-rail min-w-0 lg:sticky lg:top-8 lg:self-start">
+          <p className="pd-eyebrow text-[#A5A2AE]">результат</p>
+          <h2 className="pd-display mt-2.5 text-[19px] font-extrabold leading-snug">
+            {report.doc_kind || "Бактериологический посев"}
+          </h2>
+
+          <dl className="mt-6 space-y-3 border-t border-black/[0.09] pt-5 text-[13px]">
+            {report.material && (
+              <div>
+                <dt className="text-[#8A8794]">Биоматериал</dt>
+                <dd className="mt-0.5 leading-snug">{report.material}</dd>
               </div>
-            </div>
-            {meta?.elapsed_ms != null && (
-              <span className="posev-noprint" style={{ fontSize: 11.5, color: C.grey }}>
-                разобрано за {(meta.elapsed_ms / 1000).toFixed(1)} с
-              </span>
             )}
-          </div>
-        </div>
+            {report.collected_at && (
+              <div>
+                <dt className="text-[#8A8794]">Дата взятия</dt>
+                <dd className="mt-0.5">{report.collected_at}</dd>
+              </div>
+            )}
+            {(sexLabel || report.patient?.age != null) && (
+              <div>
+                <dt className="text-[#8A8794]">Пациент</dt>
+                <dd className="mt-0.5">
+                  {[sexLabel, report.patient?.age != null ? `${report.patient.age} лет` : null]
+                    .filter(Boolean)
+                    .join(", ")}
+                </dd>
+              </div>
+            )}
+          </dl>
 
-        {report.plain_summary && (
-          <Card title="Что показал посев" accent={C.purple}>
-            <p style={{ margin: 0, fontSize: 15, lineHeight: 1.65 }}>{report.plain_summary}</p>
-          </Card>
-        )}
-
-        {/* возбудители */}
-        {!!report.pathogens?.length && (
-          <Card title="Что выросло">
-            <div style={{ display: "grid", gap: 14 }}>
-              {report.pathogens.map((p, i) => (
-                <div
-                  key={i}
-                  style={{
-                    borderTop: i ? `1px solid ${C.line}` : "none",
-                    paddingTop: i ? 14 : 0,
-                  }}
-                >
-                  <div
-                    style={{
-                      display: "flex",
-                      gap: 10,
-                      alignItems: "baseline",
-                      flexWrap: "wrap",
-                      marginBottom: 6,
-                    }}
-                  >
-                    <span style={{ fontSize: 17, fontWeight: 700, fontStyle: "italic" }}>
-                      {p.name_latin}
-                    </span>
-                    {p.name_ru && <span style={{ color: C.grey, fontSize: 14 }}>{p.name_ru}</span>}
-                    {p.count && (
-                      <span
-                        style={{
-                          marginLeft: "auto",
-                          background: C.bg,
-                          borderRadius: 6,
-                          padding: "4px 10px",
-                          fontSize: 13,
-                          fontWeight: 700,
-                        }}
-                      >
-                        {p.count}
+          {tested > 0 && (
+            <div className="mt-7 border-t border-black/[0.09] pt-5">
+              <p className="pd-eyebrow text-[#A5A2AE]">из {tested} препаратов</p>
+              <div className="mt-4 space-y-2.5">
+                {(["S", "I", "R"] as Verdict[]).map((v) => {
+                  const val = (v === "S" ? r.s : v === "I" ? r.i : r.r) ?? 0;
+                  return (
+                    <div key={v} className="flex items-center gap-3">
+                      <span className="pd-display w-4 text-[12px] font-extrabold text-[#6B6875]">
+                        {v}
                       </span>
-                    )}
-                  </div>
-                  {p.about && (
-                    <p style={{ margin: "0 0 8px", fontSize: 14, lineHeight: 1.6 }}>{p.about}</p>
-                  )}
-                  {p.significance_text && (
-                    <p style={{ margin: 0, fontSize: 13.5, lineHeight: 1.6, color: C.grey }}>
-                      {p.significance_text}
-                    </p>
-                  )}
-                </div>
-              ))}
-            </div>
-          </Card>
-        )}
-
-        {/* антибиотикограмма */}
-        {!!report.antibiogram?.length &&
-          report.antibiogram.map((group, gi) => (
-            <Card
-              key={gi}
-              title={`Таблица чувствительности${group.pathogen ? ` · ${group.pathogen}` : ""}`}
-            >
-              <div style={{ overflowX: "auto" }}>
-                <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 14 }}>
-                  <thead>
-                    <tr style={{ background: C.bg }}>
-                      {["Препарат", "Класс", "МПК, мг/л", "Категория"].map((h) => (
-                        <th
-                          key={h}
-                          style={{
-                            textAlign: "left",
-                            padding: "10px 12px",
-                            fontSize: 11.5,
-                            fontWeight: 700,
-                            letterSpacing: ".04em",
-                            color: C.grey,
-                            whiteSpace: "nowrap",
-                          }}
-                        >
-                          {h.toUpperCase()}
-                        </th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {(group.items || []).map((it, i) => (
-                      <tr key={i} style={{ borderTop: `1px solid ${C.line}` }}>
-                        <td style={{ padding: "11px 12px", fontWeight: 600 }}>{it.drug}</td>
-                        <td style={{ padding: "11px 12px", color: C.grey, fontSize: 13 }}>
-                          {it.drug_class || "—"}
-                        </td>
-                        <td style={{ padding: "11px 12px", whiteSpace: "nowrap" }}>
-                          {it.mic || "—"}
-                        </td>
-                        <td style={{ padding: "11px 12px" }}>
-                          <Chip v={it.verdict} />
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-              <p style={{ margin: "12px 0 0", fontSize: 12.5, color: C.grey, lineHeight: 1.6 }}>
-                МПК — минимальная подавляющая концентрация. Сравнивать числа МПК между разными
-                препаратами нельзя: у каждого свои пороги.
-              </p>
-            </Card>
-          ))}
-
-        {/* устойчивость */}
-        {(r.tested || 0) > 0 && (
-          <Card title="Картина устойчивости">
-            <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginBottom: 14 }}>
-              {(["S", "I", "R"] as Verdict[]).map((v) => {
-                const val = v === "S" ? r.s : v === "I" ? r.i : r.r;
-                const st = VERDICT_STYLE[v];
-                return (
-                  <div
-                    key={v}
-                    style={{
-                      background: st.bg,
-                      color: st.fg,
-                      borderRadius: 8,
-                      padding: "12px 16px",
-                      minWidth: 96,
-                    }}
-                  >
-                    <div style={{ fontSize: 24, fontWeight: 800, lineHeight: 1 }}>{val ?? 0}</div>
-                    <div style={{ fontSize: 10.5, fontWeight: 700, marginTop: 5, letterSpacing: ".03em" }}>
-                      {v} · {st.short}
+                      <span className="h-[5px] flex-1 overflow-hidden rounded-full bg-black/[0.06]">
+                        <span
+                          className={`block h-full rounded-full ${V[v].bar}`}
+                          style={{ width: `${tested ? (val / tested) * 100 : 0}%` }}
+                        />
+                      </span>
+                      <span className="w-5 text-right text-[12.5px] font-semibold tabular-nums">
+                        {val}
+                      </span>
                     </div>
-                  </div>
-                );
-              })}
-              <div
-                style={{
-                  background: C.bg,
-                  borderRadius: 8,
-                  padding: "12px 16px",
-                  minWidth: 96,
-                }}
-              >
-                <div style={{ fontSize: 24, fontWeight: 800, lineHeight: 1 }}>{r.tested}</div>
-                <div style={{ fontSize: 11.5, fontWeight: 700, marginTop: 4, color: C.grey }}>
-                  ПРОВЕРЕНО
-                </div>
+                  );
+                })}
               </div>
+              {r.multi_resistant && (
+                <p className="mt-5 rounded-xl bg-[#F8EDEB] px-4 py-3 text-[12.5px] leading-relaxed text-[#8F3A2F]">
+                  Устойчивость к {r.r_classes} классам препаратов — картина множественной
+                  устойчивости.
+                </p>
+              )}
             </div>
-            {r.multi_resistant && (
-              <div
-                style={{
-                  background: "#FDE7E7",
-                  color: "#AE2018",
-                  border: "1px solid #F3C7C4",
-                  borderRadius: 8,
-                  padding: "11px 14px",
-                  fontSize: 13.5,
-                  fontWeight: 600,
-                  marginBottom: 12,
-                }}
-              >
-                Устойчивость к {r.r_classes} разным классам препаратов — это картина
-                множественной устойчивости. Такой результат врач обычно разбирает особенно
-                внимательно.
-              </div>
-            )}
-            {r.text && <p style={{ margin: 0, fontSize: 14, lineHeight: 1.65 }}>{r.text}</p>}
-          </Card>
-        )}
+          )}
 
-        {/* фаги */}
-        {!!report.phages?.length && (
-          <Card title="Чувствительность к бактериофагам" accent={C.teal}>
-            <div style={{ display: "grid", gap: 10 }}>
-              {report.phages.map((p, i) => (
-                <div
-                  key={i}
-                  style={{
-                    display: "flex",
-                    gap: 12,
-                    alignItems: "center",
-                    justifyContent: "space-between",
-                    borderTop: i ? `1px solid ${C.line}` : "none",
-                    paddingTop: i ? 10 : 0,
-                    flexWrap: "wrap",
-                  }}
-                >
-                  <span style={{ fontSize: 14, fontWeight: 600 }}>{p.name}</span>
-                  {p.verdict && <Chip v={p.verdict} />}
-                </div>
-              ))}
-            </div>
-          </Card>
-        )}
-
-        {/* S / I / R */}
-        {!!report.sir_explainer?.length && (
-          <Card title="Что означают S, I и R">
-            <div
-              style={{
-                display: "grid",
-                gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))",
-                gap: 12,
-              }}
-            >
-              {report.sir_explainer.map((e) => {
-                const st = VERDICT_STYLE[e.code] || VERDICT_STYLE.S;
-                return (
-                  <div
-                    key={e.code}
-                    style={{
-                      background: st.bg,
-                      borderRadius: 8,
-                      padding: "14px 16px",
-                    }}
-                  >
-                    <div
-                      style={{
-                        color: st.fg,
-                        fontWeight: 800,
-                        fontSize: 13,
-                        marginBottom: 6,
-                      }}
-                    >
-                      {e.code} — {e.title}
-                    </div>
-                    <div style={{ fontSize: 13.5, lineHeight: 1.6 }}>{e.text}</div>
-                  </div>
-                );
-              })}
-            </div>
-          </Card>
-        )}
-
-        {/* про AMR — ядро портала */}
-        {!!report.amr_notes?.length && (
-          <Card title="Почему это важно знать про устойчивость" accent={C.purple}>
-            <ul style={{ margin: 0, paddingLeft: 20, display: "grid", gap: 10 }}>
-              {report.amr_notes.map((n, i) => (
-                <li key={i} style={{ fontSize: 14, lineHeight: 1.65 }}>
-                  {n}
+          <nav className="pd-noprint mt-7 border-t border-black/[0.09] pt-5">
+            <ul className="space-y-2.5 text-[13px]">
+              {jumps.map(([id, label]) => (
+                <li key={id}>
+                  <a href={`#${id}`} className="pd-jump block text-[#6B6875]">
+                    {label}
+                  </a>
                 </li>
               ))}
             </ul>
-          </Card>
-        )}
+          </nav>
+        </aside>
 
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))",
-            gap: 16,
-          }}
-        >
-          {!!report.questions_for_doctor?.length && (
-            <Card title="О чём спросить врача">
-              <ul style={{ margin: 0, paddingLeft: 20, display: "grid", gap: 8 }}>
-                {report.questions_for_doctor.map((q, i) => (
-                  <li key={i} style={{ fontSize: 13.5, lineHeight: 1.6 }}>
-                    {q}
+        {/* ── колонка отчёта ── */}
+        <div className="min-w-0 space-y-14">
+          {report.plain_summary && (
+            <section id="summary" className="scroll-mt-8">
+              <p className="pd-eyebrow mb-4 text-[#A5A2AE]">кратко</p>
+              <p className="pd-display max-w-[62ch] text-[21px] font-medium leading-[1.5] tracking-[-0.01em]">
+                {report.plain_summary}
+              </p>
+              {meta?.elapsed_ms != null && (
+                <p className="pd-noprint mt-6 text-[11.5px] text-[#A5A2AE]">
+                  разобрано за {(meta.elapsed_ms / 1000).toFixed(1)} с
+                </p>
+              )}
+            </section>
+          )}
+
+          {!!report.pathogens?.length && (
+            <Section id="growth" eyebrow="результат посева" title="Что выросло">
+              <div className="space-y-8">
+                {report.pathogens.map((p, i) => (
+                  <div key={i} className={i ? "border-t border-black/[0.07] pt-8" : ""}>
+                    <div className="flex flex-wrap items-baseline gap-x-4 gap-y-2">
+                      <span className="pd-display text-[22px] font-extrabold italic">
+                        {p.name_latin}
+                      </span>
+                      {p.name_ru && (
+                        <span className="text-[14.5px] text-[#6B6875]">{p.name_ru}</span>
+                      )}
+                      {p.count && (
+                        <span className="ml-auto rounded-lg bg-black/[0.045] px-3 py-1.5 text-[13px] font-semibold tabular-nums">
+                          {p.count}
+                        </span>
+                      )}
+                    </div>
+                    {p.about && (
+                      <p className="mt-4 max-w-[70ch] text-[14.5px] leading-[1.7]">{p.about}</p>
+                    )}
+                    {p.significance_text && (
+                      <p className="mt-3 max-w-[70ch] text-[13.5px] leading-[1.7] text-[#6B6875]">
+                        {p.significance_text}
+                      </p>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </Section>
+          )}
+
+          {!!report.antibiogram?.length &&
+            report.antibiogram.map((group, gi) => (
+              <Section
+                key={gi}
+                id={gi === 0 ? "abx" : `abx-${gi}`}
+                eyebrow="антибиотикограмма"
+                title={`Чувствительность${group.pathogen ? ` · ${group.pathogen}` : ""}`}
+              >
+                <div className="-mx-2 overflow-x-auto px-2">
+                  <table className="w-full min-w-[560px] border-collapse text-[14px]">
+                    <thead>
+                      <tr>
+                        {["Препарат", "Класс", "МПК, мг/л", "Категория"].map((h) => (
+                          <th
+                            key={h}
+                            className="pd-eyebrow whitespace-nowrap pb-3 pr-4 text-left font-semibold text-[#A5A2AE]"
+                          >
+                            {h}
+                          </th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {(group.items || []).map((it, i) => (
+                        <tr key={i} className="pd-row border-t border-black/[0.07]">
+                          <td className="py-3.5 pr-4 font-semibold">{it.drug}</td>
+                          <td className="py-3.5 pr-4 text-[13px] text-[#6B6875]">
+                            {it.drug_class || "—"}
+                          </td>
+                          <td className="py-3.5 pr-4 whitespace-nowrap tabular-nums">
+                            {it.mic || "—"}
+                          </td>
+                          <td className="py-3.5">
+                            <Chip v={it.verdict} />
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+                <p className="mt-5 max-w-[70ch] text-[12.5px] leading-[1.7] text-[#8A8794]">
+                  МПК — минимальная подавляющая концентрация. Сравнивать числа МПК между разными
+                  препаратами нельзя: у каждого свои пороги.
+                </p>
+              </Section>
+            ))}
+
+          {tested > 0 && r.text && (
+            <Section id="resistance" eyebrow="картина изолята" title="Устойчивость">
+              <p className="max-w-[70ch] text-[15px] leading-[1.75]">{r.text}</p>
+            </Section>
+          )}
+
+          {!!report.phages?.length && (
+            <Section id="phages" eyebrow="альтернативные агенты" title="Бактериофаги">
+              <ul>
+                {report.phages.map((p, i) => (
+                  <li
+                    key={i}
+                    className="pd-row flex flex-wrap items-center justify-between gap-4 border-t border-black/[0.07] py-3.5"
+                  >
+                    <span className="text-[14.5px] font-semibold">{p.name}</span>
+                    {p.verdict && <Chip v={p.verdict} />}
                   </li>
                 ))}
               </ul>
-            </Card>
+            </Section>
           )}
-          {!!report.red_flags?.length && (
-            <Card title="Когда к врачу срочно" accent="#AE2018">
-              <ul style={{ margin: 0, paddingLeft: 20, display: "grid", gap: 8 }}>
-                {report.red_flags.map((f, i) => (
-                  <li key={i} style={{ fontSize: 13.5, lineHeight: 1.6 }}>
-                    {f}
+
+          {!!report.sir_explainer?.length && (
+            <Section id="sir" eyebrow="как читать таблицу" title="Что означают S, I и R">
+              <div className="grid gap-y-8 sm:grid-cols-3 sm:gap-x-0">
+                {report.sir_explainer.map((e, i) => {
+                  const st = V[e.code] || V.S;
+                  return (
+                    <div
+                      key={e.code}
+                      className={i ? "sm:border-l sm:border-black/[0.09] sm:pl-7" : "sm:pr-7"}
+                    >
+                      <span
+                        className={`pd-display grid h-8 w-8 place-items-center rounded-lg text-[14px] font-extrabold ${st.tile}`}
+                      >
+                        {e.code}
+                      </span>
+                      <h3 className="mt-4 text-[14.5px] font-bold leading-snug">{e.title}</h3>
+                      <p className="mt-2.5 text-[13.5px] leading-[1.7] text-[#5A5764]">{e.text}</p>
+                    </div>
+                  );
+                })}
+              </div>
+            </Section>
+          )}
+
+          {!!report.amr_notes?.length && (
+            <Section id="amr" eyebrow="тема портала" title="Почему это важно знать">
+              <ol className="space-y-6">
+                {report.amr_notes.map((n, i) => (
+                  <li key={i} className="flex gap-5">
+                    <span className="pd-display shrink-0 text-[20px] font-extrabold text-[#7119FF]/35 tabular-nums">
+                      {String(i + 1).padStart(2, "0")}
+                    </span>
+                    <p className="max-w-[66ch] text-[14.5px] leading-[1.75]">{n}</p>
                   </li>
                 ))}
-              </ul>
-            </Card>
+              </ol>
+            </Section>
           )}
-        </div>
 
-        {/* главная плашка: не назначаем */}
-        <div
-          style={{
-            background: "#FFF7E6",
-            border: "1px solid #F0D9A8",
-            borderRadius: 10,
-            padding: "18px 22px",
-          }}
-        >
-          <div
-            style={{
-              fontFamily: "var(--font-mc-head), sans-serif",
-              fontWeight: 800,
-              fontSize: 14.5,
-              color: "#8A5200",
-              marginBottom: 8,
-            }}
-          >
-            Сервис не подбирает препарат
+          {(!!report.questions_for_doctor?.length || !!report.red_flags?.length) && (
+            <Section id="ask" eyebrow="что делать дальше" title="Разговор с врачом">
+              <div className="grid gap-10 lg:grid-cols-2 lg:gap-12">
+                {!!report.questions_for_doctor?.length && (
+                  <div>
+                    <p className="pd-eyebrow mb-4 text-[#A5A2AE]">о чём спросить</p>
+                    <ul className="space-y-3.5">
+                      {report.questions_for_doctor.map((q, i) => (
+                        <li
+                          key={i}
+                          className="border-t border-black/[0.07] pt-3.5 text-[13.5px] leading-[1.65]"
+                        >
+                          {q}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+                {!!report.red_flags?.length && (
+                  <div className="rounded-2xl bg-[#F8EDEB]/70 p-7">
+                    <p className="pd-eyebrow mb-4 text-[#8F3A2F]/70">срочно к врачу</p>
+                    <ul className="space-y-3.5">
+                      {report.red_flags.map((f, i) => (
+                        <li
+                          key={i}
+                          className="border-t border-[#8F3A2F]/12 pt-3.5 text-[13.5px] leading-[1.65] text-[#5E2A22]"
+                        >
+                          {f}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+              </div>
+            </Section>
+          )}
+
+          {/* граница продукта, а не косметика */}
+          <div className="rounded-2xl border border-[#E4D9BF] bg-[#FBF7EC] p-8">
+            <h3 className="pd-display text-[16px] font-extrabold text-[#6E521C]">
+              Сервис не подбирает препарат
+            </h3>
+            <p className="mt-3.5 max-w-[72ch] text-[13.5px] leading-[1.75] text-[#6E521C]/90">
+              {report.no_prescription_note}
+            </p>
+            <p className="mt-4 max-w-[72ch] border-t border-[#E4D9BF] pt-4 text-[12.5px] leading-[1.7] text-[#6E521C]/70">
+              {report.disclaimer}
+            </p>
           </div>
-          <p style={{ margin: "0 0 8px", fontSize: 13.5, lineHeight: 1.65, color: "#6B4200" }}>
-            {report.no_prescription_note}
-          </p>
-          <p style={{ margin: 0, fontSize: 12.5, lineHeight: 1.6, color: "#8A5200" }}>
-            {report.disclaimer}
-          </p>
-        </div>
 
-        <div
-          className="posev-noprint"
-          style={{ display: "flex", gap: 12, flexWrap: "wrap", marginTop: 4 }}
-        >
-          <button
-            type="button"
-            onClick={onReset}
-            style={{
-              padding: "15px 24px",
-              background: C.purple,
-              color: "#fff",
-              border: "none",
-              borderRadius: 8,
-              fontSize: 12,
-              fontWeight: 700,
-              cursor: "pointer",
-              fontFamily: "inherit",
-            }}
-          >
-            РАЗОБРАТЬ ДРУГОЙ БЛАНК
-          </button>
-          <button
-            type="button"
-            onClick={() => window.print()}
-            style={{
-              padding: "15px 24px",
-              background: "#fff",
-              color: C.ink,
-              border: `1px solid ${C.line}`,
-              borderRadius: 8,
-              fontSize: 12,
-              fontWeight: 700,
-              cursor: "pointer",
-              fontFamily: "inherit",
-            }}
-          >
-            СОХРАНИТЬ В PDF
-          </button>
-          {/* Идентификатор модели в API-ответе остаётся (нужен нам для разбора
-              инцидентов), но заказчику в интерфейсе он ни о чём не говорит и
-              только провоцирует разговор про вендора вместо продукта. */}
+          <div className="pd-noprint flex flex-wrap gap-3">
+            <button
+              type="button"
+              onClick={onReset}
+              className="pd-btn pd-eyebrow rounded-xl bg-[#15121F] px-6 py-4 text-white hover:bg-[#241D38]"
+              style={{ boxShadow: "0 8px 30px rgba(21,18,31,.12)" }}
+            >
+              разобрать другой бланк
+            </button>
+            <button
+              type="button"
+              onClick={() => window.print()}
+              className="pd-btn pd-eyebrow rounded-xl border border-black/10 bg-white px-6 py-4 text-[#15131B] hover:bg-black/[0.02]"
+            >
+              сохранить в pdf
+            </button>
+          </div>
         </div>
       </div>
     </div>
