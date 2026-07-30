@@ -661,18 +661,25 @@ function Widget({
 
 // ─────────────────────────── результат ───────────────────────────
 
-function Chip({ v }: { v: Verdict }) {
+/**
+ * compact — для таблицы: полная подпись «Чувствителен при увел. экспозиции»
+ * переносилась в две строки и ломала ритм строк. В списке фагов, где строки
+ * редкие и места много, остаётся полная формулировка.
+ */
+function Chip({ v, compact }: { v: Verdict; compact?: boolean }) {
   const st = V[v];
   return (
     <span
-      className={`inline-flex items-center gap-2 rounded-lg py-1 pl-1 pr-2.5 text-[12px] font-semibold ${st.chip}`}
+      className={`inline-flex items-center gap-2 rounded-lg py-1 pl-1 pr-2.5 text-[12px] font-semibold ${
+        compact ? "whitespace-nowrap" : ""
+      } ${st.chip}`}
     >
       <span
         className={`grid h-[19px] w-[19px] place-items-center rounded-md text-[11px] font-extrabold ${st.tile}`}
       >
         {v}
       </span>
-      {st.label}
+      {compact ? st.short : st.label}
     </span>
   );
 }
@@ -894,7 +901,7 @@ function Result({
                             {it.mic || "—"}
                           </td>
                           <td className="py-3.5">
-                            <Chip v={it.verdict} />
+                            <Chip v={it.verdict} compact />
                           </td>
                         </tr>
                       ))}
