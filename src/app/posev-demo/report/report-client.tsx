@@ -1,11 +1,12 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import ReportChat from "../report-chat";
 import { ReportView, type PosevReport, type ReportMeta } from "../report-view";
 
 type State =
   | { kind: "loading" }
-  | { kind: "ready"; report: PosevReport; meta: ReportMeta | null }
+  | { kind: "ready"; report: PosevReport; meta: ReportMeta | null; password: string }
   | { kind: "orphan" };
 
 /** Ключ, под которым вкладка держит уже забранный отчёт (переживает F5). */
@@ -75,8 +76,17 @@ export default function ReportClient() {
       return;
     }
     try {
-      const parsed = JSON.parse(raw) as { report: PosevReport; meta?: ReportMeta };
-      setState({ kind: "ready", report: parsed.report, meta: parsed.meta ?? null });
+      const parsed = JSON.parse(raw) as {
+        report: PosevReport;
+        meta?: ReportMeta;
+        password?: string;
+      };
+      setState({
+        kind: "ready",
+        report: parsed.report,
+        meta: parsed.meta ?? null,
+        password: parsed.password ?? "",
+      });
     } catch {
       setState({ kind: "orphan" });
     }
@@ -147,7 +157,16 @@ export default function ReportClient() {
         </div>
       )}
 
-      {state.kind === "ready" && <ReportView report={state.report} meta={state.meta} />}
+      {state.kind === "ready" && (
+        <>
+          <ReportView report={state.report} meta={state.meta} />
+          {state.password && (
+            <div className="mx-auto max-w-[860px] px-6 pb-14">
+              <ReportChat report={state.report} password={state.password} />
+            </div>
+          )}
+        </>
+      )}
     </main>
   );
 }

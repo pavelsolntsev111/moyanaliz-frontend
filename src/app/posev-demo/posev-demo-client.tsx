@@ -280,7 +280,12 @@ function Portal({ password }: { password: string }) {
 
         if ("ok" in data && data.ok) {
           const key = `posev_report_${Math.random().toString(36).slice(2)}`;
-          localStorage.setItem(key, JSON.stringify({ report: data.report, meta: data.meta }));
+          // Пароль едет вместе с отчётом: вкладке он нужен для чата, а своего
+          // sessionStorage у неё нет. Живёт там ровно до первого чтения.
+          localStorage.setItem(
+            key,
+            JSON.stringify({ report: data.report, meta: data.meta, password })
+          );
           const url = `/posev-demo/report?k=${key}`;
           setReportUrl(url);
           // Открытие вне жеста может не пройти через блокировщик — тогда ниже
@@ -321,7 +326,7 @@ function Portal({ password }: { password: string }) {
         new Promise((r) => setTimeout(r, SAMPLE_FAKE_MS)),
       ]);
       const key = `posev_report_${Math.random().toString(36).slice(2)}`;
-      localStorage.setItem(key, JSON.stringify(payload));
+      localStorage.setItem(key, JSON.stringify({ ...payload, password }));
       const url = `/posev-demo/report?k=${key}`;
       setReportUrl(url);
       const w = window.open(url, "_blank");
@@ -331,7 +336,7 @@ function Portal({ password }: { password: string }) {
     } finally {
       setBusy(false);
     }
-  }, []);
+  }, [password]);
 
   return (
     <main className="min-h-screen bg-white text-[#16141C]">
