@@ -21,6 +21,10 @@ export interface AbxItem {
   drug_class?: string | null;
   verdict: Verdict;
   mic?: string | null;
+  /** Диаметр зоны задержки роста, мм — диско-диффузионный метод. */
+  zone_mm?: string | number | null;
+  /** Скрининговый тест механизма устойчивости, а не препарат для лечения. */
+  is_screen?: boolean;
   comment?: string | null;
 }
 
@@ -38,7 +42,7 @@ export interface PosevReport {
     significance_text?: string;
     about?: string;
   }[];
-  antibiogram?: { pathogen?: string; items?: AbxItem[] }[];
+  antibiogram?: { pathogen?: string; method?: "mic" | "disc" | "unknown"; items?: AbxItem[] }[];
   phages?: { name?: string; verdict?: Verdict | null; comment?: string | null }[];
   resistance?: {
     tested?: number;
@@ -48,6 +52,15 @@ export interface PosevReport {
     multi_resistant?: boolean;
     r_classes?: number;
     text?: string;
+    per_pathogen?: {
+      pathogen?: string | null;
+      tested?: number;
+      s?: number;
+      i?: number;
+      r?: number;
+      multi_resistant?: boolean;
+      r_classes?: number;
+    }[];
   };
   plain_summary?: string;
   sir_explainer?: { code: Verdict; title: string; text: string }[];
@@ -129,8 +142,8 @@ function SirScale({ v }: { v: Verdict }) {
  * Иначе «> 32» и «≤ 0,25» едут по разным осям и колонка выглядит небрежно.
  * Точка в дробях меняется на запятую — бланки лабораторий русскоязычные.
  */
-function Mic({ raw }: { raw?: string | null }) {
-  const s = (raw ?? "").trim();
+function Mic({ raw }: { raw?: string | number | null }) {
+  const s = String(raw ?? "").trim();
   if (!s || s === "—") return <span className="text-[#C3C3C9]">—</span>;
   const m = s.match(/^([≤≥<>]=?)\s*(.+)$/);
   const op = m ? m[1] : "";
@@ -278,8 +291,11 @@ export function ReportView({ report }: { report: PosevReport; meta?: ReportMeta 
                       <th className="pb-2.5 pr-4 text-left text-[13px] font-normal text-[#8A8A93]">
                         Препарат
                       </th>
+                      {/* Заголовок числовой колонки зависит от метода: миллиметры
+                          зоны и МПК — разные величины с противоположным смыслом,
+                          подписать их одинаково нельзя. */}
                       <th className="whitespace-nowrap pb-2.5 pr-4 text-right text-[13px] font-normal text-[#8A8A93]">
-                        МПК, мг/л
+                        {group.method === "disc" ? "Зона, мм" : "МПК, мг/л"}
                       </th>
                       <th className="pb-2.5 text-left text-[13px] font-normal text-[#8A8A93]">
                         Категория
@@ -291,14 +307,20 @@ export function ReportView({ report }: { report: PosevReport; meta?: ReportMeta 
                       <tr key={i} className="pd-row border-b border-[#EFEFF1] align-middle">
                         <td className="py-3 pr-4">
                           <span className="block leading-snug">{it.drug}</span>
-                          {it.drug_class && (
+                          {it.is_screen ? (
                             <span className="mt-0.5 block text-[12.5px] leading-snug text-[#8A8A93]">
-                              {it.drug_class}
+                              лабораторный тест, не препарат для лечения
                             </span>
+                          ) : (
+                            it.drug_class && (
+                              <span className="mt-0.5 block text-[12.5px] leading-snug text-[#8A8A93]">
+                                {it.drug_class}
+                              </span>
+                            )
                           )}
                         </td>
                         <td className="whitespace-nowrap py-3 pr-4 text-right">
-                          <Mic raw={it.mic} />
+                          <Mic raw={group.method === "disc" ? it.zone_mm : it.mic} />
                         </td>
                         <td className="py-3">
                           <SirScale v={it.verdict} />
@@ -332,15 +354,41 @@ export function ReportView({ report }: { report: PosevReport; meta?: ReportMeta 
           <Section id="resistance" title="Устойчивость">
             {/* Раскладка по категориям — графикой, а не перечислением в строку:
                 соотношение S/I/R считывается до чтения текста. */}
-            <p className="mb-3 text-[13px] text-[#8A8A93]">
-              Всего проверено препаратов — <span className="tabular-nums">{tested}</span>
-            </p>
-            <ShareBar s={r.s ?? 0} i={r.i ?? 0} r={r.r ?? 0} />
-            {r.multi_resistant && (
-              <p className="max-w-[68ch] border-l-2 border-[#8F3A2F] pl-4 text-[#8A372C]">
-                Устойчивость к {r.r_classes} классам препаратов — картина множественной
-                устойчивости.
-              </p>
+            {/* Несколько возбудителей — сводка по каждому: множественная
+                устойчивость это свойство микроба, а не бланка целиком. */}
+            {(r.per_pathogen?.length ?? 0) > 1 ? (
+              <div className="space-y-6">
+                {r.per_pathogen!.map((p, i) => (
+                  <div key={i}>
+                    <p className="mb-3 text-[14px] font-semibold">
+                      {p.pathogen}{" "}
+                      <span className="font-normal text-[#8A8A93]">
+                        — проверено {p.tested}
+                      </span>
+                    </p>
+                    <ShareBar s={p.s ?? 0} i={p.i ?? 0} r={p.r ?? 0} />
+                    {p.multi_resistant && (
+                      <p className="max-w-[68ch] border-l-2 border-[#8F3A2F] pl-4 text-[#8A372C]">
+                        Устойчив к {p.r_classes} классам препаратов — картина множественной
+                        устойчивости.
+                      </p>
+                    )}
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <>
+                <p className="mb-3 text-[13px] text-[#8A8A93]">
+                  Всего проверено препаратов — <span className="tabular-nums">{tested}</span>
+                </p>
+                <ShareBar s={r.s ?? 0} i={r.i ?? 0} r={r.r ?? 0} />
+                {r.multi_resistant && (
+                  <p className="max-w-[68ch] border-l-2 border-[#8F3A2F] pl-4 text-[#8A372C]">
+                    Устойчивость к {r.r_classes} классам препаратов — картина множественной
+                    устойчивости.
+                  </p>
+                )}
+              </>
             )}
             {r.text && <p className="mt-4 max-w-[68ch]">{r.text}</p>}
           </Section>
