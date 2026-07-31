@@ -60,12 +60,24 @@ export default function ReportChat({
     setMessages([...history, { role: "user", content: q }]);
     setBusy(true);
     try {
-      const res = await fetch("/api/v1/demo/posev/chat", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ password, question: q, report, history }),
-      });
-      const raw = await res.text();
+      // Свой таймаут: без него зависший запрос оставляет «Думаю…» навсегда, а
+      // чат показывают вживую. Сервер укладывается в 25 с на попытку плюс один
+      // ретрай, поэтому 60 с здесь — потолок, а не рабочее ожидание.
+      const ctrl = new AbortController();
+      const timer = setTimeout(() => ctrl.abort(), 60_000);
+      let res: Response;
+      let raw: string;
+      try {
+        res = await fetch("/api/v1/demo/posev/chat", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ password, question: q, report, history }),
+          signal: ctrl.signal,
+        });
+        raw = await res.text();
+      } finally {
+        clearTimeout(timer);
+      }
       let data: { answer?: string; detail?: string } | null = null;
       try {
         data = JSON.parse(raw);
@@ -77,7 +89,14 @@ export default function ReportChat({
       }
       setMessages((prev) => [...prev, { role: "assistant", content: data!.answer! }]);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Что-то пошло не так");
+      const aborted = err instanceof DOMException && err.name === "AbortError";
+      setError(
+        aborted
+          ? "Ответ не пришёл вовремя. Попробуйте задать вопрос ещё раз."
+          : err instanceof Error
+            ? err.message
+            : "Что-то пошло не так"
+      );
     } finally {
       setBusy(false);
     }
