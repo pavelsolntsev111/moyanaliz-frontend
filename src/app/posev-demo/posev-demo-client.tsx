@@ -377,6 +377,10 @@ function Portal({ password }: { password: string }) {
                 микроорганизм, как читать таблицу чувствительности (буквы S, I и R) и что
                 означает устойчивость к антибиотикам.
               </p>
+              <p className="mt-4 max-w-[48ch] text-[16.5px] leading-[1.7] text-white/75">
+                Остались вопросы по результату — разберите их с ИИ‑ассистентом: он объяснит
+                непонятное простыми словами и поможет подготовиться к разговору с врачом.
+              </p>
 
               <ul className="mt-12 space-y-3 border-t border-white/20 pt-8 text-[15px] text-white/80">
                 {[
@@ -454,10 +458,8 @@ function Widget({
 
   return (
     <div className="pd-noprint rounded-lg bg-white p-7 text-[#16141C]">
-      <h2 className="pd-display text-[19px] font-extrabold">Расшифровка посева</h2>
-
       {busy ? (
-        <div className="mt-7">
+        <div>
           <div className="h-[3px] w-full overflow-hidden rounded-full bg-black/[0.07]">
             <div
               className="h-full rounded-full bg-[#7119FF]"
@@ -486,7 +488,7 @@ function Widget({
           </ul>
         </div>
       ) : reportUrl ? (
-        <div className="mt-7">
+        <div>
           {/* Вкладку запрашиваем ПОСЛЕ разбора, то есть вне клика пользователя —
               большинство браузеров такое открытие режут, и кнопка ниже штатный
               путь, а не аварийный. Поэтому здесь нет слов про «заблокировал»:
@@ -546,7 +548,7 @@ function Widget({
             }}
             onClick={() => consent && inputRef.current?.click()}
             aria-disabled={!consent}
-            className={`pd-drop mt-7 rounded-lg border border-dashed px-6 py-10 text-center ${
+            className={`pd-drop rounded-lg border border-dashed px-6 py-12 text-center ${
               !consent
                 ? "cursor-not-allowed border-black/[0.1] opacity-45"
                 : drag
@@ -592,16 +594,12 @@ function Widget({
           {/* Согласие — отдельным полем под зоной загрузки. Визуально ниже, но
               по-прежнему БЛОКИРУЕТ отправку: согласие обязано быть получено до
               того, как файл ушёл на сервер. */}
-          <label
-            className={`mt-4 flex cursor-pointer items-start gap-3 rounded-lg border px-4 py-3.5 text-[13px] leading-relaxed transition-colors ${
-              consent ? "border-[#7119FF]/35 bg-[#FAF7FF]" : "border-black/[0.12] bg-white"
-            }`}
-          >
+          <label className="mt-4 flex cursor-pointer items-center gap-2.5 text-[13px] leading-snug">
             <input
               type="checkbox"
               checked={consent}
               onChange={(e) => setConsent(e.target.checked)}
-              className="mt-0.5 h-4 w-4 shrink-0 accent-[#7119FF]"
+              className="h-[15px] w-[15px] shrink-0 accent-[#7119FF]"
             />
             <span>
               Согласен с{" "}
@@ -617,7 +615,7 @@ function Widget({
             </span>
           </label>
 
-          <div className="mt-7">
+          <div className="mt-7 border-t border-black/[0.07] pt-6">
             <p className="pd-eyebrow text-[#86838F]">образцы бланков (для демо-версии)</p>
             <div className="mt-3.5 space-y-2">
               {SAMPLES.map((s) => (
