@@ -212,7 +212,7 @@ export function ReportView({ report }: { report: PosevReport; meta?: ReportMeta 
       <dl className="mt-6 grid gap-x-8 gap-y-2 border-t border-[#E5E5E8] pt-5 text-[13px] sm:grid-cols-[max-content_1fr]">
         {report.material && (
           <>
-            <dt className="text-[#8A8A93]">Биоматериал</dt>
+            <dt className="text-[#8A8A93]">Что исследовали</dt>
             <dd>{report.material}</dd>
           </>
         )}
@@ -262,7 +262,7 @@ export function ReportView({ report }: { report: PosevReport; meta?: ReportMeta 
             <Section
               key={gi}
               id={gi === 0 ? "abx" : `abx-${gi}`}
-              title={`Чувствительность${group.pathogen ? ` · ${group.pathogen}` : ""}`}
+              title={`Таблица чувствительности${group.pathogen ? ` · ${group.pathogen}` : ""}`}
             >
               <div className="-mx-1 overflow-x-auto px-1">
                 <table className="w-full min-w-[460px] border-collapse text-[14px]">
@@ -321,8 +321,9 @@ export function ReportView({ report }: { report: PosevReport; meta?: ReportMeta 
                 ))}
               </p>
               <p className="mt-3 max-w-[68ch] text-[13px] text-[#8A8A93]">
-                МПК — минимальная подавляющая концентрация. Сравнивать числа МПК между разными
-                препаратами нельзя: у каждого свои пороги.
+                МПК — наименьшая концентрация препарата, которая остановила рост микроба в
+                лаборатории. Сравнивать эти числа между разными препаратами нельзя: у каждого
+                свои пороговые значения.
               </p>
             </Section>
           ))}
@@ -332,7 +333,7 @@ export function ReportView({ report }: { report: PosevReport; meta?: ReportMeta 
             {/* Раскладка по категориям — графикой, а не перечислением в строку:
                 соотношение S/I/R считывается до чтения текста. */}
             <p className="mb-3 text-[13px] text-[#8A8A93]">
-              Проверено препаратов — <span className="tabular-nums">{tested}</span>
+              Всего проверено препаратов — <span className="tabular-nums">{tested}</span>
             </p>
             <ShareBar s={r.s ?? 0} i={r.i ?? 0} r={r.r ?? 0} />
             {r.multi_resistant && (
