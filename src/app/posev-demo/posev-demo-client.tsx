@@ -46,10 +46,36 @@ const STAGES = [
   "Проверяем формулировки",
 ];
 
+/**
+ * ⚠️ ВРЕМЕННО (для показа заказчику): у образцов есть `report` — заранее
+ * сохранённый НАСТОЯЩИЙ ответ движка с прода. Кнопка образца не ходит в модель,
+ * а проигрывает те же стадии и отдаёт этот отчёт.
+ *
+ * Зачем: показ не должен зависеть от доступности поставщика моделей и от того,
+ * жив ли бэкенд в эту минуту. Разбор идёт 20-25 секунд и проходит через прокси
+ * с собственным лимитом — на встрече это лишний риск.
+ *
+ * Загрузка СВОЕГО файла работает по-настоящему, через модель: иначе демо врало
+ * бы о продукте. Снять заглушку — убрать поле `report` у образцов и ветку
+ * `sample.report` в showSample.
+ */
 const SAMPLES = [
-  { file: "/demo/posev-sample-1.png", label: "Посев мочи", meta: "E. coli · БЛРС" },
-  { file: "/demo/posev-sample-2.png", label: "Посев раны", meta: "MRSA · бактериофаги" },
+  {
+    file: "/demo/posev-sample-1.png",
+    report: "/demo/report-sample-1.json",
+    label: "Посев мочи",
+    meta: "E. coli · БЛРС",
+  },
+  {
+    file: "/demo/posev-sample-2.png",
+    report: "/demo/report-sample-2.json",
+    label: "Посев раны",
+    meta: "MRSA · бактериофаги",
+  },
 ];
+
+/** Сколько «думает» образец: меньше настоящих 20-25 с, но стадии видно. */
+const SAMPLE_FAKE_MS = 9000;
 
 const AUTH_KEY = "posev_demo_ok";
 
@@ -188,16 +214,19 @@ function Portal({ password }: { password: string }) {
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [stage, setStage] = useState(0);
+  // Темп стадий: у настоящего разбора 20-25 с, у готового образца — 9 с.
+  const [stageMs, setStageMs] = useState(3200);
 
   useEffect(() => {
     if (!busy) return;
     setStage(0);
-    const id = setInterval(() => setStage((s) => (s < STAGES.length - 1 ? s + 1 : s)), 3200);
+    const id = setInterval(() => setStage((s) => (s < STAGES.length - 1 ? s + 1 : s)), stageMs);
     return () => clearInterval(id);
-  }, [busy]);
+  }, [busy, stageMs]);
 
   const analyze = useCallback(
     async (file: File) => {
+      setStageMs(3200);
       setBusy(true);
       setError(null);
       setRejected(null);
@@ -210,8 +239,41 @@ function Portal({ password }: { password: string }) {
         // Согласие уходит на сервер и проверяется там же: гейт только в
         // интерфейсе — это витрина, а не правовое основание обработки.
         form.append("consent", "true");
-        const res = await fetch("/api/v1/demo/posev", { method: "POST", body: form });
-        const data = (await res.json()) as ApiOk | ApiReject | { detail?: string };
+        // Разбор идёт 20-30 секунд, и на этом пути стоит прокси. Когда он не
+        // дожидается ответа, приходит НЕ JSON, а страница «Internal Server
+        // Error» открытым текстом — res.json() падал, и пользователь видел
+        // ошибку парсера вместо человеческого объяснения. Поэтому читаем текст
+        // и разбираем его сами. Свой таймаут нужен, чтобы вкладка не висела
+        // бесконечно, если ответ не придёт вовсе.
+        const ctrl = new AbortController();
+        const abortTimer = setTimeout(() => ctrl.abort(), 90_000);
+        let res: Response;
+        let raw: string;
+        try {
+          res = await fetch("/api/v1/demo/posev", {
+            method: "POST",
+            body: form,
+            signal: ctrl.signal,
+          });
+          raw = await res.text();
+        } finally {
+          clearTimeout(abortTimer);
+        }
+
+        let data: ApiOk | ApiReject | { detail?: string } | null = null;
+        try {
+          data = JSON.parse(raw);
+        } catch {
+          data = null;
+        }
+
+        if (!data) {
+          throw new Error(
+            res.status >= 500 || res.status === 0
+              ? "Разбор занял слишком много времени, и соединение прервалось. Попробуйте ещё раз — обычно со второй попытки проходит."
+              : "Сервис вернул неожиданный ответ. Попробуйте ещё раз."
+          );
+        }
         if (!res.ok) {
           throw new Error(("detail" in data && data.detail) || "Не удалось обработать файл");
         }
@@ -229,7 +291,14 @@ function Portal({ password }: { password: string }) {
           setRejected(data.reason);
         }
       } catch (err) {
-        setError(err instanceof Error ? err.message : "Что-то пошло не так");
+        const aborted = err instanceof DOMException && err.name === "AbortError";
+        setError(
+          aborted
+            ? "Разбор не уложился в отведённое время. Попробуйте ещё раз."
+            : err instanceof Error
+              ? err.message
+              : "Что-то пошло не так"
+        );
       } finally {
         setBusy(false);
       }
@@ -237,14 +306,32 @@ function Portal({ password }: { password: string }) {
     [password]
   );
 
-  const loadSample = useCallback(
-    async (path: string) => {
-      const res = await fetch(path);
-      const blob = await res.blob();
-      await analyze(new File([blob], path.split("/").pop() || "sample.png", { type: "image/png" }));
-    },
-    [analyze]
-  );
+  /** Показ готового отчёта по образцу — без обращения к модели (см. SAMPLES). */
+  const showSample = useCallback(async (reportPath: string) => {
+    setStageMs(Math.floor(SAMPLE_FAKE_MS / STAGES.length));
+    setBusy(true);
+    setError(null);
+    setRejected(null);
+    setReportUrl(null);
+    setOpenedInTab(false);
+    try {
+      // Файл тянем параллельно с «ожиданием», чтобы к концу стадий он уже был.
+      const [payload] = await Promise.all([
+        fetch(reportPath).then((r) => r.json()),
+        new Promise((r) => setTimeout(r, SAMPLE_FAKE_MS)),
+      ]);
+      const key = `posev_report_${Math.random().toString(36).slice(2)}`;
+      localStorage.setItem(key, JSON.stringify(payload));
+      const url = `/posev-demo/report?k=${key}`;
+      setReportUrl(url);
+      const w = window.open(url, "_blank");
+      setOpenedInTab(!!w && !w.closed);
+    } catch {
+      setError("Не удалось открыть пример. Обновите страницу и попробуйте ещё раз.");
+    } finally {
+      setBusy(false);
+    }
+  }, []);
 
   return (
     <main className="min-h-screen bg-white text-[#16141C]">
@@ -329,7 +416,7 @@ function Portal({ password }: { password: string }) {
                 reportUrl={reportUrl}
                 openedInTab={openedInTab}
                 onFile={analyze}
-                onSample={loadSample}
+                onSample={showSample}
               />
             </div>
           </div>
@@ -542,7 +629,7 @@ function Widget({
                   key={s.file}
                   type="button"
                   disabled={!consent}
-                  onClick={() => onSample(s.file)}
+                  onClick={() => onSample(s.report)}
                   className="pd-sample flex w-full items-center justify-between rounded-lg border border-black/[0.1] bg-white px-4 py-3.5 text-left disabled:cursor-not-allowed disabled:opacity-45 disabled:hover:translate-x-0 disabled:hover:border-black/[0.1] disabled:hover:shadow-none"
                 >
                   <span className="text-[13.5px] font-semibold">{s.label}</span>
