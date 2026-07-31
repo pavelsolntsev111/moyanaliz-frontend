@@ -4,7 +4,24 @@
 
 @custom-variant dark (&:is(.dark *));
 
+/* Метрически подогнанный fallback — точная копия того, что генерировал
+   next/font до перехода на @fontsource-variable/inter. Пока грузится
+   Inter Variable, Arial рисуется с метриками Inter и подмена шрифта не
+   двигает вёрстку (CLS). */
+@font-face {
+  font-family: "Inter Fallback";
+  src: local("Arial");
+  ascent-override: 90.44%;
+  descent-override: 22.52%;
+  line-gap-override: 0%;
+  size-adjust: 107.12%;
+}
+
 :root {
+  /* Семейство из @fontsource-variable/inter (импорт в app/layout.tsx).
+     Раньше переменная приходила от next/font, который качал шрифт с gstatic
+     во время сборки и ронял билд, когда Google был недоступен. */
+  --font-inter: "Inter Variable", "Inter Fallback";
   --background: #f8fafb;
   --foreground: #1a1a2e;
   --card: #ffffff;
@@ -84,7 +101,7 @@
 }
 
 @theme inline {
-  --font-sans: "Inter", "Inter Fallback", system-ui, sans-serif;
+  --font-sans: var(--font-inter), system-ui, sans-serif;
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-card: var(--card);
