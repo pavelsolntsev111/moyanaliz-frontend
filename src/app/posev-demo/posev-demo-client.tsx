@@ -294,17 +294,15 @@ function Portal({ password }: { password: string }) {
               </h1>
 
               <p className="mt-7 max-w-[48ch] text-[16.5px] leading-[1.7] text-white/75">
-                Загрузите бланк посева — сервис объяснит, что за микроб выделен, что означают буквы
-                S, I и R в таблице чувствительности и о чём говорит устойчивость. Понятным языком и
-                без назначений: препарат подбирает врач.
+                Загрузите бланк посева и узнайте, что за микроб выделен, в каком количестве, что
+                означают буквы S, I и R в таблице чувствительности и о чём говорит устойчивость.
               </p>
 
               <ul className="mt-12 space-y-3 border-t border-white/20 pt-8 text-[15px] text-white/80">
                 {[
-                  "Личные данные не сохраняются",
-                  "Имя и лаборатория из бланка не считываются",
-                  "Файл удаляется сразу после разбора",
-                  "Оценка по международному стандарту EUCAST",
+                  "Не храним пользовательские файлы: бланк удаляется сразу после расшифровки",
+                  "Работаем в соответствии с Федеральным законом № 152-ФЗ «О персональных данных»",
+                  "Оценка чувствительности по международному стандарту EUCAST",
                 ].map((t) => (
                   <li key={t} className="flex items-start gap-3">
                     <span className="mt-[9px] h-1 w-1 shrink-0 rounded-full bg-[#00C3C8]" />
@@ -312,6 +310,13 @@ function Portal({ password }: { password: string }) {
                   </li>
                 ))}
               </ul>
+
+              {/* Дисклеймер отдельной строкой внизу, а не внутри основного текста:
+                  основной текст должен говорить, что продукт делает. */}
+              <p className="mt-10 max-w-[48ch] border-t border-white/20 pt-6 text-[13.5px] leading-relaxed text-white/60">
+                Информационная услуга не является медицинской рекомендацией. Препарат выбирает
+                врач.
+              </p>
             </div>
 
             <div className="lg:col-span-5">
@@ -369,10 +374,7 @@ function Widget({
 
   return (
     <div className="pd-noprint rounded-lg bg-white p-7 text-[#16141C]">
-      <div className="flex items-baseline justify-between gap-4">
-        <h2 className="pd-display text-[19px] font-extrabold">Расшифровка посева</h2>
-        <span className="text-[11.5px] text-[#86838F]">до 20 МБ</span>
-      </div>
+      <h2 className="pd-display text-[19px] font-extrabold">Расшифровка посева</h2>
 
       {busy ? (
         <div className="mt-7">
@@ -444,26 +446,6 @@ function Widget({
         </div>
       ) : (
         <>
-          <label className="mt-7 flex cursor-pointer items-start gap-3 text-[13px] leading-relaxed">
-            <input
-              type="checkbox"
-              checked={consent}
-              onChange={(e) => setConsent(e.target.checked)}
-              className="mt-0.5 h-4 w-4 shrink-0 accent-[#7119FF]"
-            />
-            <span>
-              Согласен с{" "}
-              <a
-                href="/posev-demo/privacy"
-                target="_blank"
-                rel="noopener"
-                className="underline decoration-[#7119FF]/40 underline-offset-2 hover:decoration-[#7119FF]"
-              >
-                политикой обработки персональных данных
-              </a>
-            </span>
-          </label>
-
           <div
             onDragOver={(e) => {
               if (!consent) return;
@@ -480,7 +462,7 @@ function Widget({
             }}
             onClick={() => consent && inputRef.current?.click()}
             aria-disabled={!consent}
-            className={`pd-drop mt-4 rounded-lg border border-dashed px-6 py-10 text-center ${
+            className={`pd-drop mt-7 rounded-lg border border-dashed px-6 py-10 text-center ${
               !consent
                 ? "cursor-not-allowed border-black/[0.1] opacity-45"
                 : drag
@@ -502,7 +484,14 @@ function Widget({
               <circle cx="14.2" cy="13.2" r="1.1" fill="#7119FF" />
             </svg>
             <p className="text-[14.5px] font-semibold">Перетащите бланк или выберите файл</p>
-            <p className="mt-1.5 text-[12px] text-[#86838F]">PDF, JPG, PNG, HEIC</p>
+            {/* Пока согласия нет, зона неактивна — подсказываем, куда смотреть:
+                чекбокс теперь НИЖЕ, и без подсказки клик по серой зоне выглядит
+                как поломка. */}
+            <p className="mt-1.5 text-[12px] text-[#86838F]">
+              {consent
+                ? "PDF, JPG, PNG, HEIC · до 20 МБ"
+                : "Отметьте согласие ниже, чтобы загрузить бланк"}
+            </p>
             <input
               ref={inputRef}
               type="file"
@@ -516,8 +505,36 @@ function Widget({
             />
           </div>
 
+          {/* Согласие — отдельным полем под зоной загрузки. Визуально ниже, но
+              по-прежнему БЛОКИРУЕТ отправку: согласие обязано быть получено до
+              того, как файл ушёл на сервер. */}
+          <label
+            className={`mt-4 flex cursor-pointer items-start gap-3 rounded-lg border px-4 py-3.5 text-[13px] leading-relaxed transition-colors ${
+              consent ? "border-[#7119FF]/35 bg-[#FAF7FF]" : "border-black/[0.12] bg-white"
+            }`}
+          >
+            <input
+              type="checkbox"
+              checked={consent}
+              onChange={(e) => setConsent(e.target.checked)}
+              className="mt-0.5 h-4 w-4 shrink-0 accent-[#7119FF]"
+            />
+            <span>
+              Согласен с{" "}
+              <a
+                href="/posev-demo/privacy"
+                target="_blank"
+                rel="noopener"
+                onClick={(e) => e.stopPropagation()}
+                className="underline decoration-[#7119FF]/40 underline-offset-2 hover:decoration-[#7119FF]"
+              >
+                политикой обработки персональных данных
+              </a>
+            </span>
+          </label>
+
           <div className="mt-7">
-            <p className="pd-eyebrow text-[#86838F]">образцы бланков</p>
+            <p className="pd-eyebrow text-[#86838F]">образцы бланков (для демо-версии)</p>
             <div className="mt-3.5 space-y-2">
               {SAMPLES.map((s) => (
                 <button
