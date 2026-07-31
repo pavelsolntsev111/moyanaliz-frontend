@@ -32,11 +32,15 @@ interface Msg {
 export default function ReportChat({
   report,
   password,
+  open,
+  onOpen,
 }: {
   report: PosevReport;
   password: string;
+  /** Управляется страницей: открыть чат можно и кнопкой под «Общими выводами». */
+  open: boolean;
+  onOpen: () => void;
 }) {
-  const [open, setOpen] = useState(false);
   const [messages, setMessages] = useState<Msg[]>([]);
   const [value, setValue] = useState("");
   const [busy, setBusy] = useState(false);
@@ -114,7 +118,7 @@ export default function ReportChat({
         </p>
         <button
           type="button"
-          onClick={() => setOpen(true)}
+          onClick={onOpen}
           className="pd-btn rounded-lg bg-[#7119FF] px-6 py-4 text-[12px] font-bold text-white hover:bg-[#5F12DC]"
         >
           Обсудить отчёт
@@ -178,9 +182,11 @@ export default function ReportChat({
             e.preventDefault();
             ask(value);
           }}
-          className="flex flex-wrap items-end gap-3 border-t border-[#EFEFF1] px-5 py-4"
+          className="border-t border-[#EFEFF1] px-5 py-4"
         >
-          <div className="min-w-[240px] flex-1">
+          {/* Счётчик вынесен ПОД строку ввода: пока он жил в колонке с полем,
+              он тянул её вниз и кнопка вставала не по одной линии с textarea. */}
+          <div className="flex items-stretch gap-3">
             <textarea
               value={value}
               maxLength={MAX_CHARS}
@@ -196,19 +202,19 @@ export default function ReportChat({
               placeholder={
                 left > 0 ? "Ваш вопрос по этому результату" : "Лимит вопросов исчерпан"
               }
-              className="w-full resize-none rounded-lg border border-[#E5E5E8] px-4 py-3 text-[14px] outline-none focus:border-[#7119FF] disabled:bg-[#FAFAFB]"
+              className="min-w-0 flex-1 resize-none rounded-lg border border-[#E5E5E8] px-4 py-3 text-[14px] outline-none focus:border-[#7119FF] disabled:bg-[#FAFAFB]"
             />
-            <div className="mt-1 text-right text-[12px] text-[#B4B1BC]">
-              {value.length}/{MAX_CHARS}
-            </div>
+            <button
+              type="submit"
+              disabled={!canAsk}
+              className="pd-btn shrink-0 rounded-lg bg-[#7119FF] px-6 text-[12px] font-bold text-white hover:bg-[#5F12DC] disabled:cursor-default disabled:bg-[#E7E3F2] disabled:text-[#A9A5B6]"
+            >
+              Спросить
+            </button>
           </div>
-          <button
-            type="submit"
-            disabled={!canAsk}
-            className="pd-btn mb-6 rounded-lg bg-[#7119FF] px-6 py-3.5 text-[12px] font-bold text-white hover:bg-[#5F12DC] disabled:cursor-default disabled:bg-[#E7E3F2] disabled:text-[#A9A5B6]"
-          >
-            Спросить
-          </button>
+          <div className="mt-1.5 text-right text-[12px] text-[#B4B1BC]">
+            {value.length}/{MAX_CHARS}
+          </div>
         </form>
       </div>
 

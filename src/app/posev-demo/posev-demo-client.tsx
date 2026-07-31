@@ -161,22 +161,8 @@ function Gate({ onPass }: { onPass: (pw: string) => void }) {
 
   return (
     <main className="flex min-h-screen items-center bg-[#4000A8] px-6 py-16 text-white">
-      <div className="mx-auto grid w-full max-w-[1000px] gap-14 lg:grid-cols-12 lg:items-center">
-        <div className="lg:col-span-6">
-          <div className="pd-display mb-8 text-[13px] font-bold tracking-[0.06em] text-white/70">
-            ПОРТАЛ О АНТИБИОТИКОРЕЗИСТЕНТНОСТИ
-          </div>
-          <h1 className="pd-display text-[38px] font-extrabold leading-[1.06] sm:text-[46px]">
-            Демо расшифровки
-            <br />
-            бак-посева
-          </h1>
-          <p className="mt-6 max-w-[42ch] text-[15.5px] leading-relaxed text-white/70">
-            Закрытая сборка для команды Med-Click. Страница не индексируется, доступ по паролю.
-          </p>
-        </div>
-
-        <form onSubmit={submit} className="rounded-lg bg-white p-8 text-[#16141C] lg:col-span-6">
+      <div className="mx-auto w-full max-w-[420px]">
+        <form onSubmit={submit} className="rounded-lg bg-white p-8 text-[#16141C]">
           <label htmlFor="pd-pw" className="pd-eyebrow block text-[#86838F]">
             Пароль доступа
           </label>
@@ -381,8 +367,9 @@ function Portal({ password }: { password: string }) {
               </div>
 
               <h1 className="pd-display text-[34px] font-extrabold leading-[1.05] sm:text-[46px] lg:text-[58px] lg:leading-[1.03]">
-                Разберитесь
-                <br />в своём бак-посеве
+                Расшифровка
+                <br />
+                вашего бак-посева
               </h1>
 
               <p className="mt-7 max-w-[48ch] text-[16.5px] leading-[1.7] text-white/75">

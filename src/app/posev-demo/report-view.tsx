@@ -207,7 +207,15 @@ function Section({
   );
 }
 
-export function ReportView({ report }: { report: PosevReport; meta?: ReportMeta | null }) {
+export function ReportView({
+  report,
+  onDiscuss,
+}: {
+  report: PosevReport;
+  meta?: ReportMeta | null;
+  /** Открыть чат по отчёту. Если не передан — кнопка не рисуется. */
+  onDiscuss?: () => void;
+}) {
   const r = report.resistance || {};
   const tested = r.tested || 0;
   const sexLabel =
@@ -246,7 +254,17 @@ export function ReportView({ report }: { report: PosevReport; meta?: ReportMeta 
       <div className="mt-10 space-y-10">
         {report.plain_summary && (
           <section id="summary" className="pd-block border-t border-[#E5E5E8] pt-7">
+            <h2 className="pd-display mb-4 text-[18px] font-bold leading-snug">Общие выводы</h2>
             <p className="max-w-[68ch]">{report.plain_summary}</p>
+            {onDiscuss && (
+              <button
+                type="button"
+                onClick={onDiscuss}
+                className="pd-noprint pd-btn mt-6 rounded-lg bg-[#7119FF] px-6 py-4 text-[12px] font-bold text-white hover:bg-[#5F12DC]"
+              >
+                Обсудить с ИИ-ассистентом
+              </button>
+            )}
           </section>
         )}
 

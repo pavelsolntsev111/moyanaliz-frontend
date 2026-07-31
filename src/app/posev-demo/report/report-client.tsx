@@ -40,6 +40,17 @@ const CSS = `
 
 export default function ReportClient() {
   const [state, setState] = useState<State>({ kind: "loading" });
+  // Чат открывается двумя путями: кнопкой под «Общими выводами» вверху отчёта и
+  // своей кнопкой внизу — состояние поэтому живёт здесь, а не внутри панели.
+  const [chatOpen, setChatOpen] = useState(false);
+
+  const openChat = () => {
+    setChatOpen(true);
+    setTimeout(
+      () => document.getElementById("posev-chat")?.scrollIntoView({ behavior: "smooth", block: "start" }),
+      60
+    );
+  };
 
   useEffect(() => {
     // Отчёт передаётся ключом в localStorage: postMessage не годится — часть
@@ -159,10 +170,19 @@ export default function ReportClient() {
 
       {state.kind === "ready" && (
         <>
-          <ReportView report={state.report} meta={state.meta} />
+          <ReportView
+            report={state.report}
+            meta={state.meta}
+            onDiscuss={state.password ? openChat : undefined}
+          />
           {state.password && (
-            <div className="mx-auto max-w-[860px] px-6 pb-14">
-              <ReportChat report={state.report} password={state.password} />
+            <div id="posev-chat" className="mx-auto max-w-[860px] px-6 pb-14">
+              <ReportChat
+                report={state.report}
+                password={state.password}
+                open={chatOpen}
+                onOpen={openChat}
+              />
             </div>
           )}
         </>
