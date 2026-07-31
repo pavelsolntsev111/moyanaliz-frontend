@@ -88,13 +88,8 @@ export default function ReportClient() {
 
       <header className="pd-noprint border-b border-black/[0.08]">
         <div className="mx-auto flex max-w-[1240px] flex-wrap items-center gap-x-6 gap-y-4 px-6 py-5 lg:px-10">
-          <div className="flex items-center gap-3.5">
-            <div className="pd-display grid h-10 w-10 shrink-0 place-items-center rounded-lg bg-[#00C3C8] text-[11px] font-extrabold tracking-[0.04em] text-white">
-              АМР
-            </div>
-            <div className="pd-display text-[13px] font-extrabold tracking-[0.06em]">
-              ПОРТАЛ О АНТИБИОТИКОРЕЗИСТЕНТНОСТИ
-            </div>
+          <div className="pd-display text-[13px] font-extrabold tracking-[0.06em]">
+            ПОРТАЛ О АНТИБИОТИКОРЕЗИСТЕНТНОСТИ
           </div>
 
           {state.kind === "ready" && (

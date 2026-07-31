@@ -107,17 +107,6 @@ export default function PosevDemoClient() {
   );
 }
 
-function LogoMark({ size = "md" }: { size?: "sm" | "md" }) {
-  const box = size === "sm" ? "h-9 w-9 text-[10px]" : "h-11 w-11 text-[11px]";
-  return (
-    <div
-      className={`${box} pd-display grid shrink-0 place-items-center rounded-lg bg-[#00C3C8] font-extrabold tracking-[0.04em] text-white`}
-    >
-      АМР
-    </div>
-  );
-}
-
 // ─────────────────────────── пароль ───────────────────────────
 
 function Gate({ onPass }: { onPass: (pw: string) => void }) {
@@ -148,9 +137,8 @@ function Gate({ onPass }: { onPass: (pw: string) => void }) {
     <main className="flex min-h-screen items-center bg-[#4000A8] px-6 py-16 text-white">
       <div className="mx-auto grid w-full max-w-[1000px] gap-14 lg:grid-cols-12 lg:items-center">
         <div className="lg:col-span-6">
-          <div className="mb-8 flex items-center gap-3">
-            <LogoMark size="sm" />
-            <span className="pd-eyebrow text-white/60">портал о антибиотикорезистентности</span>
+          <div className="pd-display mb-8 text-[13px] font-bold tracking-[0.06em] text-white/70">
+            ПОРТАЛ О АНТИБИОТИКОРЕЗИСТЕНТНОСТИ
           </div>
           <h1 className="pd-display text-[38px] font-extrabold leading-[1.06] sm:text-[46px]">
             Демо расшифровки
@@ -219,6 +207,9 @@ function Portal({ password }: { password: string }) {
         const form = new FormData();
         form.append("file", file);
         form.append("password", password);
+        // Согласие уходит на сервер и проверяется там же: гейт только в
+        // интерфейсе — это витрина, а не правовое основание обработки.
+        form.append("consent", "true");
         const res = await fetch("/api/v1/demo/posev", { method: "POST", body: form });
         const data = (await res.json()) as ApiOk | ApiReject | { detail?: string };
         if (!res.ok) {
@@ -261,11 +252,8 @@ function Portal({ password }: { password: string }) {
       <section className="flex min-h-[100svh] flex-col bg-[#4000A8] text-white">
         <div className="mx-auto flex w-full max-w-[1240px] flex-1 flex-col px-6 lg:px-10">
           <header className="flex flex-wrap items-center gap-x-10 gap-y-5 py-7">
-            <div className="flex items-center gap-3.5">
-              <LogoMark />
-              <div className="pd-display text-[13.5px] font-extrabold tracking-[0.06em]">
-                ПОРТАЛ О АНТИБИОТИКОРЕЗИСТЕНТНОСТИ
-              </div>
+            <div className="pd-display text-[13.5px] font-extrabold tracking-[0.06em]">
+              ПОРТАЛ О АНТИБИОТИКОРЕЗИСТЕНТНОСТИ
             </div>
 
             <nav className="ml-auto flex flex-wrap items-center gap-7 text-[13px]">
@@ -311,18 +299,19 @@ function Portal({ password }: { password: string }) {
                 без назначений: препарат подбирает врач.
               </p>
 
-              <dl className="mt-12 grid gap-y-7 border-t border-white/20 pt-8 sm:grid-cols-3 sm:gap-x-8">
+              <ul className="mt-12 space-y-3 border-t border-white/20 pt-8 text-[15px] text-white/80">
                 {[
-                  ["Приватность", "Файл обрабатывается и удаляется, не сохраняется"],
-                  ["Обезличивание", "Имя пациента и лаборатория не извлекаются"],
-                  ["Стандарт", "Категории чувствительности — по критериям EUCAST"],
-                ].map(([k, v], i) => (
-                  <div key={k} className={i ? "sm:border-l sm:border-white/20 sm:pl-8" : ""}>
-                    <dt className="pd-eyebrow text-[#7EE3E6]">{k}</dt>
-                    <dd className="mt-2.5 text-[13.5px] leading-relaxed text-white/75">{v}</dd>
-                  </div>
+                  "Личные данные не сохраняются",
+                  "Имя и лаборатория из бланка не считываются",
+                  "Файл удаляется сразу после разбора",
+                  "Оценка по международному стандарту EUCAST",
+                ].map((t) => (
+                  <li key={t} className="flex items-start gap-3">
+                    <span className="mt-[9px] h-1 w-1 shrink-0 rounded-full bg-[#00C3C8]" />
+                    {t}
+                  </li>
                 ))}
-              </dl>
+              </ul>
             </div>
 
             <div className="lg:col-span-5">
@@ -373,6 +362,9 @@ function Widget({
   onSample: (p: string) => void;
 }) {
   const [drag, setDrag] = useState(false);
+  // Согласие спрашиваем ДО загрузки: после того как файл ушёл, спрашивать
+  // разрешение уже поздно.
+  const [consent, setConsent] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
   return (
@@ -452,8 +444,29 @@ function Widget({
         </div>
       ) : (
         <>
+          <label className="mt-7 flex cursor-pointer items-start gap-3 text-[13px] leading-relaxed">
+            <input
+              type="checkbox"
+              checked={consent}
+              onChange={(e) => setConsent(e.target.checked)}
+              className="mt-0.5 h-4 w-4 shrink-0 accent-[#7119FF]"
+            />
+            <span>
+              Согласен с{" "}
+              <a
+                href="/posev-demo/privacy"
+                target="_blank"
+                rel="noopener"
+                className="underline decoration-[#7119FF]/40 underline-offset-2 hover:decoration-[#7119FF]"
+              >
+                политикой обработки персональных данных
+              </a>
+            </span>
+          </label>
+
           <div
             onDragOver={(e) => {
+              if (!consent) return;
               e.preventDefault();
               setDrag(true);
             }}
@@ -461,14 +474,18 @@ function Widget({
             onDrop={(e) => {
               e.preventDefault();
               setDrag(false);
+              if (!consent) return;
               const f = e.dataTransfer.files?.[0];
               if (f) onFile(f);
             }}
-            onClick={() => inputRef.current?.click()}
-            className={`pd-drop mt-7 cursor-pointer rounded-lg border border-dashed px-6 py-10 text-center ${
-              drag
-                ? "border-[#7119FF] bg-[#FAF7FF]"
-                : "border-black/[0.15] hover:border-black/30 hover:bg-black/[0.02]"
+            onClick={() => consent && inputRef.current?.click()}
+            aria-disabled={!consent}
+            className={`pd-drop mt-4 rounded-lg border border-dashed px-6 py-10 text-center ${
+              !consent
+                ? "cursor-not-allowed border-black/[0.1] opacity-45"
+                : drag
+                  ? "cursor-pointer border-[#7119FF] bg-[#FAF7FF]"
+                  : "cursor-pointer border-black/[0.15] hover:border-black/30 hover:bg-black/[0.02]"
             }`}
           >
             <svg
@@ -506,8 +523,9 @@ function Widget({
                 <button
                   key={s.file}
                   type="button"
+                  disabled={!consent}
                   onClick={() => onSample(s.file)}
-                  className="pd-sample flex w-full items-center justify-between rounded-lg border border-black/[0.1] bg-white px-4 py-3.5 text-left"
+                  className="pd-sample flex w-full items-center justify-between rounded-lg border border-black/[0.1] bg-white px-4 py-3.5 text-left disabled:cursor-not-allowed disabled:opacity-45 disabled:hover:translate-x-0 disabled:hover:border-black/[0.1] disabled:hover:shadow-none"
                 >
                   <span className="text-[13.5px] font-semibold">{s.label}</span>
                   <span className="text-[11.5px] text-[#86838F]">{s.meta}</span>

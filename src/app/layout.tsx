@@ -1,12 +1,16 @@
 import type { Metadata, Viewport } from "next";
-import { Inter } from "next/font/google";
-import Script from "next/script";
+// Inter — интерфейсный шрифт всего сайта. Подключён ЛОКАЛЬНО из node_modules,
+// а НЕ через next/font/google, и это принципиально: next/font качает woff2 с
+// fonts.gstatic.com во время сборки, и когда доступ к Google Fonts отваливается,
+// падает билд ВСЕГО фронта. Так уже было на /posev-demo дважды (Raleway, потом
+// Manrope), а 30.07.2026 то же воспроизводилось локально на этом Inter'е.
+// @fontsource-variable/inter везёт woff2 в зависимостях (включая cyrillic и
+// cyrillic-ext) — сборка перестаёт зависеть от внешней сети.
+// Семейство называется 'Inter Variable', оно подставлено в --font-inter в
+// globals.css.
+import "@fontsource-variable/inter";
 import "./globals.css";
-
-const inter = Inter({
-  variable: "--font-inter",
-  subsets: ["latin", "cyrillic"],
-});
+import Analytics from "./analytics";
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://moyanaliz.ru"),
@@ -75,31 +79,9 @@ export default function RootLayout({
           dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
         />
       </head>
-      <body className={`${inter.variable} antialiased`}>
+      <body className="antialiased">
         {children}
-        <Script id="ym-init" strategy="afterInteractive">{`
-          (function(m,e,t,r,i,k,a){
-            m[i]=m[i]||function(){(m[i].a=m[i].a||[]).push(arguments)};
-            m[i].l=1*new Date();
-            for(var j=0;j<document.scripts.length;j++){if(document.scripts[j].src===r){return;}}
-            k=e.createElement(t),a=e.getElementsByTagName(t)[0],k.async=1,k.src=r,a.parentNode.insertBefore(k,a)
-          })(window,document,'script','https://mc.yandex.ru/metrika/tag.js?id=108175626','ym');
-          // Strip payment-provider referrers so returning from checkout doesn't
-          // reset attribution to yookassa.ru (keep original Direct/UTM source).
-          var _ymRef = document.referrer;
-          try {
-            if (_ymRef) {
-              var _ymHost = new URL(_ymRef).hostname.toLowerCase();
-              if (/(^|\\.)(yookassa|yoomoney|qiwi|sberbank|tinkoff)\\.[a-z]+$/.test(_ymHost)) { _ymRef = ''; }
-            }
-          } catch (e) {}
-          ym(108175626,'init',{ssr:true,webvisor:true,clickmap:true,ecommerce:"dataLayer",referrer:_ymRef,url:location.href,accurateTrackBounce:true,trackLinks:true});
-        `}</Script>
-        <noscript>
-          <div>
-            <img src="https://mc.yandex.ru/watch/108175626" style={{position:"absolute",left:"-9999px"}} alt="" />
-          </div>
-        </noscript>
+        <Analytics />
       </body>
     </html>
   );
