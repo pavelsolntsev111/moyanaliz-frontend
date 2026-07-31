@@ -1,20 +1,18 @@
 "use client";
 
 /**
- * Презентация расшифровки бак-посева. Общая для двух мест:
- *  - отдельная вкладка /posev-demo/report (основной путь),
- *  - инлайн под виджетом (запасной путь, если браузер заблокировал вкладку).
+ * Презентация расшифровки бак-посева (страница /posev-demo/report).
  *
- * ПАЛИТРА — фирменная med-click.ru: плоский #4000A8, #7119FF, бирюза #00C3C8,
- * коралл. «Палевом ИИ» читается не сам фиолетовый (это бренд заказчика), а его
- * типовая подача: градиентные свечения, glassmorphism, переливы фиолетовый→синий.
- * Поэтому здесь плоские заливки и волосяные границы, без единого градиента.
- * Категории S/I/R — приглушённые зелень / латунь / терракота, а не светофор.
+ * СОЗНАТЕЛЬНО КОНСЕРВАТИВНО. Прошлая версия расползалась: десяток кеглей,
+ * шесть уровней серого, курсив, надзаголовки над каждым разделом, липкий
+ * сайдбар с оглавлением. Для медицинского документа это шум. Здесь:
+ *  - одна колонка, как у лабораторного заключения;
+ *  - четыре кегля (24 заголовок / 18 раздел / 15 текст / 13 подписи);
+ *  - три уровня серого (ink / secondary / muted) и волосяная линия;
+ *  - Manrope только на заголовках, весь текст — интерфейсным шрифтом;
+ *  - без курсива и без надзаголовков-эйбрау.
+ * Цвет остаётся только там, где он несёт смысл: категории S / I / R.
  */
-
-import { useMemo } from "react";
-
-// ─────────────────────────── типы ответа бэкенда ───────────────────────────
 
 export type Verdict = "S" | "I" | "R";
 
@@ -66,47 +64,37 @@ export interface ReportMeta {
   stored?: boolean;
 }
 
-export const V: Record<
-  Verdict,
-  { tile: string; chip: string; label: string; short: string; bar: string }
-> = {
+export const V: Record<Verdict, { tile: string; chip: string; label: string; short: string }> = {
   S: {
     tile: "bg-[#0B6E5D] text-white",
     chip: "bg-[#EAF4F1] text-[#0A6153]",
     label: "Чувствителен",
     short: "чувствителен",
-    bar: "bg-[#0B6E5D]",
   },
   I: {
     tile: "bg-[#8A6A2A] text-white",
     chip: "bg-[#F8F1E1] text-[#7A5920]",
-    label: "Чувствителен при увел. экспозиции",
+    label: "Чувствителен при увеличенной экспозиции",
     short: "при увел. экспозиции",
-    bar: "bg-[#B08A3C]",
   },
   R: {
     tile: "bg-[#8F3A2F] text-white",
     chip: "bg-[#F9ECE9] text-[#8A372C]",
     label: "Устойчив",
     short: "устойчив",
-    bar: "bg-[#8F3A2F]",
   },
 };
 
-/**
- * compact — для таблицы: полная подпись «Чувствителен при увел. экспозиции»
- * переносится в две строки и ломает ритм строк.
- */
-export function Chip({ v, compact }: { v: Verdict; compact?: boolean }) {
+function Chip({ v, compact }: { v: Verdict; compact?: boolean }) {
   const st = V[v];
   return (
     <span
-      className={`inline-flex items-center gap-2 rounded-lg py-1 pl-1 pr-2.5 text-[12px] font-semibold ${
+      className={`inline-flex items-center gap-2 rounded py-0.5 pl-0.5 pr-2 text-[13px] ${
         compact ? "whitespace-nowrap" : ""
       } ${st.chip}`}
     >
       <span
-        className={`grid h-[19px] w-[19px] place-items-center rounded-md text-[11px] font-extrabold ${st.tile}`}
+        className={`grid h-[18px] w-[18px] place-items-center rounded-sm text-[11px] font-bold ${st.tile}`}
       >
         {v}
       </span>
@@ -117,171 +105,77 @@ export function Chip({ v, compact }: { v: Verdict; compact?: boolean }) {
 
 function Section({
   id,
-  eyebrow,
   title,
   children,
 }: {
   id: string;
-  eyebrow: string;
   title: string;
   children: React.ReactNode;
 }) {
   return (
-    <section id={id} className="pd-block scroll-mt-8">
-      <div className="mb-6 border-t border-black/[0.09] pt-5">
-        <p className="pd-eyebrow text-[#9A96A6]">{eyebrow}</p>
-        <h2 className="pd-display mt-2 text-[24px] font-extrabold leading-tight">{title}</h2>
-      </div>
+    <section id={id} className="pd-block border-t border-[#E5E5E8] pt-7">
+      <h2 className="pd-display mb-4 text-[18px] font-bold leading-snug">{title}</h2>
       {children}
     </section>
   );
 }
 
-// ─────────────────────────── сам отчёт ───────────────────────────
-
-export function ReportView({ report, meta }: { report: PosevReport; meta?: ReportMeta | null }) {
+export function ReportView({ report }: { report: PosevReport; meta?: ReportMeta | null }) {
   const r = report.resistance || {};
   const tested = r.tested || 0;
   const sexLabel =
     report.patient?.sex === "male" ? "мужской" : report.patient?.sex === "female" ? "женский" : null;
-
-  const jumps = useMemo(
-    () =>
-      [
-        report.plain_summary && ["summary", "Кратко"],
-        report.pathogens?.length && ["growth", "Что выросло"],
-        report.antibiogram?.length && ["abx", "Чувствительность"],
-        tested > 0 && r.text && ["resistance", "Устойчивость"],
-        report.phages?.length && ["phages", "Бактериофаги"],
-        report.sir_explainer?.length && ["sir", "S, I и R"],
-        report.amr_notes?.length && ["amr", "Про устойчивость"],
-        (report.questions_for_doctor?.length || report.red_flags?.length) && ["ask", "Врачу"],
-      ].filter(Boolean) as [string, string][],
-    [report, tested, r.text]
-  );
+  const patientLine = [sexLabel, report.patient?.age != null ? `${report.patient.age} лет` : null]
+    .filter(Boolean)
+    .join(", ");
 
   return (
-    <div className="mx-auto grid max-w-[1240px] gap-12 px-6 py-14 lg:grid-cols-[268px_minmax(0,1fr)] lg:gap-16 lg:px-10">
-      {/* ── колонка-сводка ──
-          min-w-0 обязателен: без него грид-трек раздувается под min-w таблицы
-          антибиотикограммы и на мобильном появляется горизонтальный скролл
-          всей страницы вместо прокрутки внутри таблицы. */}
-      <aside className="pd-rail min-w-0 lg:sticky lg:top-8 lg:self-start">
-        <p className="pd-eyebrow text-[#9A96A6]">результат</p>
-        <h1 className="pd-display mt-2.5 text-[19px] font-extrabold leading-snug">
-          {report.doc_kind || "Бактериологический посев"}
-        </h1>
+    <article className="mx-auto max-w-[860px] px-6 py-12 text-[15px] leading-[1.65] text-[#1A1A1F]">
+      <h1 className="pd-display text-[24px] font-bold leading-snug">
+        {report.doc_kind || "Бактериологический посев"}
+      </h1>
 
-        <dl className="mt-6 space-y-3 border-t border-black/[0.09] pt-5 text-[13px]">
-          {report.material && (
-            <div>
-              <dt className="text-[#86838F]">Биоматериал</dt>
-              <dd className="mt-0.5 leading-snug">{report.material}</dd>
-            </div>
-          )}
-          {report.collected_at && (
-            <div>
-              <dt className="text-[#86838F]">Дата взятия</dt>
-              <dd className="mt-0.5">{report.collected_at}</dd>
-            </div>
-          )}
-          {(sexLabel || report.patient?.age != null) && (
-            <div>
-              <dt className="text-[#86838F]">Пациент</dt>
-              <dd className="mt-0.5">
-                {[sexLabel, report.patient?.age != null ? `${report.patient.age} лет` : null]
-                  .filter(Boolean)
-                  .join(", ")}
-              </dd>
-            </div>
-          )}
-        </dl>
-
-        {tested > 0 && (
-          <div className="mt-7 border-t border-black/[0.09] pt-5">
-            <p className="pd-eyebrow text-[#9A96A6]">из {tested} препаратов</p>
-            <div className="mt-4 space-y-2.5">
-              {(["S", "I", "R"] as Verdict[]).map((v) => {
-                const val = (v === "S" ? r.s : v === "I" ? r.i : r.r) ?? 0;
-                return (
-                  <div key={v} className="flex items-center gap-3">
-                    <span className="pd-display w-4 text-[12px] font-extrabold text-[#6B6875]">
-                      {v}
-                    </span>
-                    <span className="h-[5px] flex-1 overflow-hidden rounded-full bg-black/[0.06]">
-                      <span
-                        className={`block h-full rounded-full ${V[v].bar}`}
-                        style={{ width: `${tested ? (val / tested) * 100 : 0}%` }}
-                      />
-                    </span>
-                    <span className="w-5 text-right text-[12.5px] font-semibold tabular-nums">
-                      {val}
-                    </span>
-                  </div>
-                );
-              })}
-            </div>
-            {r.multi_resistant && (
-              <p className="mt-5 rounded-xl bg-[#F9ECE9] px-4 py-3 text-[12.5px] leading-relaxed text-[#8A372C]">
-                Устойчивость к {r.r_classes} классам препаратов — картина множественной
-                устойчивости.
-              </p>
-            )}
-          </div>
+      <dl className="mt-6 grid gap-x-8 gap-y-2 border-t border-[#E5E5E8] pt-5 text-[13px] sm:grid-cols-[max-content_1fr]">
+        {report.material && (
+          <>
+            <dt className="text-[#8A8A93]">Биоматериал</dt>
+            <dd>{report.material}</dd>
+          </>
         )}
+        {report.collected_at && (
+          <>
+            <dt className="text-[#8A8A93]">Дата взятия</dt>
+            <dd>{report.collected_at}</dd>
+          </>
+        )}
+        {patientLine && (
+          <>
+            <dt className="text-[#8A8A93]">Пациент</dt>
+            <dd>{patientLine}</dd>
+          </>
+        )}
+      </dl>
 
-        <nav className="pd-noprint mt-7 border-t border-black/[0.09] pt-5">
-          <ul className="space-y-2.5 text-[13px]">
-            {jumps.map(([id, label]) => (
-              <li key={id}>
-                <a href={`#${id}`} className="pd-jump block text-[#6B6875]">
-                  {label}
-                </a>
-              </li>
-            ))}
-          </ul>
-        </nav>
-      </aside>
-
-      {/* ── колонка отчёта ── */}
-      <div className="min-w-0 space-y-14">
+      <div className="mt-10 space-y-10">
         {report.plain_summary && (
-          <section id="summary" className="pd-block scroll-mt-8">
-            <p className="pd-eyebrow mb-4 text-[#9A96A6]">кратко</p>
-            <p className="pd-display max-w-[62ch] text-[21px] font-medium leading-[1.5] tracking-[-0.01em]">
-              {report.plain_summary}
-            </p>
-            {meta?.elapsed_ms != null && (
-              <p className="pd-noprint mt-6 text-[11.5px] text-[#A5A2AE]">
-                разобрано за {(meta.elapsed_ms / 1000).toFixed(1)} с
-              </p>
-            )}
+          <section id="summary" className="pd-block border-t border-[#E5E5E8] pt-7">
+            <p className="max-w-[68ch]">{report.plain_summary}</p>
           </section>
         )}
 
         {!!report.pathogens?.length && (
-          <Section id="growth" eyebrow="результат посева" title="Что выросло">
-            <div className="space-y-8">
+          <Section id="growth" title="Что выросло">
+            <div className="space-y-6">
               {report.pathogens.map((p, i) => (
-                <div key={i} className={i ? "border-t border-black/[0.07] pt-8" : ""}>
-                  <div className="flex flex-wrap items-baseline gap-x-4 gap-y-2">
-                    <span className="pd-display text-[22px] font-extrabold italic">
-                      {p.name_latin}
-                    </span>
-                    {p.name_ru && <span className="text-[14.5px] text-[#6B6875]">{p.name_ru}</span>}
-                    {p.count && (
-                      <span className="ml-auto rounded-lg bg-black/[0.045] px-3 py-1.5 text-[13px] font-semibold tabular-nums">
-                        {p.count}
-                      </span>
-                    )}
-                  </div>
-                  {p.about && (
-                    <p className="mt-4 max-w-[70ch] text-[14.5px] leading-[1.7]">{p.about}</p>
-                  )}
+                <div key={i} className={i ? "border-t border-[#EFEFF1] pt-6" : ""}>
+                  <p className="font-semibold">
+                    {p.name_latin}
+                    {p.name_ru ? ` — ${p.name_ru}` : ""}
+                    {p.count ? ` · ${p.count}` : ""}
+                  </p>
+                  {p.about && <p className="mt-2 max-w-[68ch]">{p.about}</p>}
                   {p.significance_text && (
-                    <p className="mt-3 max-w-[70ch] text-[13.5px] leading-[1.7] text-[#6B6875]">
-                      {p.significance_text}
-                    </p>
+                    <p className="mt-2 max-w-[68ch] text-[#55555E]">{p.significance_text}</p>
                   )}
                 </div>
               ))}
@@ -294,17 +188,16 @@ export function ReportView({ report, meta }: { report: PosevReport; meta?: Repor
             <Section
               key={gi}
               id={gi === 0 ? "abx" : `abx-${gi}`}
-              eyebrow="антибиотикограмма"
               title={`Чувствительность${group.pathogen ? ` · ${group.pathogen}` : ""}`}
             >
-              <div className="-mx-2 overflow-x-auto px-2">
-                <table className="w-full min-w-[560px] border-collapse text-[14px]">
+              <div className="-mx-1 overflow-x-auto px-1">
+                <table className="w-full min-w-[540px] border-collapse text-[14px]">
                   <thead>
-                    <tr>
+                    <tr className="border-b border-[#E5E5E8]">
                       {["Препарат", "Класс", "МПК, мг/л", "Категория"].map((h) => (
                         <th
                           key={h}
-                          className="pd-eyebrow whitespace-nowrap pb-3 pr-4 text-left font-semibold text-[#9A96A6]"
+                          className="whitespace-nowrap pb-2.5 pr-4 text-left text-[13px] font-normal text-[#8A8A93]"
                         >
                           {h}
                         </th>
@@ -313,15 +206,11 @@ export function ReportView({ report, meta }: { report: PosevReport; meta?: Repor
                   </thead>
                   <tbody>
                     {(group.items || []).map((it, i) => (
-                      <tr key={i} className="pd-row border-t border-black/[0.07]">
-                        <td className="py-3.5 pr-4 font-semibold">{it.drug}</td>
-                        <td className="py-3.5 pr-4 text-[13px] text-[#6B6875]">
-                          {it.drug_class || "—"}
-                        </td>
-                        <td className="whitespace-nowrap py-3.5 pr-4 tabular-nums">
-                          {it.mic || "—"}
-                        </td>
-                        <td className="py-3.5">
+                      <tr key={i} className="pd-row border-b border-[#EFEFF1]">
+                        <td className="py-2.5 pr-4">{it.drug}</td>
+                        <td className="py-2.5 pr-4 text-[#55555E]">{it.drug_class || "—"}</td>
+                        <td className="whitespace-nowrap py-2.5 pr-4">{it.mic || "—"}</td>
+                        <td className="py-2.5">
                           <Chip v={it.verdict} compact />
                         </td>
                       </tr>
@@ -329,124 +218,108 @@ export function ReportView({ report, meta }: { report: PosevReport; meta?: Repor
                   </tbody>
                 </table>
               </div>
-              <p className="mt-5 max-w-[70ch] text-[12.5px] leading-[1.7] text-[#86838F]">
+              <p className="mt-4 max-w-[68ch] text-[13px] text-[#8A8A93]">
                 МПК — минимальная подавляющая концентрация. Сравнивать числа МПК между разными
                 препаратами нельзя: у каждого свои пороги.
               </p>
             </Section>
           ))}
 
-        {tested > 0 && r.text && (
-          <Section id="resistance" eyebrow="картина изолята" title="Устойчивость">
-            <p className="max-w-[70ch] text-[15px] leading-[1.75]">{r.text}</p>
+        {tested > 0 && (
+          <Section id="resistance" title="Устойчивость">
+            <p>
+              Проверено препаратов: {tested}. Чувствителен — {r.s ?? 0}, чувствителен при
+              увеличенной экспозиции — {r.i ?? 0}, устойчив — {r.r ?? 0}.
+            </p>
+            {r.multi_resistant && (
+              <p className="mt-3 max-w-[68ch] text-[#8A372C]">
+                Устойчивость к {r.r_classes} классам препаратов — картина множественной
+                устойчивости.
+              </p>
+            )}
+            {r.text && <p className="mt-3 max-w-[68ch]">{r.text}</p>}
           </Section>
         )}
 
         {!!report.phages?.length && (
-          <Section id="phages" eyebrow="альтернативные агенты" title="Бактериофаги">
-            <ul>
-              {report.phages.map((p, i) => (
-                <li
-                  key={i}
-                  className="pd-row flex flex-wrap items-center justify-between gap-4 border-t border-black/[0.07] py-3.5"
-                >
-                  <span className="text-[14.5px] font-semibold">{p.name}</span>
-                  {p.verdict && <Chip v={p.verdict} />}
-                </li>
-              ))}
-            </ul>
+          <Section id="phages" title="Бактериофаги">
+            <table className="w-full border-collapse text-[14px]">
+              <tbody>
+                {report.phages.map((p, i) => (
+                  <tr key={i} className="border-b border-[#EFEFF1]">
+                    <td className="py-2.5 pr-4">{p.name}</td>
+                    <td className="w-px whitespace-nowrap py-2.5 text-right">
+                      {p.verdict && <Chip v={p.verdict} compact />}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </Section>
         )}
 
         {!!report.sir_explainer?.length && (
-          <Section id="sir" eyebrow="как читать таблицу" title="Что означают S, I и R">
-            <div className="grid gap-y-8 sm:grid-cols-3 sm:gap-x-0">
-              {report.sir_explainer.map((e, i) => {
+          <Section id="sir" title="Что означают S, I и R">
+            <dl className="space-y-4">
+              {report.sir_explainer.map((e) => {
                 const st = V[e.code] || V.S;
                 return (
-                  <div
-                    key={e.code}
-                    className={i ? "sm:border-l sm:border-black/[0.09] sm:pl-7" : "sm:pr-7"}
-                  >
-                    <span
-                      className={`pd-display grid h-8 w-8 place-items-center rounded-lg text-[14px] font-extrabold ${st.tile}`}
-                    >
-                      {e.code}
-                    </span>
-                    <h3 className="mt-4 text-[14.5px] font-bold leading-snug">{e.title}</h3>
-                    <p className="mt-2.5 text-[13.5px] leading-[1.7] text-[#55535E]">{e.text}</p>
+                  <div key={e.code}>
+                    <dt className="flex items-center gap-2 font-semibold">
+                      <span
+                        className={`grid h-[18px] w-[18px] place-items-center rounded-sm text-[11px] font-bold ${st.tile}`}
+                      >
+                        {e.code}
+                      </span>
+                      {e.title}
+                    </dt>
+                    <dd className="mt-1 max-w-[68ch] text-[#55555E]">{e.text}</dd>
                   </div>
                 );
               })}
-            </div>
+            </dl>
           </Section>
         )}
 
         {!!report.amr_notes?.length && (
-          <Section id="amr" eyebrow="тема портала" title="Почему это важно знать">
-            <ol className="space-y-6">
+          <Section id="amr" title="Почему это важно знать">
+            <ol className="max-w-[68ch] list-decimal space-y-3 pl-5">
               {report.amr_notes.map((n, i) => (
-                <li key={i} className="flex gap-5">
-                  <span className="pd-display shrink-0 text-[20px] font-extrabold tabular-nums text-[#4000A8]/45">
-                    {String(i + 1).padStart(2, "0")}
-                  </span>
-                  <p className="max-w-[66ch] text-[14.5px] leading-[1.75]">{n}</p>
-                </li>
+                <li key={i}>{n}</li>
               ))}
             </ol>
           </Section>
         )}
 
-        {(!!report.questions_for_doctor?.length || !!report.red_flags?.length) && (
-          <Section id="ask" eyebrow="что делать дальше" title="Разговор с врачом">
-            <div className="grid gap-10 lg:grid-cols-2 lg:gap-12">
-              {!!report.questions_for_doctor?.length && (
-                <div>
-                  <p className="pd-eyebrow mb-4 text-[#9A96A6]">о чём спросить</p>
-                  <ul className="space-y-3.5">
-                    {report.questions_for_doctor.map((q, i) => (
-                      <li
-                        key={i}
-                        className="border-t border-black/[0.07] pt-3.5 text-[13.5px] leading-[1.65]"
-                      >
-                        {q}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-              {!!report.red_flags?.length && (
-                <div className="rounded-2xl bg-[#FBEEEB]/70 p-7">
-                  <p className="pd-eyebrow mb-4 text-[#8A372C]/75">срочно к врачу</p>
-                  <ul className="space-y-3.5">
-                    {report.red_flags.map((f, i) => (
-                      <li
-                        key={i}
-                        className="border-t border-[#8F3A2F]/15 pt-3.5 text-[13.5px] leading-[1.65] text-[#5E2A22]"
-                      >
-                        {f}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-            </div>
+        {!!report.questions_for_doctor?.length && (
+          <Section id="ask" title="О чём спросить врача">
+            <ul className="max-w-[68ch] list-disc space-y-2 pl-5">
+              {report.questions_for_doctor.map((q, i) => (
+                <li key={i}>{q}</li>
+              ))}
+            </ul>
+          </Section>
+        )}
+
+        {!!report.red_flags?.length && (
+          <Section id="urgent" title="Когда к врачу срочно">
+            <ul className="max-w-[68ch] list-disc space-y-2 pl-5">
+              {report.red_flags.map((f, i) => (
+                <li key={i}>{f}</li>
+              ))}
+            </ul>
           </Section>
         )}
 
         {/* граница продукта, а не косметика */}
-        <div className="pd-block rounded-2xl border border-[#E4D9BF] bg-[#FBF7EC] p-8">
-          <h3 className="pd-display text-[16px] font-extrabold text-[#6E521C]">
+        <section className="pd-block border-t border-[#E5E5E8] pt-7">
+          <h2 className="pd-display mb-4 text-[18px] font-bold leading-snug">
             Сервис не подбирает препарат
-          </h3>
-          <p className="mt-3.5 max-w-[72ch] text-[13.5px] leading-[1.75] text-[#6E521C]/90">
-            {report.no_prescription_note}
-          </p>
-          <p className="mt-4 max-w-[72ch] border-t border-[#E4D9BF] pt-4 text-[12.5px] leading-[1.7] text-[#6E521C]/70">
-            {report.disclaimer}
-          </p>
-        </div>
+          </h2>
+          <p className="max-w-[68ch]">{report.no_prescription_note}</p>
+          <p className="mt-3 max-w-[68ch] text-[13px] text-[#8A8A93]">{report.disclaimer}</p>
+        </section>
       </div>
-    </div>
+    </article>
   );
 }

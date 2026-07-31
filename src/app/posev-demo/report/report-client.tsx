@@ -20,8 +20,6 @@ const CSS = `
 .pd-eyebrow { font-size: 10.5px; letter-spacing: 0.16em; text-transform: uppercase; font-weight: 600; }
 .pd-row { transition: background-color .18s ease; }
 .pd-row:hover { background-color: rgba(22,20,28,.022); }
-.pd-jump { transition: color .18s ease, padding-left .18s ease; }
-.pd-jump:hover { color: #16141C; padding-left: 4px; }
 .pd-btn { transition: background-color .2s ease, transform .12s ease, border-color .2s ease; }
 .pd-btn:active { transform: translateY(1px); }
 .pd-print-only { display: none; }
@@ -33,12 +31,9 @@ const CSS = `
   .pd-print-only { display: block !important; }
   * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
   .pd-block, tr, li { break-inside: avoid; }
-  h1, h2, h3 { break-after: avoid; }
+  h1, h2 { break-after: avoid; }
   table { width: 100% !important; min-width: 0 !important; }
-  /* в печати колонка-сводка идёт первым блоком, а не липким сайдбаром */
-  .pd-grid > div { display: block !important; }
-  /* без max-width полосы S/I/R растягиваются на всю ширину листа и выглядят рвано */
-  .pd-rail { position: static !important; margin-bottom: 12mm; max-width: 110mm; }
+  article { max-width: none !important; padding: 0 !important; }
 }
 `;
 
@@ -157,11 +152,7 @@ export default function ReportClient() {
         </div>
       )}
 
-      {state.kind === "ready" && (
-        <div className="pd-grid">
-          <ReportView report={state.report} meta={state.meta} />
-        </div>
-      )}
+      {state.kind === "ready" && <ReportView report={state.report} meta={state.meta} />}
     </main>
   );
 }

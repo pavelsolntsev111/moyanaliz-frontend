@@ -200,7 +200,6 @@ function Portal({ password }: { password: string }) {
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [stage, setStage] = useState(0);
-  const [fileName, setFileName] = useState<string | null>(null);
 
   useEffect(() => {
     if (!busy) return;
@@ -216,7 +215,6 @@ function Portal({ password }: { password: string }) {
       setRejected(null);
       setReportUrl(null);
       setOpenedInTab(false);
-      setFileName(file.name);
       try {
         const form = new FormData();
         form.append("file", file);
@@ -331,7 +329,6 @@ function Portal({ password }: { password: string }) {
               <Widget
                 busy={busy}
                 stage={stage}
-                fileName={fileName}
                 error={error}
                 rejected={rejected}
                 reportUrl={reportUrl}
@@ -359,7 +356,6 @@ function Portal({ password }: { password: string }) {
 function Widget({
   busy,
   stage,
-  fileName,
   error,
   rejected,
   reportUrl,
@@ -369,7 +365,6 @@ function Widget({
 }: {
   busy: boolean;
   stage: number;
-  fileName: string | null;
   error: string | null;
   rejected: string | null;
   reportUrl: string | null;
@@ -415,11 +410,6 @@ function Widget({
               </li>
             ))}
           </ul>
-          {fileName && (
-            <p className="mt-7 border-t border-black/[0.07] pt-4 text-[11.5px] leading-relaxed text-[#86838F]">
-              {fileName} — обрабатывается в памяти, не сохраняется
-            </p>
-          )}
         </div>
       ) : reportUrl ? (
         <div className="mt-7">
