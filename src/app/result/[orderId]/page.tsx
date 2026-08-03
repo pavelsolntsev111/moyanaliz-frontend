@@ -1117,7 +1117,7 @@ function FullReport({ status, orderId, hasEmail, onEmailSubmitted, chatPromoOffe
 
             {/* Telegram channel */}
             <a
-              href="https://t.me/moy_analiz"
+              href="https://t.me/moy_analiz_tg"
               target="_blank"
               rel="noopener noreferrer"
               className="flex items-center gap-3 rounded-2xl border border-border bg-card p-4 min-h-[72px] hover:border-[#0088cc]/25 hover:shadow-sm transition-all duration-200 group"
@@ -1128,11 +1128,11 @@ function FullReport({ status, orderId, hasEmail, onEmailSubmitted, chatPromoOffe
               <div className="flex-1 text-left min-w-0">
                 <p className="text-sm font-semibold text-foreground">Канал в Telegram</p>
                 <p className="text-xs text-muted-foreground mt-0.5 leading-snug">
-                  Советы и научные данные о здоровье
+                  Каждый день разбираем один показатель
                 </p>
               </div>
               <div className="shrink-0 flex items-center gap-1 text-[#0088cc]">
-                <span className="text-xs font-medium hidden sm:block">@moy_analiz</span>
+                <span className="text-xs font-medium hidden sm:block">@moy_analiz_tg</span>
                 <ExternalLink className="w-3.5 h-3.5 opacity-60 group-hover:opacity-100 transition-opacity" />
               </div>
             </a>
