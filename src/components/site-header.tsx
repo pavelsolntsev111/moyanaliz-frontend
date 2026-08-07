@@ -35,6 +35,12 @@ export function SiteHeader() {
           >
             Показатели
           </Link>
+<Link
+            href="/kalkulyator"
+            className="text-sm font-medium text-muted-foreground transition-colors hover:text-primary"
+          >
+            Калькуляторы
+          </Link>
           <Link
             href="/blog"
             className="text-sm font-medium text-muted-foreground transition-colors hover:text-primary"
@@ -90,6 +96,13 @@ export function SiteHeader() {
               className="text-sm font-medium text-muted-foreground transition-colors hover:text-primary"
             >
               Показатели
+            </Link>
+<Link
+              href="/kalkulyator"
+              onClick={() => setMenuOpen(false)}
+              className="text-sm font-medium text-muted-foreground transition-colors hover:text-primary"
+            >
+              Калькуляторы
             </Link>
             <Link
               href="/blog"

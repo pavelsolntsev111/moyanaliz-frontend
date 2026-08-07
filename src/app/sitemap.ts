@@ -2,6 +2,7 @@ import type { MetadataRoute } from "next";
 import { articles } from "@/lib/blog-data";
 import { indicators } from "@/lib/indicators-data";
 import { landings } from "@/lib/landings-data";
+import { calculators } from "@/lib/calculators-data";
 
 export default function sitemap(): MetadataRoute.Sitemap {
   const base = "https://moyanaliz.ru";
@@ -10,6 +11,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
     { url: base, lastModified: new Date(), changeFrequency: "weekly", priority: 1.0 },
     { url: `${base}/indicators`, lastModified: new Date(), changeFrequency: "weekly", priority: 0.8 },
     { url: `${base}/blog`, lastModified: new Date(), changeFrequency: "weekly", priority: 0.8 },
+    { url: `${base}/kalkulyator`, lastModified: new Date(), changeFrequency: "weekly", priority: 0.9 },
     { url: `${base}/offer`, changeFrequency: "yearly", priority: 0.3 },
     { url: `${base}/privacy`, changeFrequency: "yearly", priority: 0.3 },
     { url: `${base}/terms`, changeFrequency: "yearly", priority: 0.3 },
@@ -37,5 +39,12 @@ export default function sitemap(): MetadataRoute.Sitemap {
     priority: 0.9,
   }));
 
-  return [...staticPages, ...landingPages, ...blogPages, ...indicatorPages];
+  const calcPages: MetadataRoute.Sitemap = calculators.map((c) => ({
+    url: `${base}/kalkulyator/${c.slug}`,
+    lastModified: new Date(),
+    changeFrequency: "monthly",
+    priority: 0.8,
+  }));
+
+  return [...staticPages, ...landingPages, ...calcPages, ...blogPages, ...indicatorPages];
 }
