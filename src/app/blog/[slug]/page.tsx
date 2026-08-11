@@ -1,9 +1,16 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import { Calendar, Clock, ArrowLeft } from "lucide-react";
+import { Calendar, Clock, ArrowLeft, ArrowUpRight } from "lucide-react";
 import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
+import { InlineDropzone } from "@/components/inline-dropzone";
 import { articles, getArticleBySlug } from "@/lib/blog-data";
+import {
+  articleCluster,
+  landingForArticle,
+  indicatorsMentioned,
+  autolinkIndicators,
+} from "@/lib/article-links";
 import type { Metadata } from "next";
 
 interface Props {
@@ -39,9 +46,42 @@ export default async function ArticlePage({ params }: Props) {
   const article = getArticleBySlug(slug);
   if (!article) notFound();
 
+  const cluster = articleCluster(slug);
+  const landing = landingForArticle(slug, article.category);
+  const mentioned = indicatorsMentioned(article.content, 6);
+
+  const jsonLd = [
+    {
+      "@context": "https://schema.org",
+      "@type": "Article",
+      headline: article.title,
+      description: article.description,
+      inLanguage: "ru-RU",
+      datePublished: article.date,
+      dateModified: article.date,
+      mainEntityOfPage: `https://moyanaliz.ru/blog/${slug}`,
+      author: { "@type": "Organization", name: "Мой Анализ" },
+      publisher: { "@type": "Organization", name: "Мой Анализ" },
+      articleSection: article.category,
+    },
+    {
+      "@context": "https://schema.org",
+      "@type": "BreadcrumbList",
+      itemListElement: [
+        { "@type": "ListItem", position: 1, name: "Главная", item: "https://moyanaliz.ru/" },
+        { "@type": "ListItem", position: 2, name: "Блог", item: "https://moyanaliz.ru/blog" },
+        { "@type": "ListItem", position: 3, name: article.title, item: `https://moyanaliz.ru/blog/${slug}` },
+      ],
+    },
+  ];
+
   return (
     <div className="flex min-h-screen flex-col">
       <SiteHeader />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
 
       <main className="flex-1">
         <div className="mx-auto max-w-3xl px-4 py-10">
@@ -78,28 +118,48 @@ export default async function ArticlePage({ params }: Props) {
           </h1>
 
           <article className="prose prose-sm sm:prose-base max-w-none prose-headings:font-semibold prose-h2:text-xl prose-h2:mt-8 prose-h2:mb-3 prose-h3:text-lg prose-h3:mt-6 prose-h3:mb-2 prose-p:text-foreground/80 prose-p:leading-relaxed prose-li:text-foreground/80 prose-strong:text-foreground prose-table:text-sm">
-            <FormattedContent content={article.content} />
+            <FormattedContent content={article.content} cluster={cluster} />
           </article>
 
-          {/* CTA (end) */}
-          <div className="mt-12 p-6 rounded-2xl bg-primary/5 border border-primary/10 text-center">
-            <h3 className="font-semibold mb-2 text-foreground">
-              Хотите расшифровать свои анализы?
-            </h3>
-            <p className="text-sm text-muted-foreground mb-4">
-              Загрузите PDF или фото — и получите подробное объяснение каждого
-              показателя за 2 минуты
-            </p>
+          {/* Показатели из статьи — контекстные ссылки вглубь сайта, а не только на главную */}
+          {mentioned.length > 0 && (
+            <section className="mt-10">
+              <h2 className="text-lg font-semibold text-foreground">Показатели из статьи</h2>
+              <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                {mentioned.map((i) => (
+                  <Link
+                    key={i.slug}
+                    href={`/indicators/${i.slug}`}
+                    className="group flex items-center justify-between rounded-xl border border-border bg-card px-4 py-3 transition hover:border-primary/40"
+                  >
+                    <span className="text-sm font-medium text-foreground">{i.name}</span>
+                    <ArrowUpRight className="h-4 w-4 shrink-0 text-muted-foreground transition group-hover:text-primary" />
+                  </Link>
+                ))}
+              </div>
+            </section>
+          )}
+
+          {/* Финальная дропзона: не ссылка на главную, а сама загрузка прямо здесь */}
+          <InlineDropzone
+            source={cluster}
+            title="Разберём ваш анализ целиком"
+            subtitle="Загрузите PDF или фото бланка — ИИ объяснит каждый показатель с учётом пола и возраста. 299 ₽, без регистрации, результат сразу."
+          />
+
+          {/* Профильный лендинг вместо главной: тематически ближе и не сбрасывает контекст */}
+          {landing && (
             <Link
-              href="/?ref=blog"
-              className="inline-block py-2.5 px-6 rounded-xl bg-primary text-primary-foreground font-semibold hover:opacity-90 transition"
+              href={`/${landing.slug}?ref=${cluster}`}
+              className="group mt-4 flex items-center justify-between rounded-xl border border-border bg-card px-5 py-4 transition hover:border-primary/40"
             >
-              Расшифровать анализы
+              <span className="text-sm text-muted-foreground">
+                Подробнее по теме:{" "}
+                <span className="font-medium text-foreground">{landing.title}</span>
+              </span>
+              <ArrowUpRight className="h-4 w-4 shrink-0 text-muted-foreground transition group-hover:text-primary" />
             </Link>
-            <p className="mt-3 text-xs text-muted-foreground">
-              299 ₽ · без регистрации · результат сразу
-            </p>
-          </div>
+          )}
         </div>
       </main>
 
@@ -108,12 +168,16 @@ export default async function ArticlePage({ params }: Props) {
   );
 }
 
-function FormattedContent({ content }: { content: string }) {
+function FormattedContent({ content, cluster }: { content: string; cluster: string }) {
   const lines = content.split("\n");
   const elements: React.ReactNode[] = [];
   let i = 0;
   let key = 0;
   let ctaInserted = false;
+  // Бюджет автоссылок на статью: 5 достаточно для связности и не превращает текст в решето.
+  const linkBudget = { left: 5 };
+  const linkedSlugs = new Set<string>();
+  const link = (t: string) => autolinkIndicators(t, linkedSlugs, linkBudget);
 
   while (i < lines.length) {
     const line = lines[i];
@@ -131,7 +195,7 @@ function FormattedContent({ content }: { content: string }) {
       // Bridge into the funnel early: place a CTA after the intro, before the
       // first section — most readers leave before the end-of-article CTA (depth ~1.1).
       if (!ctaInserted && elements.length > 0) {
-        elements.push(<InlineCTA key={key++} />);
+        elements.push(<InlineDropzone key={key++} source={cluster} />);
         ctaInserted = true;
       }
       elements.push(<h2 key={key++}>{line.slice(3)}</h2>);
@@ -187,7 +251,7 @@ function FormattedContent({ content }: { content: string }) {
       elements.push(
         <ul key={key++}>
           {items.map((item, idx) => (
-            <li key={idx} dangerouslySetInnerHTML={{ __html: formatInline(item) }} />
+            <li key={idx} dangerouslySetInnerHTML={{ __html: formatInline(link(item)) }} />
           ))}
         </ul>
       );
@@ -216,33 +280,12 @@ function FormattedContent({ content }: { content: string }) {
     }
 
     elements.push(
-      <p key={key++} dangerouslySetInnerHTML={{ __html: formatInline(line) }} />
+      <p key={key++} dangerouslySetInnerHTML={{ __html: formatInline(link(line)) }} />
     );
     i++;
   }
 
   return <>{elements}</>;
-}
-
-function InlineCTA() {
-  return (
-    <div className="not-prose my-8 p-4 sm:p-5 rounded-2xl bg-primary/5 border border-primary/10 flex flex-col sm:flex-row sm:items-center gap-3">
-      <div className="flex-1">
-        <p className="font-semibold text-foreground text-[15px] leading-snug m-0">
-          Есть на руках свой анализ? Расшифруем за 2 минуты
-        </p>
-        <p className="text-sm text-muted-foreground m-0 mt-1">
-          Загрузите PDF или фото — ИИ объяснит каждый показатель и отклонения. 299 ₽, без регистрации.
-        </p>
-      </div>
-      <Link
-        href="/?ref=blog"
-        className="shrink-0 inline-block py-2.5 px-5 rounded-xl bg-primary text-primary-foreground font-semibold text-sm text-center hover:opacity-90 transition"
-      >
-        Загрузить анализ
-      </Link>
-    </div>
-  );
 }
 
 function formatInline(text: string): string {

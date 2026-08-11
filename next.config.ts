@@ -27,6 +27,33 @@ const nextConfig: NextConfig = {
   },
   async redirects() {
     return [
+      // Транслитерационные дубли: обе страницы отдавали 200 с self-canonical и
+      // каннибализировали друг друга в выдаче. Склеиваем на канонический вариант.
+      {
+        source: "/blog/kakie-analizy-sdat-pri-bessonnitse",
+        destination: "/blog/kakie-analizy-sdat-pri-bessonnice",
+        permanent: true,
+      },
+      {
+        source: "/blog/kakie-analizy-sdat-pri-chastykh-prostudakh",
+        destination: "/blog/kakie-analizy-sdat-pri-chastyh-prostudah",
+        permanent: true,
+      },
+      {
+        source: "/blog/kakie-analizy-sdat-pri-sukhosti-kozhi",
+        destination: "/blog/kakie-analizy-sdat-pri-suhosti-kozhi",
+        permanent: true,
+      },
+      {
+        source: "/blog/kakie-analizy-sdat-pri-sukhosti-vo-rtu",
+        destination: "/blog/kakie-analizy-sdat-pri-suhosti-vo-rtu",
+        permanent: true,
+      },
+      {
+        source: "/blog/kakie-analizy-sdat-pri-sukhosti-vo-rtu-i-zhazhde",
+        destination: "/blog/kakie-analizy-sdat-pri-suhosti-vo-rtu-i-zhazhde",
+        permanent: true,
+      },
       {
         source: "/blog/kaltsiy-magniy-norma-kosti",
         destination: "/blog/kaltsij-magnij-norma-kosti",

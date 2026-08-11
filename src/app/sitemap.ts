@@ -4,6 +4,17 @@ import { indicators } from "@/lib/indicators-data";
 import { landings } from "@/lib/landings-data";
 import { calculators } from "@/lib/calculators-data";
 
+// Слаги, склеенные 301-редиректом в next.config.ts (транслитерационные дубли).
+// В карте сайта их быть не должно — иначе сами же отдаём роботу редиректы.
+const REDIRECTED_SLUGS = new Set([
+  "kakie-analizy-sdat-pri-bessonnitse",
+  "kakie-analizy-sdat-pri-chastykh-prostudakh",
+  "kakie-analizy-sdat-pri-sukhosti-kozhi",
+  "kakie-analizy-sdat-pri-sukhosti-vo-rtu",
+  "kakie-analizy-sdat-pri-sukhosti-vo-rtu-i-zhazhde",
+  "kaltsiy-magniy-norma-kosti",
+]);
+
 export default function sitemap(): MetadataRoute.Sitemap {
   const base = "https://moyanaliz.ru";
 
@@ -18,7 +29,9 @@ export default function sitemap(): MetadataRoute.Sitemap {
     { url: `${base}/guarantee`, changeFrequency: "yearly", priority: 0.4 },
   ];
 
-  const blogPages: MetadataRoute.Sitemap = articles.map((a) => ({
+  const blogPages: MetadataRoute.Sitemap = articles
+    .filter((a) => !REDIRECTED_SLUGS.has(a.slug))
+    .map((a) => ({
     url: `${base}/blog/${a.slug}`,
     lastModified: new Date(a.date),
     changeFrequency: "monthly" as const,

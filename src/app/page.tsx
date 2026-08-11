@@ -3,6 +3,7 @@
 import { useState, useCallback, useRef, useEffect } from "react";
 import type { AppStep, PreviewData } from "@/lib/types";
 import { ymGoal } from "@/lib/ym";
+import { takePendingUpload } from "@/lib/pending-upload";
 import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
 import { UploadStep } from "@/components/steps/upload-step";
@@ -200,6 +201,18 @@ export default function HomePage() {
       setStep("upload");
     }
   }, []);
+
+  // Файл, выбранный в дропзоне внутри статьи или на странице показателя, доезжает сюда
+  // через pending-upload и запускает ОБЫЧНЫЙ обработчик — чтобы A/B-логика, атрибуция и
+  // цели Метрики не дублировались во втором месте. Пустой стор (прямой заход) — no-op.
+  const pendingConsumed = useRef(false);
+  useEffect(() => {
+    if (pendingConsumed.current) return;
+    const p = takePendingUpload();
+    if (!p) return;
+    pendingConsumed.current = true;
+    handleFileSelected(p.file);
+  }, [handleFileSelected]);
 
   // Resolve order_id for pay/promo. In the instant-paywall arm the background
   // upload may still be running (await it) or have failed (→ null → recover).

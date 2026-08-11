@@ -2,6 +2,8 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft, ArrowUpRight } from "lucide-react";
 import { SiteHeader } from "@/components/site-header";
+import { ValueChecker } from "@/components/value-checker";
+import { InlineDropzone } from "@/components/inline-dropzone";
 import { SiteFooter } from "@/components/site-footer";
 import { indicators, getIndicatorBySlug } from "@/lib/indicators-data";
 import { getIndicatorSources } from "@/lib/indicator-sources";
@@ -192,6 +194,16 @@ export default async function IndicatorPage({ params }: Props) {
             </div>
           </div>
 
+          {/* Проверка своего значения: страница уже ранжируется, не хватало ровно интерактива */}
+          <div className="mb-8">
+            <ValueChecker
+              indicatorName={ind.name}
+              unit={ind.unit}
+              male={ind.referenceRange.male}
+              female={ind.referenceRange.female}
+            />
+          </div>
+
           {/* Content sections */}
           <article className="space-y-8">
             <section>
@@ -311,6 +323,12 @@ export default async function IndicatorPage({ params }: Props) {
               </section>
             )}
           </article>
+
+          <InlineDropzone
+            source="indicator"
+            title="Разберём весь бланк, а не один показатель"
+            subtitle="Загрузите PDF или фото анализа — ИИ объяснит каждый показатель с учётом пола и возраста. 299 ₽, без регистрации."
+          />
 
           {/* CTA */}
           <div className="mt-12 rounded-2xl p-6 text-center" style={{ background: "rgba(0,180,188,0.06)", border: "1px solid rgba(0,180,188,0.15)" }}>
