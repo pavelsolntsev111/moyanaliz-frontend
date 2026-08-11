@@ -20,6 +20,24 @@ export function SiteFooter() {
               Показатели
             </Link>
             <Link
+              href="/kalkulyator"
+              className="text-xs text-muted-foreground transition-colors hover:text-primary"
+            >
+              Калькуляторы
+            </Link>
+            <Link
+              href="/oboznacheniya"
+              className="text-xs text-muted-foreground transition-colors hover:text-primary"
+            >
+              Обозначения
+            </Link>
+            <Link
+              href="/example"
+              className="text-xs text-muted-foreground transition-colors hover:text-primary"
+            >
+              Пример отчёта
+            </Link>
+            <Link
               href="/offer"
               className="text-xs text-muted-foreground transition-colors hover:text-primary"
             >
