@@ -15,6 +15,9 @@ const REDIRECTED_SLUGS = new Set([
   "kaltsiy-magniy-norma-kosti",
 ]);
 
+// Дата фактической публикации раздела калькуляторов. Бампать вручную, когда меняли их контент.
+const CALC_PUBLISHED = "2026-08-07";
+
 export default function sitemap(): MetadataRoute.Sitemap {
   const base = "https://moyanaliz.ru";
 
@@ -40,9 +43,10 @@ export default function sitemap(): MetadataRoute.Sitemap {
     priority: 0.7,
   }));
 
+  // lastmod НЕ ставим «сегодня»: страницы показателей не меняются на каждом деплое,
+  // а если каждый URL всегда «изменён только что», Google перестаёт доверять сигналу целиком.
   const indicatorPages: MetadataRoute.Sitemap = indicators.map((i) => ({
     url: `${base}/indicators/${i.slug}`,
-    lastModified: new Date(),
     changeFrequency: "monthly" as const,
     priority: 0.6,
   }));
@@ -56,7 +60,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
 
   const calcPages: MetadataRoute.Sitemap = calculators.map((c) => ({
     url: `${base}/kalkulyator/${c.slug}`,
-    lastModified: new Date(),
+    lastModified: new Date(CALC_PUBLISHED),
     changeFrequency: "monthly",
     priority: 0.8,
   }));
