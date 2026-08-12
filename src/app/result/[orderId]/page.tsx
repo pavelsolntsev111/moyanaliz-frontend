@@ -96,6 +96,8 @@ export default function ResultPage({ params }: Props) {
       sale: s.ab_sale_v1 === "test" ? "test" : "control",
       price_v2: s.ab_price_v2 === "test" ? "test" : "control",
       price_v3: s.ab_price_v3 === "test" ? "test" : "control",
+      segment: s.ab_segment_v1 === "test" ? "test" : "control",
+      seg_bucket: s.segment_bucket || "-",
     });
   }, [goalKey]);
 

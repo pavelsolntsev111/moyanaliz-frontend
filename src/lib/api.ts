@@ -73,8 +73,14 @@ export interface UploadResponse {
   // (single 399 / combo 449 / 5-pack 599 / 10-pack 999). KILLED — pinned control.
   ab_price_v2?: string | null;
   // A/B test ab_price_v3: "control" | "test" | null. "test" → LOWER ladder
-  // (single 199 / combo 299 / 5-pack 499 / 10-pack 699). Drives `prices` below.
+  // (single 199 / combo 299 / 5-pack 499 / 10-pack 699). CLOSED — pinned control.
   ab_price_v3?: string | null;
+  // A/B test ab_segment_v1: "control" | "test" | null. What "test" does depends on
+  // segment_bucket below (A → new copy, B → nothing, C → 399/449 via `prices`).
+  ab_segment_v1?: string | null;
+  // Segment frozen at upload from the LIGHT preview: "a" = 0 out-of-range,
+  // "b" = 1-4, "c" = 5+, null = light failed/skipped (→ control pricing).
+  segment_bucket?: string | null;
   // Resolved prices for this bucket. UI MUST render these, not hardcoded values.
   prices?: PriceBundle;
 }
@@ -341,6 +347,9 @@ export interface OrderStatus {
   ab_price_v2?: string | null;
   // A/B test ab_price_v3 (price decrease) — surfaced for YM tagging.
   ab_price_v3?: string | null;
+  // A/B test ab_segment_v1 + frozen segment — surfaced for YM tagging.
+  ab_segment_v1?: string | null;
+  segment_bucket?: string | null;
   prices?: PriceBundle;
   claude_result_json?: {
     meta: {

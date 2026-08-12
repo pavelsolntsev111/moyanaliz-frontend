@@ -78,9 +78,12 @@ export default function HomePage() {
   const [abSaleV1, setAbSaleV1] = useState<string | null>(null);
   // A/B real price increase (KILLED, pinned control). Kept for YM continuity.
   const [abPriceV2, setAbPriceV2] = useState<string | null>(null);
-  // A/B price decrease. "control"|"test"|null. test → lower ladder
-  // (single 199 / combo 299 / 5-pack 499 / 10-pack 699), rendered via `prices`.
+  // A/B price decrease (CLOSED, pinned control). Kept for YM continuity.
   const [abPriceV3, setAbPriceV3] = useState<string | null>(null);
+  // A/B segmented paywall. Arm is "control"/"test"; what it does depends on the
+  // frozen segment ("a" 0 откл → new copy, "b" 1-4 → nothing, "c" 5+ → 399/449).
+  const [abSegmentV1, setAbSegmentV1] = useState<string | null>(null);
+  const [segmentBucket, setSegmentBucket] = useState<string | null>(null);
   const [prices, setPrices] = useState<PriceBundle>(FALLBACK_PRICES);
   const [error, setError] = useState<string | null>(null);
   const [payLoading, setPayLoading] = useState(false);
@@ -96,7 +99,7 @@ export default function HomePage() {
   // before upload) so the front-funnel is splittable.
   // `price`/`cta` tests are closed (everyone control) but kept for continuity.
   // All params live on the same goal hit — Метрика «Параметры визитов» делит по любому.
-  const abParams = (group: boolean, priceGroup: string | null, ctaGroup: string | null, skipGroup: string | null, premiumGroup: string | null = abPremiumV1, bumpGroup: string | null = abBumpV1, packGroup: string | null = abPackV1, exampleGroup: string | null = abExampleV1, comboPromoGroup: string | null = abComboPromoV1, saleGroup: string | null = abSaleV1, priceV2Group: string | null = abPriceV2, priceV3Group: string | null = abPriceV3) => ({
+  const abParams = (group: boolean, priceGroup: string | null, ctaGroup: string | null, skipGroup: string | null, premiumGroup: string | null = abPremiumV1, bumpGroup: string | null = abBumpV1, packGroup: string | null = abPackV1, exampleGroup: string | null = abExampleV1, comboPromoGroup: string | null = abComboPromoV1, saleGroup: string | null = abSaleV1, priceV2Group: string | null = abPriceV2, priceV3Group: string | null = abPriceV3, segGroup: string | null = abSegmentV1, segBucket: string | null = segmentBucket) => ({
     ab: group ? "B" : "A",
     price: priceGroup === "test" ? "test" : "control",
     cta: ctaGroup === "test" ? "test" : "control",
@@ -109,6 +112,10 @@ export default function HomePage() {
     sale: saleGroup === "test" ? "test" : "control",
     price_v2: priceV2Group === "test" ? "test" : "control",
     price_v3: priceV3Group === "test" ? "test" : "control",
+    segment: segGroup === "test" ? "test" : "control",
+    // Segment itself, so Метрика can slice the funnel the same way the dashboard
+    // does. "-" = light failed/skipped (no bucket → always control pricing).
+    seg_bucket: segBucket || "-",
   });
 
   const handleFileSelected = useCallback(async (f: File) => {
@@ -153,8 +160,10 @@ export default function HomePage() {
         setAbSaleV1(res.ab_sale_v1 ?? null);
         setAbPriceV2(res.ab_price_v2 ?? null);
         setAbPriceV3(res.ab_price_v3 ?? null);
+        setAbSegmentV1(res.ab_segment_v1 ?? null);
+        setSegmentBucket(res.segment_bucket ?? null);
         if (res.prices) setPrices(res.prices);
-        ymGoal("file_uploaded", abParams(!!res.ab_email_before_pay, res.ab_price_v1 ?? null, res.ab_cta_v1 ?? null, res.ab_skip_preview ?? "test", res.ab_premium_v1 ?? null, res.ab_bump_v1 ?? null, res.ab_pack_v1 ?? null, res.ab_example_v1 ?? null, res.ab_combo_promo_v1 ?? null, res.ab_sale_v1 ?? null, res.ab_price_v2 ?? null, res.ab_price_v3 ?? null));
+        ymGoal("file_uploaded", abParams(!!res.ab_email_before_pay, res.ab_price_v1 ?? null, res.ab_cta_v1 ?? null, res.ab_skip_preview ?? "test", res.ab_premium_v1 ?? null, res.ab_bump_v1 ?? null, res.ab_pack_v1 ?? null, res.ab_example_v1 ?? null, res.ab_combo_promo_v1 ?? null, res.ab_sale_v1 ?? null, res.ab_price_v2 ?? null, res.ab_price_v3 ?? null, res.ab_segment_v1 ?? null, res.segment_bucket ?? null));
       }).catch(() => {
         // Don't bounce the user mid-read; ensureOrderId() surfaces the failure
         // on the pay/promo click and sends them back to re-upload.
@@ -181,6 +190,8 @@ export default function HomePage() {
       const saleGroup = res.ab_sale_v1 ?? null;
       const priceV2Group = res.ab_price_v2 ?? null;
       const priceV3Group = res.ab_price_v3 ?? null;
+      const segGroup = res.ab_segment_v1 ?? null;
+      const segBucket = res.segment_bucket ?? null;
       setAbEmailBeforePay(ab);
       setAbPriceV1(priceGroup);
       setAbCtaV1(ctaGroup);
@@ -193,9 +204,11 @@ export default function HomePage() {
       setAbSaleV1(saleGroup);
       setAbPriceV2(priceV2Group);
       setAbPriceV3(priceV3Group);
+      setAbSegmentV1(segGroup);
+      setSegmentBucket(segBucket);
       if (res.prices) setPrices(res.prices);
       uploadDone.current = true;  // analyzing animation finishes → handleAnalyzingComplete
-      ymGoal("file_uploaded", abParams(ab, priceGroup, ctaGroup, skipGroup, premiumGroup, bumpGroup, packGroup, exampleGroup, comboPromoGroup, saleGroup, priceV2Group, priceV3Group));
+      ymGoal("file_uploaded", abParams(ab, priceGroup, ctaGroup, skipGroup, premiumGroup, bumpGroup, packGroup, exampleGroup, comboPromoGroup, saleGroup, priceV2Group, priceV3Group, segGroup, segBucket));
     } catch (e) {
       setError(e instanceof Error ? e.message : "Ошибка загрузки");
       setStep("upload");
@@ -346,6 +359,9 @@ export default function HomePage() {
             exampleTest={abExampleV1 === "test"}
             onExampleOpen={handleExampleOpen}
             saleTest={abSaleV1 === "test"}
+            // ab_segment_v1: new copy only for bucket A's test arm. Bucket C's
+            // price change rides in via `prices`, so it needs no prop here.
+            segmentCopyTest={abSegmentV1 === "test" && segmentBucket === "a"}
           />
         )}
       </main>

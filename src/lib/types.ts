@@ -49,6 +49,11 @@ export interface PreviewData {
     lab_name: string | null;
     total_count: number;
     out_of_range_count: number;
+    // Extracted by the light model from the document header. Present in ~54-68%
+    // of uploads (NOT the 95% the docs used to claim) — always handle null, the
+    // personalized copy falls back to an impersonal variant.
+    patient_sex?: "male" | "female" | null;
+    patient_age?: number | null;
   };
   indicators: LightIndicator[];
 }

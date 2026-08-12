@@ -56,20 +56,24 @@ function ruInstrIndicator(n: number): string {
 }
 
 /**
- * Single-tier CTA copy resolver. Test variant only fires when:
+ * Single-tier CTA copy resolver. ab_cta_v1 test variant only fires when:
  *   - bucket = "test"
  *   - outOfRangeCount > 0 (we have something concrete to hook onto)
- * For outOfRangeCount=0 (all-normal results) test falls back to control copy
- * — we deliberately don't try to monetize "all is fine" with a different
- * frame; that's a separate experiment if anyone wants to run it.
+ * That "separate experiment" for the all-normal case is now ab_segment_v1:
+ * `segmentCopy` is its bucket-A test arm, where «полный отчёт» reads to a healthy
+ * customer as "a full report telling me I'm fine". Price is unchanged.
  */
 function getSingleCtaText(
   abCtaV1: string | null,
   outOfRangeCount: number,
   displayPrice: number,
+  segmentCopy = false,
 ): string {
   if (abCtaV1 === "test" && outOfRangeCount > 0) {
     return `Узнать, что с ${outOfRangeCount} ${ruInstrIndicator(outOfRangeCount)} — ${displayPrice} ₽`
+  }
+  if (segmentCopy) {
+    return `Получить подробный разбор — ${displayPrice} ₽`
   }
   return `Получить полный отчёт — ${displayPrice} ₽`
 }
@@ -192,11 +196,16 @@ function generateFallbackExplanation(ind: LightIndicator): string {
     : ind.status === "critical_high" ? "критически повышен"
     : "критически понижен"
 
+  // The light model omits `unit` for ~3.5% of indicators (8.7% of orders have at
+  // least one), and this function takes the RAW LightIndicator — so interpolating
+  // it directly printed a literal "undefined" to the customer ("145 undefined").
+  const valueWithUnit = [ind.value, ind.unit].filter(Boolean).join(" ")
+
   if (impact) {
-    return `${ind.name} — показатель, который влияет на ${impact}. Ваш результат ${ind.value} ${ind.unit} — ${statusText}.`
+    return `${ind.name} — показатель, который влияет на ${impact}. Ваш результат ${valueWithUnit} — ${statusText}.`
   }
 
-  return ind.short_description || `${ind.name} — ${ind.value} ${ind.unit}. Показатель ${statusText}.`
+  return ind.short_description || `${ind.name} — ${valueWithUnit}. Показатель ${statusText}.`
 }
 
 function getDirectionText(status: AnalysisIndicator["status"]): string {
@@ -213,6 +222,20 @@ function pluralIndicators(n: number): string {
   if (mod10 === 1 && mod100 !== 11) return `${n} показатель`
   if (mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14)) return `${n} показателя`
   return `${n} показателей`
+}
+
+/** "для мужчины 40 лет" / "для женщины 34 лет" / "для мужчины" / "человека 40 лет".
+ *  Built from the light model's document extraction, which yields BOTH sex and age
+ *  in only ~54% of all-normal uploads — so every partial combination degrades
+ *  gracefully and a fully-unknown patient returns null (impersonal copy). */
+function patientPhrase(sex?: string | null, age?: number | null): string | null {
+  const a = typeof age === "number" && age > 0 && age < 120 ? Math.round(age) : null
+  const who = sex === "male" ? "мужчины" : sex === "female" ? "женщины" : null
+  if (!who && !a) return null
+  if (!a) return `для ${who}`
+  const m10 = a % 10, m100 = a % 100
+  const years = m10 === 1 && m100 !== 11 ? "года" : "лет"  // «для мужчины 41 года»
+  return `для ${who ?? "человека"} ${a} ${years}`
 }
 
 function mapLightToAnalysis(ind: LightIndicator, index: number): AnalysisIndicator {
@@ -359,15 +382,24 @@ function GradientCard({
   )
 }
 
-/** Emotional summary — dynamic text with health impact descriptions */
+/** Emotional summary — dynamic text with health impact descriptions.
+ *  `segmentCopy` (ab_segment_v1, bucket A test arm) reframes the all-normal case:
+ *  a healthy customer was being sold "разбор отклонений" they don't have, so the
+ *  hook becomes "норма — широкий диапазон" + what the report actually gives them.
+ *  `patientDescriptor` ("для мужчины 40 лет") is present in ~54% of bucket A — the
+ *  copy degrades to an impersonal variant when the document had no sex/age. */
 function EmotionalSummary({
   outOfRangeCount,
   totalCount,
   abnormalIndicators,
+  segmentCopy = false,
+  patientDescriptor = null,
 }: {
   outOfRangeCount: number
   totalCount: number
   abnormalIndicators: AnalysisIndicator[]
+  segmentCopy?: boolean
+  patientDescriptor?: string | null
 }) {
   const hasProblems = outOfRangeCount > 0
   const normalCount = totalCount - outOfRangeCount
@@ -469,13 +501,28 @@ function EmotionalSummary({
         </div>
         <div className="flex-1 min-w-0">
           <h3 className="text-base font-bold text-card-foreground leading-snug">
-            Все показатели в норме
+            {segmentCopy && totalCount > 1
+              ? `Все ${pluralIndicators(totalCount)} в пределах нормы`
+              : "Все показатели в норме"}
           </h3>
           <p className="mt-1 text-sm text-muted-foreground leading-relaxed">
-            {totalCount === 1
-              ? "Показатель в пределах референсных значений — отличная новость!"
-              : `Все ${pluralIndicators(totalCount)} в пределах референсных значений — отличная новость!`}
-            {" "}В полном отчёте: какие продукты и привычки помогут сохранить этот результат + персональный чек-лист профилактики.
+            {segmentCopy ? (
+              <>
+                Предварительный разбор отклонений не нашёл. Но норма — широкий диапазон
+                {patientDescriptor
+                  ? <>, и то, что нормально в среднем, не всегда оптимально <b>{patientDescriptor}</b>.</>
+                  : <>: важно, насколько ваши значения близки к его границам и что они означают именно в вашем случае.</>}
+                {" "}В полном отчёте — {patientDescriptor ? "насколько каждое значение близко к границам диапазона, что оно означает в вашем случае, " : "разбор каждого показателя, "}
+                что контролировать и когда пересдать.
+              </>
+            ) : (
+              <>
+                {totalCount === 1
+                  ? "Показатель в пределах референсных значений — отличная новость!"
+                  : `Все ${pluralIndicators(totalCount)} в пределах референсных значений — отличная новость!`}
+                {" "}В полном отчёте: какие продукты и привычки помогут сохранить этот результат + персональный чек-лист профилактики.
+              </>
+            )}
           </p>
         </div>
       </div>
@@ -547,9 +594,18 @@ function DoctorQuestionTeaser({ firstAbnormalName }: { firstAbnormalName?: strin
   )
 }
 
-/** Clean (non-blurred) report section teasers */
-function ReportSectionTeasers() {
-  const sections = [
+/** Clean (non-blurred) report section teasers.
+ *  `segmentCopy` (ab_segment_v1 bucket A test arm) swaps in a healthy-result value
+ *  prop: the default list reads as "we'll explain your problems in detail" to
+ *  someone who has none, which is why that segment converts at 5.6% vs 21%. */
+function ReportSectionTeasers({ segmentCopy = false }: { segmentCopy?: boolean }) {
+  const sections = segmentCopy ? [
+    { icon: FileText, title: "Разбор каждого показателя: что означает именно ваше значение" },
+    { icon: BarChart3, title: "Насколько ваши значения близки к границам нормы" },
+    { icon: ListChecks, title: "Что отслеживать и когда пересдать" },
+    { icon: TestTubes, title: "Какие анализы имеет смысл сдать дополнительно" },
+    { icon: UtensilsCrossed, title: "Как сохранить результат: питание и привычки" },
+  ] : [
     { icon: FileText, title: "Детальные комментарии по всем показателям" },
     { icon: UtensilsCrossed, title: "Рекомендации по питанию" },
     { icon: ListChecks, title: "Персональный чек-лист «Что делать дальше»" },
@@ -575,13 +631,22 @@ function ReportSectionTeasers() {
   )
 }
 
-/** Chat consultation section teasers — shown below report teasers */
-function ChatConsultationTeasers() {
+/** Chat consultation section teasers — shown below report teasers.
+ *  `hasDeviations=false` (all indicators normal — 31% of uploads) swaps the
+ *  deviation-specific line: promising to explain "каждое отклонение" to someone
+ *  who has none is incoherent. Applies in BOTH A/B arms — it's a copy bug, not
+ *  part of the ab_segment_v1 treatment. */
+function ChatConsultationTeasers({ hasDeviations = true }: { hasDeviations?: boolean }) {
   const items = [
     { icon: MessageSquare, title: "До 10 вопросов по вашим анализам" },
     { icon: Stethoscope, title: "Персональные рекомендации под ваши показатели" },
     { icon: UtensilsCrossed, title: "Советы по питанию, добавкам и образу жизни" },
-    { icon: FileText, title: "Объяснение каждого отклонения простым языком" },
+    {
+      icon: FileText,
+      title: hasDeviations
+        ? "Объяснение каждого отклонения простым языком"
+        : "Объяснение каждого показателя простым языком",
+    },
     { icon: BarChart3, title: "Что контролировать и когда пересдать анализы" },
   ]
 
@@ -807,6 +872,7 @@ function InlinePaywall({
   withAbonement, setWithAbonement,
   abEmailBeforePay, prepayEmail, setPrepayEmail,
   prices, abPriceV1, abCtaV1, premiumTest, bumpTest, packTest, exampleTest, onExampleOpen, saleTest,
+  segmentCopyTest,
 }: {
   promoVisible: boolean
   setPromoVisible: (v: boolean) => void
@@ -860,6 +926,8 @@ function InlinePaywall({
   // A/B ab_sale_v1. true → struck prices on single (399→299) + combo (465→349) +
   // "−25%" badges + "акция до конца дня" countdown. Price-neutral (both 299/349).
   saleTest?: boolean
+  // ab_segment_v1 bucket-A test arm → healthy-result copy (price unchanged).
+  segmentCopyTest?: boolean
 }) {
   const priceTag = abPriceV1 === "test" ? "test" : "control"
   const ctaTag = abCtaV1 === "test" ? "test" : "control"
@@ -1326,7 +1394,7 @@ function InlinePaywall({
             <ReportExampleModal
               onClose={() => setExampleOpen(false)}
               onPay={() => { setExampleOpen(false); triggerPay() }}
-              payLabel={`Получить полный отчёт — ${prices.single} ₽`}
+              payLabel={getSingleCtaText(abCtaV1, outOfRangeCount, prices.single, segmentCopyTest)}
             />
           )}
 
@@ -1370,7 +1438,7 @@ function InlinePaywall({
                   ? `Получить базовый отчёт — ${displayPrice} ₽`
                   /* AB ab_cta_v1: test → "Узнать, что с N показателем/показателями — N ₽"
                      when outOfRangeCount > 0. Control or all-normal → current copy. */
-                  : getSingleCtaText(abCtaV1, outOfRangeCount, displayPrice)}
+                  : getSingleCtaText(abCtaV1, outOfRangeCount, displayPrice, segmentCopyTest)}
                 <ChevronRight className="h-4 w-4" />
               </>
             )}
@@ -1485,7 +1553,7 @@ function InlinePaywall({
 }
 
 /** Bottom CTA card + sticky mobile button */
-function BottomCTA({ onPay, loading, withChat, withThreeReports, withAbonement, prices, abCtaV1, outOfRangeCount, premiumTest, bumpTest, packTest }: {
+function BottomCTA({ onPay, loading, withChat, withThreeReports, withAbonement, prices, abCtaV1, outOfRangeCount, premiumTest, bumpTest, packTest, segmentCopyTest = false }: {
   onPay: () => void
   loading: boolean
   withChat: boolean
@@ -1495,6 +1563,8 @@ function BottomCTA({ onPay, loading, withChat, withThreeReports, withAbonement, 
   // A/B CTA bucket — single-tier sticky CTA mirrors the main InlinePaywall CTA
   // copy so the user sees the same message above and below the fold.
   abCtaV1: string | null
+  // ab_segment_v1 bucket-A test arm — keeps the sticky CTA in sync with the main one.
+  segmentCopyTest?: boolean
   outOfRangeCount: number
   // A/B premium packaging — sticky CTA mirrors «Базовый/Расширенный отчёт».
   premiumTest?: boolean
@@ -1538,7 +1608,7 @@ function BottomCTA({ onPay, loading, withChat, withThreeReports, withAbonement, 
                 : premiumTest
                 ? `Получить базовый отчёт — ${prices.single} ₽`
                 /* AB ab_cta_v1: same logic as InlinePaywall — mirror on mobile. */
-                : getSingleCtaText(abCtaV1, outOfRangeCount, prices.single)}
+                : getSingleCtaText(abCtaV1, outOfRangeCount, prices.single, segmentCopyTest)}
               <ChevronRight className="h-4 w-4" />
             </span>
             <span className="mt-0.5 text-[10px] font-normal opacity-80">
@@ -1648,9 +1718,13 @@ interface PaywallStepProps {
   // A/B ab_sale_v1 (−25% sale framing). true → struck prices on single (399→299)
   // + combo (465→349) + "−25%" badges + "акция до конца дня" countdown. Price-neutral.
   saleTest?: boolean
+  // A/B ab_segment_v1, bucket A (0 out-of-range) test arm only: reframe the copy
+  // for a healthy result. Price is unchanged (299) — bucket C's price change
+  // arrives via `prices`, not this flag.
+  segmentCopyTest?: boolean
 }
 
-export function PaywallStep({ onPay, onPromo, loading, preview, abEmailBeforePay = false, prices, abPriceV1 = null, abCtaV1 = null, skipPreview = false, premiumTest = false, bumpTest = false, packTest = false, exampleTest = false, onExampleOpen, saleTest = false }: PaywallStepProps) {
+export function PaywallStep({ onPay, onPromo, loading, preview, abEmailBeforePay = false, prices, abPriceV1 = null, abCtaV1 = null, skipPreview = false, premiumTest = false, bumpTest = false, packTest = false, exampleTest = false, onExampleOpen, saleTest = false, segmentCopyTest = false }: PaywallStepProps) {
   const [promoVisible, setPromoVisible] = useState(false)
   const [promoCode, setPromoCode] = useState("")
   const [withChat, setWithChat] = useState(false)
@@ -1709,7 +1783,13 @@ export function PaywallStep({ onPay, onPromo, loading, preview, abEmailBeforePay
         <>
           {/* ── 1. Emotional summary ── */}
           <div className="mt-6">
-            <EmotionalSummary outOfRangeCount={outOfRangeCount} totalCount={totalCount} abnormalIndicators={abnormalIndicators} />
+            <EmotionalSummary
+              outOfRangeCount={outOfRangeCount}
+              totalCount={totalCount}
+              abnormalIndicators={abnormalIndicators}
+              segmentCopy={segmentCopyTest}
+              patientDescriptor={patientPhrase(preview?.meta?.patient_sex, preview?.meta?.patient_age)}
+            />
           </div>
 
           {/* ── 2. Open cards (1 normal, expanded) ── */}
@@ -1782,6 +1862,7 @@ export function PaywallStep({ onPay, onPromo, loading, preview, abEmailBeforePay
           exampleTest={exampleTest}
           onExampleOpen={onExampleOpen}
           saleTest={saleTest}
+          segmentCopyTest={segmentCopyTest}
         />
       </div>
 
@@ -1790,10 +1871,10 @@ export function PaywallStep({ onPay, onPromo, loading, preview, abEmailBeforePay
       {!premiumTest && (
         <>
           <div className="mt-8">
-            <ReportSectionTeasers />
+            <ReportSectionTeasers segmentCopy={segmentCopyTest} />
           </div>
           <div className="mt-4">
-            <ChatConsultationTeasers />
+            <ChatConsultationTeasers hasDeviations={outOfRangeCount > 0} />
           </div>
         </>
       )}
@@ -1831,6 +1912,7 @@ export function PaywallStep({ onPay, onPromo, loading, preview, abEmailBeforePay
         premiumTest={premiumTest}
         bumpTest={bumpTest}
         packTest={packTest}
+        segmentCopyTest={segmentCopyTest}
       />
     </div>
   )
