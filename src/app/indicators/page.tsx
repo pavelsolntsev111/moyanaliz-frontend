@@ -6,14 +6,14 @@ import { indicators, indicatorCategories } from "@/lib/indicators-data";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Показатели анализов — справочник | Мой Анализ",
+  title: "Справочник лабораторных показателей — нормы и расшифровка | Мой Анализ",
   description:
     "Справочник лабораторных показателей: нормы, причины отклонений. Гемоглобин, холестерин, глюкоза, ТТГ, ферритин, лейкоциты и другие.",
   alternates: {
     canonical: "/indicators",
   },
   openGraph: {
-    title: "Показатели анализов — справочник | Мой Анализ",
+    title: "Справочник лабораторных показателей — нормы и расшифровка | Мой Анализ",
     description:
       "Справочник лабораторных показателей: нормы, причины отклонений.",
     url: "https://moyanaliz.ru/indicators",
@@ -41,11 +41,15 @@ export default function IndicatorsPage() {
         <div className="mx-auto max-w-5xl px-4 py-10">
           <div className="mb-10">
             <h1 className="text-3xl sm:text-4xl font-bold text-foreground">
-              Показатели анализов
+              Справочник показателей
             </h1>
-            <p className="text-muted-foreground mt-2 max-w-xl">
-              Справочник лабораторных показателей: что означает каждый, нормы
-              для взрослых, причины отклонений и что делать.
+            <p className="text-muted-foreground mt-2 max-w-2xl">
+              Что означает каждый лабораторный показатель, нормы для взрослых, причины
+              отклонений вверх и вниз и что с этим делать. Если бланк уже на руках —{" "}
+              <Link href="/" className="text-primary hover:underline">
+                загрузите его целиком
+              </Link>
+              : разбор учтёт пол, возраст и связи между показателями.
             </p>
           </div>
 

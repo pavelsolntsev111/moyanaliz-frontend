@@ -99,6 +99,14 @@ export function InlineDropzone({
         />
       </div>
 
+      <p className="mt-3 text-[11px] leading-relaxed text-muted-foreground">
+        Загружая файл, вы даёте{" "}
+        <a href="/consent" className="underline hover:text-primary">
+          согласие на обработку персональных данных
+        </a>
+        , включая сведения о здоровье.
+      </p>
+
       {error && <p className="mt-2 text-sm text-rose-600 dark:text-rose-400">{error}</p>}
     </div>
   );

@@ -17,7 +17,19 @@ export function SiteFooter() {
               href="/indicators"
               className="text-xs text-muted-foreground transition-colors hover:text-primary"
             >
-              Показатели
+              Справочник
+            </Link>
+            <Link
+              href="/blog"
+              className="text-xs text-muted-foreground transition-colors hover:text-primary"
+            >
+              Здоровье
+            </Link>
+            <Link
+              href="/novosti"
+              className="text-xs text-muted-foreground transition-colors hover:text-primary"
+            >
+              Новости
             </Link>
             <Link
               href="/kalkulyator"
@@ -48,6 +60,12 @@ export function SiteFooter() {
               className="text-xs text-muted-foreground transition-colors hover:text-primary"
             >
               Конфиденциальность
+            </Link>
+            <Link
+              href="/consent"
+              className="text-xs text-muted-foreground transition-colors hover:text-primary"
+            >
+              Согласие на обработку данных
             </Link>
             <Link
               href="/terms"

@@ -11,6 +11,7 @@ import type { Metadata, Viewport } from "next";
 import "@fontsource-variable/inter";
 import "./globals.css";
 import Analytics from "./analytics";
+import { jsonLdScript } from "@/lib/safe-html";
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://moyanaliz.ru"),
@@ -76,7 +77,7 @@ export default function RootLayout({
       <head>
         <script
           type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+          dangerouslySetInnerHTML={{ __html: jsonLdScript(jsonLd) }}
         />
       </head>
       <body className="antialiased">

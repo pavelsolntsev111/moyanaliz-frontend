@@ -7,6 +7,7 @@ import { CalculatorWidget } from "@/components/calculator-widget";
 import { calculators, getCalculatorBySlug } from "@/lib/calculators-data";
 import { indicators } from "@/lib/indicators-data";
 import type { Metadata } from "next";
+import { jsonLdScript } from "@/lib/safe-html";
 
 interface Props {
   params: Promise<{ slug: string }>;
@@ -88,7 +89,7 @@ export default async function CalculatorPage({ params }: Props) {
       <SiteHeader />
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+        dangerouslySetInnerHTML={{ __html: jsonLdScript(jsonLd) }}
       />
 
       <main className="flex-1">

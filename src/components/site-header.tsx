@@ -6,6 +6,28 @@ import { useState } from "react";
 import { SupportModal } from "@/components/support-modal";
 import { ymGoal } from "@/lib/ym";
 
+/**
+ * Разделы портала. Один список на десктоп и мобильное меню — раньше они дублировались
+ * и успели разъехаться.
+ *
+ * «Расшифровка» ведёт на «/» — это и есть продукт, менять адрес нельзя (на него настроены
+ * рекламные кампании). «Справочник» — прежние /indicators: сменилась только вывеска.
+ * «Новости» наполняет контент-агент из RSS — раздел живой с первого дня, даже пустой
+ * страницей с объяснением, поэтому ссылка не ведёт в никуда.
+ */
+const NAV = [
+  { href: "/", label: "Расшифровка" },
+  { href: "/indicators", label: "Справочник" },
+  { href: "/kalkulyator", label: "Калькуляторы" },
+  { href: "/blog", label: "Здоровье" },
+  { href: "/novosti", label: "Новости" },
+];
+
+const SECONDARY = [
+  { href: "/offer", label: "О сервисе" },
+  { href: "/abonement", label: "Абонемент" },
+];
+
 export function SiteHeader() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [supportOpen, setSupportOpen] = useState(false);
@@ -28,37 +50,25 @@ export function SiteHeader() {
           </span>
         </Link>
 
-        <nav className="hidden items-center gap-6 md:flex">
-          <Link
-            href="/indicators"
-            className="text-sm font-medium text-muted-foreground transition-colors hover:text-primary"
-          >
-            Показатели
-          </Link>
-<Link
-            href="/kalkulyator"
-            className="text-sm font-medium text-muted-foreground transition-colors hover:text-primary"
-          >
-            Калькуляторы
-          </Link>
-          <Link
-            href="/blog"
-            className="text-sm font-medium text-muted-foreground transition-colors hover:text-primary"
-          >
-            Блог
-          </Link>
-          <Link
-            href="/offer"
-            className="text-sm font-medium text-muted-foreground transition-colors hover:text-primary"
-          >
-            О сервисе
-          </Link>
-          <Link
-            href="/abonement"
-            className="text-sm font-medium text-muted-foreground transition-colors hover:text-primary"
-          >
-            Абонемент
-          </Link>
+        <nav className="hidden items-center gap-5 md:flex">
+          {NAV.map((item) => (
+            <Link
+              key={item.href}
+              href={item.href}
+              className="text-sm font-medium text-muted-foreground transition-colors hover:text-primary"
+            >
+              {item.label}
+            </Link>
+          ))}
+          {SECONDARY.map((item) => (
+            <Link
+              key={item.href}
+              href={item.href}
+              className="text-sm font-medium text-muted-foreground transition-colors hover:text-primary"
+            >
+              {item.label}
+            </Link>
+          ))}
           <button
             onClick={openSupport}
             className="flex items-center gap-1.5 rounded-lg border border-border px-3 py-1.5 text-sm font-medium text-muted-foreground transition-colors hover:border-primary hover:text-primary"
@@ -90,41 +100,16 @@ export function SiteHeader() {
       {menuOpen && (
         <nav className="border-t border-border bg-card px-4 py-3 md:hidden">
           <div className="flex flex-col gap-3">
-            <Link
-              href="/indicators"
-              onClick={() => setMenuOpen(false)}
-              className="text-sm font-medium text-muted-foreground transition-colors hover:text-primary"
-            >
-              Показатели
-            </Link>
-<Link
-              href="/kalkulyator"
-              onClick={() => setMenuOpen(false)}
-              className="text-sm font-medium text-muted-foreground transition-colors hover:text-primary"
-            >
-              Калькуляторы
-            </Link>
-            <Link
-              href="/blog"
-              onClick={() => setMenuOpen(false)}
-              className="text-sm font-medium text-muted-foreground transition-colors hover:text-primary"
-            >
-              Блог
-            </Link>
-            <Link
-              href="/offer"
-              onClick={() => setMenuOpen(false)}
-              className="text-sm font-medium text-muted-foreground transition-colors hover:text-primary"
-            >
-              О сервисе
-            </Link>
-            <Link
-              href="/abonement"
-              onClick={() => setMenuOpen(false)}
-              className="text-sm font-medium text-muted-foreground transition-colors hover:text-primary"
-            >
-              Абонемент
-            </Link>
+            {[...NAV, ...SECONDARY].map((item) => (
+              <Link
+                key={item.href}
+                href={item.href}
+                onClick={() => setMenuOpen(false)}
+                className="text-sm font-medium text-muted-foreground transition-colors hover:text-primary"
+              >
+                {item.label}
+              </Link>
+            ))}
           </div>
         </nav>
       )}

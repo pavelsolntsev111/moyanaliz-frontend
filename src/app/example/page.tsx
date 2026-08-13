@@ -4,6 +4,7 @@ import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
 import { InlineDropzone } from "@/components/inline-dropzone";
 import type { Metadata } from "next";
+import { jsonLdScript } from "@/lib/safe-html";
 
 /**
  * Индексируемый пример расшифровки. Раньше пример жил только внутри модалки на пейволле
@@ -97,7 +98,7 @@ export default function ExamplePage() {
   return (
     <div className="flex min-h-screen flex-col">
       <SiteHeader />
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLdScript(jsonLd) }} />
 
       <main className="flex-1">
         <div className="mx-auto max-w-3xl px-4 py-10">

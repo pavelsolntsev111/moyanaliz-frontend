@@ -4,6 +4,7 @@ import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
 import { calculators, calculatorsByGroup } from "@/lib/calculators-data";
 import type { Metadata } from "next";
+import { jsonLdScript } from "@/lib/safe-html";
 
 export const metadata: Metadata = {
   title: "Медицинские калькуляторы по анализам — Мой Анализ",
@@ -89,7 +90,7 @@ export default function CalculatorsHub() {
       <SiteHeader />
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+        dangerouslySetInnerHTML={{ __html: jsonLdScript(jsonLd) }}
       />
 
       <main className="flex-1">

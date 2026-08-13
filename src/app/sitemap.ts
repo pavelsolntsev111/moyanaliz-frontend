@@ -3,6 +3,8 @@ import { articles } from "@/lib/blog-data";
 import { indicators } from "@/lib/indicators-data";
 import { landings } from "@/lib/landings-data";
 import { calculators } from "@/lib/calculators-data";
+import { rubrics, articlesInRubric } from "@/lib/rubrics-data";
+import { news } from "@/lib/news-data";
 
 // Слаги, склеенные 301-редиректом в next.config.ts (транслитерационные дубли).
 // В карте сайта их быть не должно — иначе сами же отдаём роботу редиректы.
@@ -23,13 +25,16 @@ export default function sitemap(): MetadataRoute.Sitemap {
 
   const staticPages: MetadataRoute.Sitemap = [
     { url: base, lastModified: new Date(), changeFrequency: "weekly", priority: 1.0 },
+    { url: `${base}/main`, lastModified: new Date(), changeFrequency: "weekly", priority: 0.9 },
     { url: `${base}/indicators`, lastModified: new Date(), changeFrequency: "weekly", priority: 0.8 },
     { url: `${base}/blog`, lastModified: new Date(), changeFrequency: "weekly", priority: 0.8 },
+    { url: `${base}/novosti`, lastModified: new Date(), changeFrequency: "daily", priority: 0.8 },
     { url: `${base}/kalkulyator`, lastModified: new Date(), changeFrequency: "weekly", priority: 0.9 },
     { url: `${base}/example`, lastModified: new Date(), changeFrequency: "monthly", priority: 0.8 },
     { url: `${base}/oboznacheniya`, lastModified: new Date(), changeFrequency: "monthly", priority: 0.8 },
     { url: `${base}/offer`, changeFrequency: "yearly", priority: 0.3 },
     { url: `${base}/privacy`, changeFrequency: "yearly", priority: 0.3 },
+    { url: `${base}/consent`, changeFrequency: "yearly", priority: 0.3 },
     { url: `${base}/terms`, changeFrequency: "yearly", priority: 0.3 },
     { url: `${base}/guarantee`, changeFrequency: "yearly", priority: 0.4 },
   ];
@@ -65,5 +70,31 @@ export default function sitemap(): MetadataRoute.Sitemap {
     priority: 0.8,
   }));
 
-  return [...staticPages, ...landingPages, ...calcPages, ...blogPages, ...indicatorPages];
+  // Рубрики: lastmod = дата свежайшей статьи внутри, чтобы не врать роботу «обновлено сегодня»
+  const rubricPages: MetadataRoute.Sitemap = rubrics.map((r) => {
+    const list = articlesInRubric(r.slug);
+    return {
+      url: `${base}/blog/rubrika/${r.slug}`,
+      lastModified: list.length ? new Date(list[0].date) : undefined,
+      changeFrequency: "weekly" as const,
+      priority: 0.7,
+    };
+  });
+
+  const newsPages: MetadataRoute.Sitemap = news.map((n) => ({
+    url: `${base}/novosti/${n.slug}`,
+    lastModified: new Date(n.date),
+    changeFrequency: "monthly" as const,
+    priority: 0.6,
+  }));
+
+  return [
+    ...staticPages,
+    ...newsPages,
+    ...landingPages,
+    ...calcPages,
+    ...rubricPages,
+    ...blogPages,
+    ...indicatorPages,
+  ];
 }

@@ -5,12 +5,14 @@ import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
 import { InlineDropzone } from "@/components/inline-dropzone";
 import { articles, getArticleBySlug } from "@/lib/blog-data";
+import { rubricForCategory, relatedArticles } from "@/lib/rubrics-data";
 import {
   articleCluster,
   landingForArticle,
   indicatorsMentioned,
   autolinkIndicators,
 } from "@/lib/article-links";
+import { formatInlineSafe, jsonLdScript } from "@/lib/safe-html";
 import type { Metadata } from "next";
 
 interface Props {
@@ -49,6 +51,8 @@ export default async function ArticlePage({ params }: Props) {
   const cluster = articleCluster(slug);
   const landing = landingForArticle(slug, article.category);
   const mentioned = indicatorsMentioned(article.content, 6);
+  const rubric = rubricForCategory(article.category);
+  const related = relatedArticles(slug, 4);
 
   const jsonLd = [
     {
@@ -62,15 +66,21 @@ export default async function ArticlePage({ params }: Props) {
       mainEntityOfPage: `https://moyanaliz.ru/blog/${slug}`,
       author: { "@type": "Organization", name: "Мой Анализ" },
       publisher: { "@type": "Organization", name: "Мой Анализ" },
-      articleSection: article.category,
+      articleSection: rubric.title,
     },
     {
       "@context": "https://schema.org",
       "@type": "BreadcrumbList",
       itemListElement: [
         { "@type": "ListItem", position: 1, name: "Главная", item: "https://moyanaliz.ru/" },
-        { "@type": "ListItem", position: 2, name: "Блог", item: "https://moyanaliz.ru/blog" },
-        { "@type": "ListItem", position: 3, name: article.title, item: `https://moyanaliz.ru/blog/${slug}` },
+        { "@type": "ListItem", position: 2, name: "Здоровье", item: "https://moyanaliz.ru/blog" },
+        {
+          "@type": "ListItem",
+          position: 3,
+          name: rubric.title,
+          item: `https://moyanaliz.ru/blog/rubrika/${rubric.slug}`,
+        },
+        { "@type": "ListItem", position: 4, name: article.title, item: `https://moyanaliz.ru/blog/${slug}` },
       ],
     },
   ];
@@ -80,7 +90,7 @@ export default async function ArticlePage({ params }: Props) {
       <SiteHeader />
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+        dangerouslySetInnerHTML={{ __html: jsonLdScript(jsonLd) }}
       />
 
       <main className="flex-1">
@@ -90,13 +100,16 @@ export default async function ArticlePage({ params }: Props) {
             className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-primary transition mb-6"
           >
             <ArrowLeft className="h-4 w-4" />
-            Все статьи
+            Здоровье
           </Link>
 
           <div className="flex items-center gap-3 mb-4 flex-wrap">
-            <span className="text-xs font-medium px-2.5 py-0.5 rounded-full bg-primary/10 text-primary">
-              {article.category}
-            </span>
+            <Link
+              href={`/blog/rubrika/${rubric.slug}`}
+              className="text-xs font-medium px-2.5 py-0.5 rounded-full bg-primary/10 text-primary hover:bg-primary/20 transition-colors"
+            >
+              {rubric.title}
+            </Link>
             <div className="flex items-center gap-1 text-xs text-muted-foreground">
               <Clock className="h-3 w-3" />
               <span>{article.readTime}</span>
@@ -159,6 +172,34 @@ export default async function ArticlePage({ params }: Props) {
               </span>
               <ArrowUpRight className="h-4 w-4 shrink-0 text-muted-foreground transition group-hover:text-primary" />
             </Link>
+          )}
+
+          {/* Соседи по рубрике — связность раздела без ручной разметки */}
+          {related.length > 0 && (
+            <section className="mt-12 border-t border-border pt-8">
+              <div className="flex items-baseline justify-between gap-4">
+                <h2 className="text-lg font-semibold text-foreground">Читайте также</h2>
+                <Link
+                  href={`/blog/rubrika/${rubric.slug}`}
+                  className="text-sm text-primary hover:underline shrink-0"
+                >
+                  Вся рубрика
+                </Link>
+              </div>
+              <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                {related.map((a) => (
+                  <Link
+                    key={a.slug}
+                    href={`/blog/${a.slug}`}
+                    className="group rounded-xl border border-border bg-card px-4 py-3 transition hover:border-primary/40"
+                  >
+                    <span className="text-sm font-medium text-foreground group-hover:text-primary transition-colors">
+                      {a.title}
+                    </span>
+                  </Link>
+                ))}
+              </div>
+            </section>
           )}
         </div>
       </main>
@@ -251,7 +292,7 @@ function FormattedContent({ content, cluster }: { content: string; cluster: stri
       elements.push(
         <ul key={key++}>
           {items.map((item, idx) => (
-            <li key={idx} dangerouslySetInnerHTML={{ __html: formatInline(link(item)) }} />
+            <li key={idx} dangerouslySetInnerHTML={{ __html: formatInlineSafe(link(item)) }} />
           ))}
         </ul>
       );
@@ -267,7 +308,7 @@ function FormattedContent({ content, cluster }: { content: string; cluster: stri
       elements.push(
         <ol key={key++}>
           {items.map((item, idx) => (
-            <li key={idx} dangerouslySetInnerHTML={{ __html: formatInline(item) }} />
+            <li key={idx} dangerouslySetInnerHTML={{ __html: formatInlineSafe(item) }} />
           ))}
         </ol>
       );
@@ -280,7 +321,7 @@ function FormattedContent({ content, cluster }: { content: string; cluster: stri
     }
 
     elements.push(
-      <p key={key++} dangerouslySetInnerHTML={{ __html: formatInline(link(line)) }} />
+      <p key={key++} dangerouslySetInnerHTML={{ __html: formatInlineSafe(link(line)) }} />
     );
     i++;
   }
@@ -288,12 +329,3 @@ function FormattedContent({ content, cluster }: { content: string; cluster: stri
   return <>{elements}</>;
 }
 
-function formatInline(text: string): string {
-  return text
-    .replace(
-      /\[([^\]]+)\]\(([^)]+)\)/g,
-      '<a href="$2" class="text-primary underline underline-offset-2 hover:opacity-80">$1</a>'
-    )
-    .replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>")
-    .replace(/\*(.+?)\*/g, "<em>$1</em>");
-}

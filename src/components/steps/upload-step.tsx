@@ -379,6 +379,19 @@ export function UploadStep({ onFileSelected }: UploadStepProps) {
                   <Lock className="h-3 w-3" />
                   <span>Данные зашифрованы и защищены</span>
                 </div>
+                {/* Согласие берём ЗДЕСЬ: данные о здоровье — специальная категория (ст. 10 152-ФЗ),
+                    и файл уходит на сервер в этот момент, а не на пейволле. */}
+                <p className="mx-auto mt-3 max-w-md text-center text-[11px] leading-relaxed text-muted-foreground">
+                  Загружая файл, вы даёте{" "}
+                  <a href="/consent" className="underline hover:text-primary">
+                    согласие на обработку персональных данных
+                  </a>
+                  , включая сведения о здоровье, и принимаете{" "}
+                  <a href="/privacy" className="underline hover:text-primary">
+                    политику обработки данных
+                  </a>
+                  .
+                </p>
               </div>
 
             </div>

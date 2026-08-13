@@ -7,6 +7,7 @@ import { InlineDropzone } from "@/components/inline-dropzone";
 import { SiteFooter } from "@/components/site-footer";
 import { indicators, getIndicatorBySlug } from "@/lib/indicators-data";
 import { getIndicatorSources } from "@/lib/indicator-sources";
+import { formatInlineSafe, jsonLdScript } from "@/lib/safe-html";
 import type { Metadata } from "next";
 
 interface Props {
@@ -56,7 +57,7 @@ function FormattedText({ text }: { text: string }) {
           {items.map((item, idx) => (
             <li key={idx} className="flex items-start gap-2.5 text-muted-foreground">
               <span className="mt-2 h-1.5 w-1.5 rounded-full bg-primary/40 shrink-0" />
-              <span className="leading-relaxed" dangerouslySetInnerHTML={{ __html: formatInline(item) }} />
+              <span className="leading-relaxed" dangerouslySetInnerHTML={{ __html: formatInlineSafe(item) }} />
             </li>
           ))}
         </ul>
@@ -70,7 +71,7 @@ function FormattedText({ text }: { text: string }) {
     }
 
     elements.push(
-      <p key={key++} className="text-muted-foreground leading-relaxed mb-3" dangerouslySetInnerHTML={{ __html: formatInline(line) }} />
+      <p key={key++} className="text-muted-foreground leading-relaxed mb-3" dangerouslySetInnerHTML={{ __html: formatInlineSafe(line) }} />
     );
     i++;
   }
@@ -78,11 +79,6 @@ function FormattedText({ text }: { text: string }) {
   return <>{elements}</>;
 }
 
-function formatInline(text: string): string {
-  return text
-    .replace(/\*\*(.+?)\*\*/g, "<strong class='text-foreground'>$1</strong>")
-    .replace(/\*(.+?)\*/g, "<em>$1</em>");
-}
 
 export default async function IndicatorPage({ params }: Props) {
   const { slug } = await params;
@@ -359,7 +355,7 @@ export default async function IndicatorPage({ params }: Props) {
 
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+        dangerouslySetInnerHTML={{ __html: jsonLdScript(jsonLd) }}
       />
     </div>
   );

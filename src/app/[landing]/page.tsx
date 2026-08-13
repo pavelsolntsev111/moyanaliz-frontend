@@ -5,6 +5,7 @@ import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
 import { landings, getLandingBySlug } from "@/lib/landings-data";
 import { indicators } from "@/lib/indicators-data";
+import { formatInlineSafe, jsonLdScript } from "@/lib/safe-html";
 import type { Metadata } from "next";
 
 interface Props {
@@ -192,7 +193,7 @@ export default async function LandingPage({ params }: Props) {
 
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+        dangerouslySetInnerHTML={{ __html: jsonLdScript(jsonLd) }}
       />
     </div>
   );
@@ -238,7 +239,7 @@ function FormattedContent({ content }: { content: string }) {
               <thead>
                 <tr className="border-b border-border">
                   {rows[0].map((cell, ci) => (
-                    <th key={ci} className="text-left py-2.5 px-3 text-foreground font-semibold" dangerouslySetInnerHTML={{ __html: formatInline(cell) }} />
+                    <th key={ci} className="text-left py-2.5 px-3 text-foreground font-semibold" dangerouslySetInnerHTML={{ __html: formatInlineSafe(cell) }} />
                   ))}
                 </tr>
               </thead>
@@ -246,7 +247,7 @@ function FormattedContent({ content }: { content: string }) {
                 {rows.slice(1).map((row, ri) => (
                   <tr key={ri} className="border-b border-border/50">
                     {row.map((cell, ci) => (
-                      <td key={ci} className="py-2.5 px-3 text-muted-foreground" dangerouslySetInnerHTML={{ __html: formatInline(cell) }} />
+                      <td key={ci} className="py-2.5 px-3 text-muted-foreground" dangerouslySetInnerHTML={{ __html: formatInlineSafe(cell) }} />
                     ))}
                   </tr>
                 ))}
@@ -269,7 +270,7 @@ function FormattedContent({ content }: { content: string }) {
           {items.map((item, idx) => (
             <li key={idx} className="flex items-start gap-2.5 text-muted-foreground">
               <span className="mt-2 h-1.5 w-1.5 rounded-full bg-primary/40 shrink-0" />
-              <span className="leading-relaxed" dangerouslySetInnerHTML={{ __html: formatInline(item) }} />
+              <span className="leading-relaxed" dangerouslySetInnerHTML={{ __html: formatInlineSafe(item) }} />
             </li>
           ))}
         </ul>
@@ -286,7 +287,7 @@ function FormattedContent({ content }: { content: string }) {
       elements.push(
         <ol key={key++} className="list-decimal pl-5 space-y-1.5 my-3 text-muted-foreground marker:text-primary/60">
           {items.map((item, idx) => (
-            <li key={idx} className="leading-relaxed pl-1" dangerouslySetInnerHTML={{ __html: formatInline(item) }} />
+            <li key={idx} className="leading-relaxed pl-1" dangerouslySetInnerHTML={{ __html: formatInlineSafe(item) }} />
           ))}
         </ol>
       );
@@ -299,7 +300,7 @@ function FormattedContent({ content }: { content: string }) {
     }
 
     elements.push(
-      <p key={key++} className="text-muted-foreground leading-relaxed mb-3" dangerouslySetInnerHTML={{ __html: formatInline(line) }} />
+      <p key={key++} className="text-muted-foreground leading-relaxed mb-3" dangerouslySetInnerHTML={{ __html: formatInlineSafe(line) }} />
     );
     i++;
   }
@@ -307,12 +308,3 @@ function FormattedContent({ content }: { content: string }) {
   return <>{elements}</>;
 }
 
-function formatInline(text: string): string {
-  return text
-    .replace(
-      /\[([^\]]+)\]\(([^)]+)\)/g,
-      '<a href="$2" class="text-primary hover:underline">$1</a>'
-    )
-    .replace(/\*\*(.+?)\*\*/g, "<strong class='text-foreground'>$1</strong>")
-    .replace(/\*(.+?)\*/g, "<em>$1</em>");
-}

@@ -5,6 +5,7 @@ import { SiteFooter } from "@/components/site-footer";
 import { InlineDropzone } from "@/components/inline-dropzone";
 import { abbreviations, abbreviationsByGroup } from "@/lib/abbreviations-data";
 import type { Metadata } from "next";
+import { jsonLdScript } from "@/lib/safe-html";
 
 export const metadata: Metadata = {
   title: "Обозначения в анализе крови: расшифровка сокращений — Мой Анализ",
@@ -81,7 +82,7 @@ export default function AbbreviationsPage() {
   return (
     <div className="flex min-h-screen flex-col">
       <SiteHeader />
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLdScript(jsonLd) }} />
 
       <main className="flex-1">
         <section className="border-b border-border bg-gradient-to-b from-accent/40 to-transparent py-12">

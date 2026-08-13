@@ -504,6 +504,13 @@ export function SupportModal({ onClose }: SupportModalProps) {
               {(sending || uploadingAny) && <Loader2 className="h-4 w-4 animate-spin" />}
               {sending ? "Отправляем…" : uploadingAny ? "Загрузка вложений…" : "Отправить в поддержку"}
             </button>
+            <p className="mt-3 text-[11px] leading-relaxed text-muted-foreground">
+              Отправляя обращение, вы принимаете{" "}
+              <a href="/privacy" className="underline hover:text-primary">
+                политику обработки персональных данных
+              </a>
+              .
+            </p>
           </>
         )}
 
@@ -564,6 +571,13 @@ export function SupportModal({ onClose }: SupportModalProps) {
               {sending && <Loader2 className="h-4 w-4 animate-spin" />}
               {sending ? "Отправляем…" : "Отправить вопрос"}
             </button>
+            <p className="mt-3 text-[11px] leading-relaxed text-muted-foreground">
+              Отправляя обращение, вы принимаете{" "}
+              <a href="/privacy" className="underline hover:text-primary">
+                политику обработки персональных данных
+              </a>
+              .
+            </p>
           </>
         )}
 
