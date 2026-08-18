@@ -210,7 +210,14 @@ export function streamChatMessage(
   };
 }
 
-function parseSseFrame(frame: string): StreamEvent | null {
+/**
+ * Parse one SSE frame into a StreamEvent.
+ *
+ * Exported because the standalone consultation (consult-api.ts) speaks the
+ * exact same wire protocol — one parser means a protocol change cannot fix one
+ * product and silently break the other.
+ */
+export function parseSseFrame(frame: string): StreamEvent | null {
   let event = "message";
   let data = "";
   for (const line of frame.split("\n")) {

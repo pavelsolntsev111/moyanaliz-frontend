@@ -36,13 +36,27 @@ export default function MessageInput({
   const [value, setValue] = useState("");
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
-  // Autosize: re-measure on every value change
+  // Autosize: re-measure on every value change.
+  //
+  // Measured at height:0, not height:auto. The textarea is a flex item, and a
+  // stretched flex item still reports the stretched scrollHeight for `auto` —
+  // measured mid-layout that pinned an EMPTY box to the 180px maximum and left
+  // it there, because the effect only re-runs when `value` changes. At height:0
+  // scrollHeight is content and nothing else.
+  //
+  // The rAF pass repeats the measurement once layout has settled: the first
+  // mount can land before fonts and the surrounding flex column are resolved.
   useEffect(() => {
     const ta = textareaRef.current;
     if (!ta) return;
-    ta.style.height = "auto";
     const maxHeight = 180; // ~6 lines on mobile
-    ta.style.height = `${Math.min(ta.scrollHeight, maxHeight)}px`;
+    const fit = () => {
+      ta.style.height = "0px";
+      ta.style.height = `${Math.min(ta.scrollHeight, maxHeight)}px`;
+    };
+    fit();
+    const raf = requestAnimationFrame(fit);
+    return () => cancelAnimationFrame(raf);
   }, [value]);
 
   // Restore draft from sessionStorage on mount (survives MIUI tab kill, refresh)

@@ -2,22 +2,46 @@ import Link from "next/link";
 import { MessageCircle, ShieldCheck, Moon, ArrowRight, ArrowUpRight } from "lucide-react";
 import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
+import ConsultComposer from "@/components/consult/ConsultComposer";
 import { formatInlineSafe, jsonLdScript } from "@/lib/safe-html";
+import { getConsultPacks } from "@/lib/consult-api";
 import { AI_H1, AI_LEAD, AI_TRUST, aiSections, aiFaq } from "@/lib/ai-consultant-data";
 import type { Metadata } from "next";
 
 /**
  * Посадочная «ИИ-консультант по здоровью».
  *
- * ⚠️ Чат ещё не построен, поэтому кнопка НЕ принимает оплату. Брать деньги за услугу,
- * которой нет, нельзя — CTA честно говорит «готовим запуск» и уводит на работающий
- * продукт. Когда чат появится, здесь включается оплата, а цена и объём доступа
- * (сколько вопросов, на какой срок) обязаны приехать из того же источника, что и пейволл,
- * и попасть в оферту: показ, списание и чек не должны разъезжаться.
+ * Чат живёт на /ai-chat/{token}; отсюда задаётся первый вопрос. Экрана выбора
+ * канала перед чатом НЕТ намеренно: Телеграм предлагается уже внутри диалога,
+ * где его можно проигнорировать бесплатно. Deep link в Телеграм — та самая
+ * механика, из-за которой в мае возвращали деньги и вели 31-дневную переписку,
+ * так что он не стоит на пути к ценности.
+ *
+ * ⚠️ Цена и объём пакета приезжают с бэкенда (/consult/packs) — из того же
+ * источника, из которого пейволл берёт, что списать, а чек 54-ФЗ берёт, что
+ * напечатать. Константы FALLBACK_PRICING нужны только чтобы SEO-страница
+ * отрисовалась при недоступном API (это уже случалось дважды) — меняя цену,
+ * правь config.py, а не их.
  *
  * ⚠️ Ни в title, ни в description не должно быть «консультация врача», «онлайн-приём»,
  * «телемедицина» — см. комментарий в ai-consultant-data.ts.
  */
+
+const FALLBACK_PRICING = { packPrice: 49, packQuestions: 10 };
+
+async function resolvePricing() {
+  try {
+    const info = await getConsultPacks();
+    const cheapest = [...info.packs].sort((a, b) => a.price - b.price)[0];
+    if (!cheapest) return FALLBACK_PRICING;
+    return {
+      packPrice: cheapest.price,
+      packQuestions: cheapest.questions,
+    };
+  } catch {
+    return FALLBACK_PRICING;
+  }
+}
 
 export const metadata: Metadata = {
   title: "ИИ-консультант по здоровью — задать вопрос онлайн | Мой Анализ",
@@ -41,7 +65,8 @@ const BULLETS = [
   { icon: ShieldCheck, text: "Не ставит диагноз и не назначает лечение — это к врачу" },
 ];
 
-export default function AiConsultantPage() {
+export default async function AiConsultantPage() {
+  const pricing = await resolvePricing();
   const jsonLd = [
     {
       "@context": "https://schema.org",
@@ -96,31 +121,27 @@ export default function AiConsultantPage() {
               ))}
             </ul>
 
-            {/* CTA. Оплаты нет намеренно — чат ещё не работает. */}
-            <div className="mt-8 rounded-2xl border border-border bg-card p-6">
-              <p className="text-base font-semibold text-card-foreground">
-                Готовим запуск
-              </p>
-              <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-                Чат скоро откроется. Пока он не работает, мы не берём за него деньги — здесь
-                не будет кнопки оплаты, за которой ничего нет. Если анализ уже на руках, его
-                можно разобрать прямо сейчас: это работающая часть сервиса.
-              </p>
-              <div className="mt-5 flex flex-wrap gap-3">
-                <Link
-                  href="/?ref=ai-konsultant"
-                  className="inline-flex items-center gap-2 rounded-xl bg-primary px-5 py-3 text-sm font-semibold text-primary-foreground transition hover:opacity-90"
-                >
-                  Разобрать анализ
-                  <ArrowRight className="h-4 w-4" />
-                </Link>
-                <Link
-                  href="/indicators"
-                  className="inline-flex items-center gap-2 rounded-xl border border-border bg-card px-5 py-3 text-sm font-semibold text-card-foreground transition hover:border-primary/40 hover:text-primary"
-                >
-                  Справочник показателей
-                </Link>
-              </div>
+            {/* Вход в продукт. Цифры приезжают с бэкенда (тот же источник, что
+                и пейволл), константы ниже — только на случай недоступного API. */}
+            <ConsultComposer
+              packPrice={pricing.packPrice}
+              packQuestions={pricing.packQuestions}
+            />
+
+            <div className="mt-4 flex flex-wrap gap-3">
+              <Link
+                href="/?ref=ai-konsultant"
+                className="inline-flex items-center gap-2 rounded-xl border border-border bg-card px-4 py-2.5 text-sm font-semibold text-card-foreground transition hover:border-primary/40 hover:text-primary"
+              >
+                Разобрать анализ по файлу
+                <ArrowRight className="h-4 w-4" />
+              </Link>
+              <Link
+                href="/indicators"
+                className="inline-flex items-center gap-2 rounded-xl border border-border bg-card px-4 py-2.5 text-sm font-semibold text-card-foreground transition hover:border-primary/40 hover:text-primary"
+              >
+                Справочник показателей
+              </Link>
             </div>
 
             <div className="prose prose-sm mt-8 max-w-none prose-li:text-muted-foreground prose-strong:text-foreground">
