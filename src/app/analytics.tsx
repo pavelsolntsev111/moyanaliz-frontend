@@ -1,7 +1,10 @@
 "use client";
 
+import { useEffect } from "react";
 import Script from "next/script";
 import { usePathname } from "next/navigation";
+
+import { captureAttribution } from "@/lib/attribution";
 
 /**
  * Яндекс.Метрика — для всего сайта, КРОМЕ демо-контура расшифровки бак-посева.
@@ -18,7 +21,24 @@ const EXCLUDED_PREFIXES = ["/posev-demo"];
 
 export default function Analytics() {
   const pathname = usePathname();
-  if (pathname && EXCLUDED_PREFIXES.some((p) => pathname.startsWith(p))) return null;
+  const excluded = !!pathname && EXCLUDED_PREFIXES.some((p) => pathname.startsWith(p));
+
+  // Снимок рекламной метки при ЛЮБОМ входе на сайт, а не только на «/».
+  // Раньше captureAttribution() звался лишь из главной, поэтому переход из
+  // объявления сразу на посадочную (ИИ-консультант, статья, калькулятор) терял
+  // utm и yclid: заказ приходил без источника. Внутри — first-touch, повторный
+  // вызов не перетирает первый, поэтому дёргать на каждый переход безопасно.
+  // Хук стоит ДО раннего выхода: условный вызов хука React не допускает.
+  useEffect(() => {
+    if (excluded) return;
+    try {
+      captureAttribution();
+    } catch {
+      /* приватный режим — атрибуция не критична, страница важнее */
+    }
+  }, [pathname, excluded]);
+
+  if (excluded) return null;
 
   return (
     <>
