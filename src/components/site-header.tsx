@@ -1,32 +1,84 @@
 "use client";
 
 import Link from "next/link";
-import { Activity, LifeBuoy, Menu, X } from "lucide-react";
+import { Activity, ChevronDown, LifeBuoy, Menu, X } from "lucide-react";
 import { useState } from "react";
 import { SupportModal } from "@/components/support-modal";
 import { ymGoal } from "@/lib/ym";
 
 /**
- * Разделы портала. Один список на десктоп и мобильное меню — раньше они дублировались
- * и успели разъехаться.
+ * Разделы портала. Один список на мобильное меню, где сгруппировать пункты
+ * визуально особо некуда — вся навигация плоская.
  *
  * «Расшифровка» ведёт на «/» — это и есть продукт, менять адрес нельзя (на него настроены
- * рекламные кампании). «Справочник» — прежние /indicators: сменилась только вывеска.
+ * рекламные кампании). «Здоровье» — блог, даёт ~86% органики сайта, поэтому наверху.
  * «Новости» наполняет контент-агент из RSS — раздел живой с первого дня, даже пустой
  * страницей с объяснением, поэтому ссылка не ведёт в никуда.
  */
 const NAV = [
   { href: "/", label: "Расшифровка" },
-  { href: "/indicators", label: "Справочник" },
-  { href: "/kalkulyator", label: "Калькуляторы" },
   { href: "/blog", label: "Здоровье" },
+  { href: "/ai-konsultant", label: "ИИ-консультант" },
+];
+
+/**
+ * «Справочник» — выпадающее меню на десктопе (см. ReferenceDropdown), а не отдельная
+ * страница: органика на /indicators/oboznacheniya/новости на два порядка меньше блога
+ * (15 визитов/мес против 2544 у /blog), в шапку крупным пунктом не тянут.
+ *
+ * ⚠️ Сами пункты дропдауна рендерятся в DOM только при open===true (по ховеру/клику) —
+ * Googlebot ховер не эмулирует, так что из шапки эти 4 страницы для краулера не видны.
+ * Это не потеря: все четыре уже сквозные через SiteFooter на каждой странице сайта.
+ * Если футер когда-нибудь потеряет эти ссылки — здесь тоже нужно чинить.
+ */
+const REFERENCE = [
+  { href: "/indicators", label: "Показатели" },
+  { href: "/oboznacheniya", label: "Обозначения" },
+  { href: "/kalkulyator", label: "Калькуляторы" },
   { href: "/novosti", label: "Новости" },
 ];
 
-const SECONDARY = [
-  { href: "/ai-konsultant", label: "ИИ-консультант" },
-  { href: "/abonement", label: "Абонемент" },
-];
+const SECONDARY = [{ href: "/abonement", label: "Абонемент" }];
+
+function ReferenceDropdown() {
+  const [open, setOpen] = useState(false);
+
+  return (
+    <div
+      className="relative"
+      onMouseEnter={() => setOpen(true)}
+      onMouseLeave={() => setOpen(false)}
+    >
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        aria-expanded={open}
+        className="flex items-center gap-1 text-sm font-medium text-muted-foreground transition-colors hover:text-primary"
+      >
+        Справочник
+        <ChevronDown
+          className={`h-3.5 w-3.5 transition-transform ${open ? "rotate-180" : ""}`}
+        />
+      </button>
+      {open && (
+        <div className="absolute left-0 top-full z-10 w-48 pt-2">
+          <div className="rounded-lg border border-border bg-card py-2 shadow-lg">
+            {REFERENCE.map((item) => (
+              <Link
+                key={item.href}
+                href={item.href}
+                onClick={() => setOpen(false)}
+                className="block px-4 py-2 text-sm text-muted-foreground transition-colors hover:bg-muted hover:text-primary"
+              >
+                {item.label}
+              </Link>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
 
 export function SiteHeader() {
   const [menuOpen, setMenuOpen] = useState(false);
@@ -60,6 +112,7 @@ export function SiteHeader() {
               {item.label}
             </Link>
           ))}
+          <ReferenceDropdown />
           {SECONDARY.map((item) => (
             <Link
               key={item.href}
@@ -100,7 +153,7 @@ export function SiteHeader() {
       {menuOpen && (
         <nav className="border-t border-border bg-card px-4 py-3 md:hidden">
           <div className="flex flex-col gap-3">
-            {[...NAV, ...SECONDARY].map((item) => (
+            {[...NAV, ...REFERENCE, ...SECONDARY].map((item) => (
               <Link
                 key={item.href}
                 href={item.href}
