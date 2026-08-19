@@ -24,7 +24,7 @@ const NAV = [
 ];
 
 const SECONDARY = [
-  { href: "/offer", label: "О сервисе" },
+  { href: "/ai-konsultant", label: "ИИ-консультант" },
   { href: "/abonement", label: "Абонемент" },
 ];
 
