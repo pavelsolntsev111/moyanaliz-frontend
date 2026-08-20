@@ -103,3 +103,52 @@ export function captureAttribution(): void {
 export function getAttribution(): Attribution | null {
   return readStored();
 }
+
+/**
+ * Первая страница входа на сайт — для ВСЕХ визитов, включая органику.
+ *
+ * captureAttribution() выше пишет только при наличии utm/yclid (рекламный трафик) —
+ * у органических заказов landing_url/referrer намеренно пустые (см. CLAUDE.md).
+ * Для оценки конверсии органики нужна именно точка входа независимо от источника,
+ * поэтому это отдельный снапшот с отдельным ключом, тот же first-touch принцип
+ * и тот же TTL (первый визит важнее повторных, 30 дней — чтобы редкий органический
+ * визит без возврата всё равно долетал до продажи с верной страницей входа).
+ */
+const ENTRY_PAGE_KEY = "ma_entry_page_v1";
+
+type EntryPageSnapshot = { path: string; saved_at: number };
+
+function readEntryPage(): EntryPageSnapshot | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const raw = localStorage.getItem(ENTRY_PAGE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as EntryPageSnapshot;
+    if (!parsed.saved_at || Date.now() - parsed.saved_at > TTL_MS) {
+      localStorage.removeItem(ENTRY_PAGE_KEY);
+      return null;
+    }
+    return parsed;
+  } catch {
+    return null;
+  }
+}
+
+/** Call on every route change (see analytics.tsx) — no-op after the first successful write. */
+export function captureEntryPage(): void {
+  if (typeof window === "undefined") return;
+  if (readEntryPage()) return; // first touch wins
+  try {
+    localStorage.setItem(
+      ENTRY_PAGE_KEY,
+      JSON.stringify({ path: window.location.pathname.slice(0, 500), saved_at: Date.now() }),
+    );
+  } catch {
+    // localStorage full / blocked — silent, matches captureAttribution()
+  }
+}
+
+/** Read the stored entry page path (for piggy-backing onto /upload). */
+export function getEntryPage(): string | null {
+  return readEntryPage()?.path ?? null;
+}

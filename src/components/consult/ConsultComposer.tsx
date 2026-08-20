@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { ArrowRight, Loader2, MessageCircle } from "lucide-react";
 
 import { CONSULT_TOKEN_KEY, startConsult } from "@/lib/consult-api";
-import { getAttribution } from "@/lib/attribution";
+import { getAttribution, getEntryPage } from "@/lib/attribution";
 import { ymGoal } from "@/lib/ym";
 
 const PENDING_QUESTION_KEY = "consult_pending_question";
@@ -90,6 +90,7 @@ export default function ConsultComposer({
           : undefined,
         referrer: attribution?.referrer,
         landing_url: attribution?.landing_url,
+        entry_page: getEntryPage() ?? undefined,
       });
       try {
         sessionStorage.setItem(PENDING_QUESTION_KEY, question);

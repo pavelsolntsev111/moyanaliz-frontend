@@ -98,6 +98,7 @@ export interface StartOptions {
   utm_params?: Record<string, string>;
   referrer?: string;
   landing_url?: string;
+  entry_page?: string;
 }
 
 /** Open a session. `consent` is mandatory — the backend rejects false. */

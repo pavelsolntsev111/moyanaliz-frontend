@@ -1,5 +1,5 @@
 import type { PreviewData } from "./types";
-import { getAttribution } from "./attribution";
+import { getAttribution, getEntryPage } from "./attribution";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "https://api.moyanaliz.ru";
 
@@ -116,6 +116,9 @@ export async function uploadFile(file: File, skipPreview?: string): Promise<Uplo
     if (att.referrer) formData.append("referrer", att.referrer);
     if (att.landing_url) formData.append("landing_url", att.landing_url);
   }
+  // Первая страница входа — для ВСЕХ визитов (не только рекламных), см. attribution.ts
+  const entryPage = getEntryPage();
+  if (entryPage) formData.append("entry_page", entryPage);
   return request<UploadResponse>("/api/v1/upload", {
     method: "POST",
     body: formData,
