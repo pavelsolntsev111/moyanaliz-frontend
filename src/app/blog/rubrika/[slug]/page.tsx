@@ -14,7 +14,10 @@ interface Props {
 export const dynamicParams = false;
 
 export async function generateStaticParams() {
-  return rubrics.map((r) => ({ slug: r.slug }));
+  // ⚠️ Пустую рубрику не генерим: новая категория заводится ЗАРАНЕЕ (чтобы агент мог её
+  // проставить), и до первой статьи страница была бы пустышкой в индексе.
+  // dynamicParams=false → такой URL честно отдаёт 404, пока статей нет.
+  return rubrics.filter((r) => articlesInRubric(r.slug).length > 0).map((r) => ({ slug: r.slug }));
 }
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {

@@ -71,7 +71,9 @@ export default function sitemap(): MetadataRoute.Sitemap {
   }));
 
   // Рубрики: lastmod = дата свежайшей статьи внутри, чтобы не врать роботу «обновлено сегодня»
-  const rubricPages: MetadataRoute.Sitemap = rubrics.map((r) => {
+  const rubricPages: MetadataRoute.Sitemap = rubrics
+    .filter((r) => articlesInRubric(r.slug).length > 0)   // пустую рубрику роботу не отдаём
+    .map((r) => {
     const list = articlesInRubric(r.slug);
     return {
       url: `${base}/blog/rubrika/${r.slug}`,
