@@ -672,16 +672,25 @@ function StatusScreen({ status, orderId }: { status: OrderStatus; orderId: strin
   }
 
   if (status.payment_status === "failed") {
+    // BugLog c640770811: "expired_on_confirmation" means the client's bank
+    // already placed an authorization hold (their Sber app shows "Платёж
+    // выполнен") but the confirmation page timed out before YooKassa
+    // captured it. Telling this client "payment failed, try again" reads as
+    // "you stole my money" — the hold auto-releases in 7-10 days and no
+    // second payment should be encouraged before that.
+    const expired = status.payment_failure_reason === "expired_on_confirmation";
     return (
       <div className="text-center">
         <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-destructive/10 flex items-center justify-center">
           <ShieldAlert className="w-8 h-8 text-destructive" />
         </div>
         <h1 className="text-xl font-semibold text-foreground">
-          Оплата не прошла
+          {expired ? "Время на подтверждение оплаты истекло" : "Оплата не прошла"}
         </h1>
         <p className="text-sm text-muted-foreground mt-2 mb-6">
-          Попробуйте снова или используйте другой способ оплаты
+          {expired
+            ? "Деньги до нас не дошли, но в приложении банка могло появиться сообщение о списании — это временный холд, а не платёж. Он снимается автоматически в течение 7-10 дней, повторно платить прямо сейчас не нужно. Если через 10 дней холд не исчез — напишите в поддержку."
+            : "Попробуйте снова или используйте другой способ оплаты"}
         </p>
         <a
           href="/"

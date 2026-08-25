@@ -309,6 +309,11 @@ export async function createChatPayment(
 export interface OrderStatus {
   order_id: string;
   payment_status: string;
+  // YooKassa cancellation_details.reason when payment_status === "failed"
+  // (BugLog c640770811). "expired_on_confirmation" means the bank already
+  // placed a hold (client's Sber shows "Платёж выполнен") but the
+  // confirmation page timed out before capture — not a real decline.
+  payment_failure_reason?: string | null;
   processing_status: string;
   email_status: string;
   email?: string | null;
