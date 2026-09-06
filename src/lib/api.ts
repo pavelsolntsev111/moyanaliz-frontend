@@ -1,5 +1,6 @@
 import type { PreviewData } from "./types";
 import { getAttribution, getEntryPage } from "./attribution";
+import { getYmClientId } from "./ym";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "https://api.moyanaliz.ru";
 
@@ -119,6 +120,9 @@ export async function uploadFile(file: File, skipPreview?: string): Promise<Uplo
   // Первая страница входа — для ВСЕХ визитов (не только рекламных), см. attribution.ts
   const entryPage = getEntryPage();
   if (entryPage) formData.append("entry_page", entryPage);
+  // Metrika ClientID (_ym_uid) — фолбэк офлайн-конверсии, когда нет yclid (см. ym.ts)
+  const ymCid = getYmClientId();
+  if (ymCid) formData.append("ym_client_id", ymCid);
   return request<UploadResponse>("/api/v1/upload", {
     method: "POST",
     body: formData,
