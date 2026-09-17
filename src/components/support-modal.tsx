@@ -451,9 +451,14 @@ export function SupportModal({ onClose }: SupportModalProps) {
                     className={inputCls}
                   >
                     <option value="">не помню</option>
+                    <option value="199 ₽">199 ₽</option>
+                    <option value="249 ₽">249 ₽</option>
                     <option value="299 ₽">299 ₽</option>
                     <option value="349 ₽">349 ₽</option>
+                    <option value="390 ₽">390 ₽</option>
                     <option value="449 ₽">449 ₽</option>
+                    <option value="590 ₽">590 ₽</option>
+                    <option value="699 ₽">699 ₽</option>
                     <option value="899 ₽">899 ₽</option>
                     <option value="другая">другая сумма</option>
                   </select>

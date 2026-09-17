@@ -267,7 +267,7 @@ export default function ExamplePage() {
           <InlineDropzone
             source="example"
             title="Получить такой же разбор своего анализа"
-            subtitle="Загрузите PDF или фото бланка — отчёт будет готов за пару минут. 299 ₽, без регистрации."
+            subtitle="Загрузите PDF или фото бланка — отчёт будет готов за пару минут. От 199 ₽, без регистрации."
           />
 
           <section className="mt-10">
