@@ -16,11 +16,11 @@ import { useRouter } from "next/navigation";
 // Fallback prices: only used while /upload is still in flight or if the
 // backend response is missing `prices` (old build during a partial deploy).
 const FALLBACK_PRICES: PriceBundle = {
-  single: 299,
-  combo: 349,
+  single: 199,
+  combo: 249,
   chat_upsell: 49,
-  three_reports: 449,
-  abonement: 899,
+  three_reports: 299,
+  abonement: 449,
 };
 
 export default function HomePage() {
