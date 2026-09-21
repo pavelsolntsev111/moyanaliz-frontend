@@ -27,7 +27,6 @@ import {
 import type { PreviewData, AnalysisIndicator, LightIndicator } from "@/lib/types"
 import { IndicatorCard } from "@/components/indicator-card"
 import { ReportExampleModal, ReportExampleTeaser } from "@/components/report-example-modal"
-import { mockIndicators } from "@/lib/mock-data"
 import { validatePromo } from "@/lib/api"
 import type { PromoValidateResponse, PriceBundle } from "@/lib/api"
 
@@ -35,6 +34,22 @@ import type { PromoValidateResponse, PriceBundle } from "@/lib/api"
 
 function isValidEmail(email: string) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
+}
+
+/**
+ * Price after a percentage promo code. 100% («free») codes are NOT a discount —
+ * they go through the free-email flow, so they leave the number untouched here.
+ *
+ * ⚠️ Must stay the single source of the discounted number: the sticky mobile CTA
+ * used to build its own label from the undiscounted price while charging the
+ * card price, so the button said 299 ₽ next to a card saying 209 ₽ and the
+ * payment was created WITHOUT the promo code (bug 05d7a9c638).
+ */
+function discountedPrice(price: number, promo: PromoValidateResponse | null): number {
+  if (promo?.valid && !promo.free && promo.discount_percent) {
+    return Math.max(1, Math.round(price * (100 - promo.discount_percent) / 100))
+  }
+  return price
 }
 
 /**
@@ -867,7 +882,8 @@ function EndOfDayCountdown() {
 /** Inline paywall — personalized copy */
 function InlinePaywall({
   promoVisible, setPromoVisible, promoCode, setPromoCode,
-  loading, abnormalIndicators, totalCount, outOfRangeCount, onPay, onPromo,
+  promoResult, setPromoResult, triggerPay,
+  loading, abnormalIndicators, totalCount, outOfRangeCount, onPromo,
   withChat, setWithChat, withThreeReports, setWithThreeReports,
   withAbonement, setWithAbonement,
   abEmailBeforePay, prepayEmail, setPrepayEmail,
@@ -878,13 +894,19 @@ function InlinePaywall({
   setPromoVisible: (v: boolean) => void
   promoCode: string
   setPromoCode: (v: string) => void
+  // ⚠️ Promo state is owned by PaywallStep, not by this card: the sticky mobile
+  // CTA lives outside this component and must charge the same (discounted)
+  // price through the same triggerPay (bug 05d7a9c638).
+  promoResult: PromoValidateResponse | null
+  setPromoResult: (v: PromoValidateResponse | null) => void
+  // Single payment entry point, owned by PaywallStep and shared with the sticky CTA.
+  triggerPay: () => void
   loading: boolean
   abnormalIndicators: AnalysisIndicator[]
   totalCount: number
   // Out-of-range indicator count visible in header («X из Y вне нормы»).
   // Drives the test-variant single-CTA copy via getSingleCtaText().
   outOfRangeCount: number
-  onPay: (promoCode?: string, withChat?: boolean, withThreeReports?: boolean, withAbonement?: boolean, email?: string) => Promise<void>
   onPromo: (email: string, promoCode: string, withChat?: boolean) => Promise<void>
   withChat: boolean
   setWithChat: (v: boolean) => void
@@ -932,7 +954,6 @@ function InlinePaywall({
   const priceTag = abPriceV1 === "test" ? "test" : "control"
   const ctaTag = abCtaV1 === "test" ? "test" : "control"
   const [promoValidating, setPromoValidating] = useState(false)
-  const [promoResult, setPromoResult] = useState<PromoValidateResponse | null>(null)
   const [promoError, setPromoError] = useState<string | null>(null)
   const [freePromoEmail, setFreePromoEmail] = useState("")
 
@@ -970,12 +991,8 @@ function InlinePaywall({
     </a>
   )
 
-  const baseDisplayPrice = promoResult?.valid && !promoResult.free && promoResult.discount_percent
-    ? Math.max(1, Math.round(prices.single * (100 - promoResult.discount_percent) / 100))
-    : prices.single
-  const comboDisplayPrice = promoResult?.valid && !promoResult.free && promoResult.discount_percent
-    ? Math.max(1, Math.round(prices.combo * (100 - promoResult.discount_percent) / 100))
-    : prices.combo
+  const baseDisplayPrice = discountedPrice(prices.single, promoResult)
+  const comboDisplayPrice = discountedPrice(prices.combo, promoResult)
   const displayPrice = withThreeReports ? prices.three_reports : withChat ? comboDisplayPrice : baseDisplayPrice
   const hasDiscount = promoResult?.valid && !promoResult.free && promoResult.discount_percent
 
@@ -997,30 +1014,13 @@ function InlinePaywall({
   // badge staying −25%. Keeps charge↔display↔frame consistent without extra plumbing.
   const singleOldPrice = Math.round(prices.single / 0.75)
   const comboOldPrice = Math.round(prices.combo / 0.75)
-
-  // Primary pay action — fires the same goals + onPay() as the main CTA, so the
-  // example modal's footer button is identical to clicking «Получить полный отчёт».
-  const triggerPay = () => {
-    const prepayEmailValid = !abEmailBeforePay || isValidEmail(prepayEmail)
-    if (!prepayEmailValid) {
-      document.getElementById("paywall-email")?.focus()
-      return
-    }
-    const emailArg = abEmailBeforePay ? prepayEmail.trim() : undefined
-    const premiumTag = premiumTest ? "test" : "control"
-    const bumpTag = bumpTest ? "test" : "control"
-    const packTag = packTest ? "test" : "control"
-    if (withAbonement) {
-      ymGoal("click_pay_abonement", { price: priceTag, cta: ctaTag, premium: premiumTag, bump: bumpTag, pack: packTag })
-      onPay(undefined, false, false, true, emailArg)
-    } else if (withThreeReports) {
-      ymGoal("click_pay_five_reports", { price: priceTag, cta: ctaTag, premium: premiumTag, bump: bumpTag, pack: packTag })
-      onPay(undefined, false, true, false, emailArg)
-    } else {
-      ymGoal("click_get_report", { price: priceTag, cta: ctaTag, premium: premiumTag, bump: bumpTag, pack: packTag, tier: withChat ? "combo" : "single" })
-      onPay(hasDiscount ? promoCode.trim() : undefined, withChat, false, false, emailArg)
-    }
-  }
+  // Badges and the urgency line must show the discount ACTUALLY on offer. With a
+  // promo code applied the single card charged 209 against a struck 399 while
+  // still shouting a hardcoded «−25%», and its combo neighbour computed «−48%»
+  // — two adjacent cards describing the same discount differently (bug 199ba0fe66).
+  const singleBadgePercent = Math.round((1 - baseDisplayPrice / singleOldPrice) * 100)
+  const comboBadgePercent = Math.round((1 - comboDisplayPrice / comboOldPrice) * 100)
+  const saleBadgePercent = hasDiscount ? Math.max(singleBadgePercent, comboBadgePercent) : 25
 
   const handleValidatePromo = async (codeArg?: string) => {
     const code = (codeArg ?? promoCode).trim()
@@ -1112,8 +1112,11 @@ function InlinePaywall({
             {/* A/B ab_sale_v1: shared −25% urgency line, centered in the top zone
                 above the tariffs (mb balances the card's p-6/p-7 top padding). */}
             {sale && !promoResult?.free && (
-              <p className="mb-6 sm:mb-7 flex items-center justify-center gap-1.5 text-sm font-medium text-amber-700">
-                🔥 Акция −25% · до конца дня <EndOfDayCountdown /> 🔥
+              /* whitespace-nowrap on the tail: at 375px «до конца дня» used to
+                 break away from its own countdown (bug aeddd01d6e). */
+              <p className="mb-6 sm:mb-7 flex flex-wrap items-center justify-center gap-x-1.5 text-sm font-medium text-amber-700">
+                <span className="whitespace-nowrap">🔥 Акция −{saleBadgePercent}% ·</span>
+                <span className="whitespace-nowrap">до конца дня <EndOfDayCountdown /> 🔥</span>
               </p>
             )}
             {/* In the bump arm the chat add-on lives in a checkbox (withChat),
@@ -1127,7 +1130,7 @@ function InlinePaywall({
               } ${loading ? "opacity-50 pointer-events-none" : ""}`}
             >
               {sale && !promoResult?.free && (
-                <span className="absolute -top-2 right-3 rounded-full bg-amber-500 px-2 py-0.5 text-[10px] font-bold text-white">−25%</span>
+                <span className="absolute -top-2 right-3 rounded-full bg-amber-500 px-2 py-0.5 text-[10px] font-bold text-white">−{singleBadgePercent}%</span>
               )}
               <div className={`h-4 w-4 shrink-0 rounded-full border-2 flex items-center justify-center ${
                 (bumpTest || !withChat) && !withThreeReports && !withAbonement ? "border-primary" : "border-muted-foreground/40"
@@ -1135,7 +1138,7 @@ function InlinePaywall({
                 {(bumpTest || !withChat) && !withThreeReports && !withAbonement && <div className="h-2 w-2 rounded-full bg-primary" />}
               </div>
               <div className="flex-1">
-                <p className="text-sm font-semibold text-foreground">Полный отчет</p>
+                <p className="text-sm font-semibold text-foreground">Полный отчёт</p>
               </div>
               {sale && !promoResult?.free ? (
                 <span className="flex shrink-0 flex-col items-end leading-tight">
@@ -1158,7 +1161,7 @@ function InlinePaywall({
               } ${loading ? "opacity-50 pointer-events-none" : ""}`}
             >
               <span className={`absolute -top-2 right-3 rounded-full px-2 py-0.5 text-[10px] font-bold text-white ${sale ? "bg-amber-500" : "bg-primary"}`}>
-                {sale ? `−${Math.round((1 - comboDisplayPrice / comboOldPrice) * 100)}%` : "популярный"}
+                {sale ? `−${comboBadgePercent}%` : "популярный"}
               </span>
               <div className={`h-4 w-4 shrink-0 rounded-full border-2 flex items-center justify-center ${
                 withChat && !withThreeReports && !withAbonement ? "border-primary" : "border-muted-foreground/40"
@@ -1201,8 +1204,11 @@ function InlinePaywall({
               <div className="flex-1">
                 <p className="text-sm font-semibold text-foreground">{packTest ? "5 отчётов" : "3 отчёта"}</p>
                 <p className="text-xs text-muted-foreground mt-0.5">
+                  {/* No «выгоднее всего» here: the 10-report card right below is
+                      cheaper per report, so the superlative contradicted the next
+                      line on the same screen (bug aeddd01d6e). */}
                   {packTest
-                    ? `всего ${Math.round(prices.three_reports / 5)} ₽ за расшифровку — выгоднее всего`
+                    ? `всего ${Math.round(prices.three_reports / 5)} ₽ за расшифровку`
                     : "в два раза дешевле, чем при покупке одного отчёта"}
                 </p>
               </div>
@@ -1515,6 +1521,7 @@ function InlinePaywall({
                   <div className="relative mt-1">
                     <Mail className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                     <input
+                      id="free-promo-email"
                       type="email"
                       placeholder="example@mail.ru"
                       value={freePromoEmail}
@@ -1553,13 +1560,22 @@ function InlinePaywall({
 }
 
 /** Bottom CTA card + sticky mobile button */
-function BottomCTA({ onPay, loading, withChat, withThreeReports, withAbonement, prices, abCtaV1, outOfRangeCount, premiumTest, bumpTest, packTest, segmentCopyTest = false }: {
+function BottomCTA({ onPay, loading, withChat, withThreeReports, withAbonement, prices, singlePrice, comboPrice, freePromo, abCtaV1, outOfRangeCount, premiumTest, bumpTest, packTest, segmentCopyTest = false }: {
   onPay: () => void
   loading: boolean
   withChat: boolean
   withThreeReports?: boolean
   withAbonement?: boolean
   prices: PriceBundle
+  // ⚠️ Single/combo prices AFTER the promo code. `prices` alone is not enough:
+  // this button used to advertise (and charge) the list price while the card two
+  // screens up showed the discounted one (bug 05d7a9c638). Packs are never
+  // discounted by a promo code, so they still read from `prices`.
+  singlePrice: number
+  comboPrice: number
+  // A 100% code is redeemed through the email form inside the card, not by paying —
+  // the sticky button then offers to jump there instead of charging full price.
+  freePromo: boolean
   // A/B CTA bucket — single-tier sticky CTA mirrors the main InlinePaywall CTA
   // copy so the user sees the same message above and below the fold.
   abCtaV1: string | null
@@ -1599,16 +1615,18 @@ function BottomCTA({ onPay, loading, withChat, withThreeReports, withAbonement, 
             }
           >
             <span className="flex items-center gap-2 text-sm font-bold">
-              {withAbonement
+              {freePromo
+                ? "Получить бесплатный отчёт"
+                : withAbonement
                 ? `Купить ${premiumTest ? "10 базовых отчётов" : "10 отчётов"} — ${prices.abonement} ₽`
                 : withThreeReports
                 ? `Купить ${packTest ? "5 отчётов" : premiumTest ? "3 базовых отчёта" : "3 отчёта"} — ${prices.three_reports} ₽`
                 : withChat
-                ? `${premiumTest ? "Получить расширенный отчёт" : bumpTest ? "Получить отчёт + чат" : "С консультацией"} — ${prices.combo} ₽`
+                ? `${premiumTest ? "Получить расширенный отчёт" : bumpTest ? "Получить отчёт + чат" : "С консультацией"} — ${comboPrice} ₽`
                 : premiumTest
-                ? `Получить базовый отчёт — ${prices.single} ₽`
+                ? `Получить базовый отчёт — ${singlePrice} ₽`
                 /* AB ab_cta_v1: same logic as InlinePaywall — mirror on mobile. */
-                : getSingleCtaText(abCtaV1, outOfRangeCount, prices.single, segmentCopyTest)}
+                : getSingleCtaText(abCtaV1, outOfRangeCount, singlePrice, segmentCopyTest)}
               <ChevronRight className="h-4 w-4" />
             </span>
             <span className="mt-0.5 text-[10px] font-normal opacity-80">
@@ -1657,7 +1675,9 @@ function TestimonialsBlock() {
               </div>
               <span className="text-xs font-semibold text-card-foreground">{t.name}</span>
             </div>
-            <p className="text-xs text-muted-foreground leading-relaxed">«{t.text}»</p>
+            {/* Texts already carry their own «…» — wrapping them again rendered
+                «««…»»» in the DOM (bug aeddd01d6e). */}
+            <p className="text-xs text-muted-foreground leading-relaxed">{t.text}</p>
             <div className="mt-2 flex gap-0.5">
               {Array.from({ length: 5 }).map((_, i) => (
                 <svg key={i} className="h-3 w-3" viewBox="0 0 12 12" fill="#f59e0b">
@@ -1727,23 +1747,40 @@ interface PaywallStepProps {
 export function PaywallStep({ onPay, onPromo, loading, preview, abEmailBeforePay = false, prices, abPriceV1 = null, abCtaV1 = null, skipPreview = false, premiumTest = false, bumpTest = false, packTest = false, exampleTest = false, onExampleOpen, saleTest = false, segmentCopyTest = false }: PaywallStepProps) {
   const [promoVisible, setPromoVisible] = useState(false)
   const [promoCode, setPromoCode] = useState("")
+  const [promoResult, setPromoResult] = useState<PromoValidateResponse | null>(null)
   const [withChat, setWithChat] = useState(false)
   const [withThreeReports, setWithThreeReports] = useState(false)
   const [withAbonement, setWithAbonement] = useState(false)
   const [prepayEmail, setPrepayEmail] = useState("")
   const prepayEmailValid = isValidEmail(prepayEmail)
 
+  // ⚠️ NEVER fall back to demo indicators here. /upload answers 200 with
+  // preview=null when the light analysis fails (both race models + Haiku down,
+  // unreadable file), and this used to render mock-data.ts as the client's own
+  // result: «5 из 10 вне нормы», «глюкоза выше нормы — риск диабета» for a
+  // person who has no such values. Invented abnormalities shown to a real
+  // patient, plus pressure to buy on fake findings (bug 98310ce075).
   const allIndicators = useMemo(() => {
     if (preview?.indicators?.length) {
       return preview.indicators.map(mapLightToAnalysis)
     }
-    return mockIndicators
+    return []
   }, [preview])
+
+  // No preview to show — either the no-freemium A/B arm (light analysis skipped
+  // on purpose) or a failed light analysis. Both render the tiers without any
+  // result header, summary or out-of-range counter.
+  const hidePreview = skipPreview || allIndicators.length === 0
+  const previewFailed = !skipPreview && allIndicators.length === 0
 
   const totalCount = preview?.meta?.total_count ?? allIndicators.length
   const abnormalIndicators = useMemo(() => allIndicators.filter((i) => i.status !== "normal"), [allIndicators])
-  // Use actual abnormal count from mapped indicators (backend meta may be stale/wrong)
-  const outOfRangeCount = abnormalIndicators.length > 0
+  // Use actual abnormal count from mapped indicators (backend meta may be stale/wrong).
+  // With no indicators at all we claim no count either — the CTA must not promise
+  // «узнать, что с 3 показателями» next to an empty preview.
+  const outOfRangeCount = allIndicators.length === 0
+    ? 0
+    : abnormalIndicators.length > 0
     ? abnormalIndicators.length
     : (preview?.meta?.out_of_range_count ?? 0)
 
@@ -1751,6 +1788,54 @@ export function PaywallStep({ onPay, onPromo, loading, preview, abEmailBeforePay
     () => selectOpenIndicators(allIndicators),
     [allIndicators]
   )
+
+  const baseDisplayPrice = discountedPrice(prices.single, promoResult)
+  const comboDisplayPrice = discountedPrice(prices.combo, promoResult)
+  const hasDiscount = Boolean(promoResult?.valid && !promoResult.free && promoResult.discount_percent)
+
+  /**
+   * THE payment entry point — used by the card CTA, the sample-report modal and
+   * the sticky mobile button alike. Keeping one function is the fix for
+   * bug 05d7a9c638: the sticky button had its own copy that dropped the promo
+   * code, charged the list price and fired no goal.
+   */
+  const triggerPay = () => {
+    if (abEmailBeforePay && !prepayEmailValid) {
+      document.getElementById("paywall-block")?.scrollIntoView({ behavior: "smooth", block: "center" })
+      setTimeout(() => document.getElementById("paywall-email")?.focus(), 400)
+      return
+    }
+    const emailArg = abEmailBeforePay ? prepayEmail.trim() : undefined
+    const tags = {
+      price: abPriceV1 === "test" ? "test" : "control",
+      cta: abCtaV1 === "test" ? "test" : "control",
+      premium: premiumTest ? "test" : "control",
+      bump: bumpTest ? "test" : "control",
+      pack: packTest ? "test" : "control",
+    }
+    if (withAbonement) {
+      ymGoal("click_pay_abonement", tags)
+      onPay(undefined, false, false, true, emailArg)
+    } else if (withThreeReports) {
+      ymGoal("click_pay_five_reports", tags)
+      onPay(undefined, false, true, false, emailArg)
+    } else {
+      ymGoal("click_get_report", { ...tags, tier: withChat ? "combo" : "single" })
+      onPay(hasDiscount ? promoCode.trim() : undefined, withChat, false, false, emailArg)
+    }
+  }
+
+  // 100% code (or a pack credit): the report is claimed with an email inside the
+  // card, not by paying. The sticky button takes the user there instead of
+  // charging full price for something they already own.
+  const stickyPay = () => {
+    if (promoResult?.free) {
+      document.getElementById("paywall-block")?.scrollIntoView({ behavior: "smooth", block: "center" })
+      setTimeout(() => document.getElementById("free-promo-email")?.focus(), 400)
+      return
+    }
+    triggerPay()
+  }
 
   return (
     <div className="mx-auto w-full max-w-3xl px-4 pb-20 pt-8">
@@ -1761,7 +1846,15 @@ export function PaywallStep({ onPay, onPromo, loading, preview, abEmailBeforePay
         transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
         className="text-center"
       >
-        {skipPreview ? (
+        {previewFailed ? (
+          <>
+            <h2 className="text-2xl font-bold text-foreground sm:text-3xl">Ваш анализ загружен</h2>
+            <p className="mt-2 text-sm text-muted-foreground">
+              Предварительный разбор показать не получилось, но файл принят — полный отчёт сделаем после оплаты.
+              Если файл загрузился не полностью, можно <a href="/" className="underline decoration-dotted underline-offset-4 hover:text-primary">загрузить его ещё раз</a>.
+            </p>
+          </>
+        ) : hidePreview ? (
           <>
             <h2 className="text-2xl font-bold text-foreground sm:text-3xl">Ваш анализ загружен</h2>
             <p className="mt-2 text-sm text-muted-foreground">Готов к расшифровке. Для продолжения выберите тип отчёта.</p>
@@ -1778,8 +1871,9 @@ export function PaywallStep({ onPay, onPromo, loading, preview, abEmailBeforePay
         )}
       </motion.div>
 
-      {/* ── Preview blocks (control arm only — hidden in no-freemium test) ── */}
-      {!skipPreview && (
+      {/* ── Preview blocks (control arm only — hidden in no-freemium test and
+          whenever the light analysis produced nothing) ── */}
+      {!hidePreview && (
         <>
           {/* ── 1. Emotional summary ── */}
           <div className="mt-6">
@@ -1845,9 +1939,11 @@ export function PaywallStep({ onPay, onPromo, loading, preview, abEmailBeforePay
         <InlinePaywall
           promoVisible={promoVisible} setPromoVisible={setPromoVisible}
           promoCode={promoCode} setPromoCode={setPromoCode} loading={loading}
+          promoResult={promoResult} setPromoResult={setPromoResult}
+          triggerPay={triggerPay}
           abnormalIndicators={abnormalIndicators} totalCount={totalCount}
           outOfRangeCount={outOfRangeCount}
-          onPay={onPay} onPromo={onPromo}
+          onPromo={onPromo}
           withChat={withChat} setWithChat={setWithChat}
           withThreeReports={withThreeReports} setWithThreeReports={setWithThreeReports}
           withAbonement={withAbonement} setWithAbonement={setWithAbonement}
@@ -1887,26 +1983,15 @@ export function PaywallStep({ onPay, onPromo, loading, preview, abEmailBeforePay
           instead scroll the user up to the paywall block and focus the input.
           For group A this branch is unreachable (abEmailBeforePay=false). */}
       <BottomCTA
-        onPay={() => {
-          if (abEmailBeforePay && !prepayEmailValid) {
-            document.getElementById("paywall-block")?.scrollIntoView({ behavior: "smooth", block: "center" })
-            setTimeout(() => document.getElementById("paywall-email")?.focus(), 400)
-            return
-          }
-          const emailArg = abEmailBeforePay ? prepayEmail.trim() : undefined
-          if (withAbonement) {
-            onPay(undefined, false, false, true, emailArg)
-          } else if (withThreeReports) {
-            onPay(undefined, false, true, false, emailArg)
-          } else {
-            onPay(undefined, withChat, false, false, emailArg)
-          }
-        }}
+        onPay={stickyPay}
         loading={loading}
         withChat={withChat}
         withThreeReports={withThreeReports}
         withAbonement={withAbonement}
         prices={prices}
+        singlePrice={baseDisplayPrice}
+        comboPrice={comboDisplayPrice}
+        freePromo={Boolean(promoResult?.free)}
         abCtaV1={abCtaV1}
         outOfRangeCount={outOfRangeCount}
         premiumTest={premiumTest}

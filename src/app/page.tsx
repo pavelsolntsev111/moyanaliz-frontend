@@ -7,11 +7,11 @@ import { takePendingUpload } from "@/lib/pending-upload";
 import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
 import { UploadStep } from "@/components/steps/upload-step";
+import { PaidOrderBanner, rememberPendingOrder } from "@/components/paid-order-banner";
 import { AnalyzingStep } from "@/components/steps/analyzing-step";
 import { PaywallStep } from "@/components/steps/paywall-step";
 import { uploadFile, createPayment, applyPromo, markExampleOpened, type PriceBundle, type UploadResponse } from "@/lib/api";
 import { captureAttribution } from "@/lib/attribution";
-import { useRouter } from "next/navigation";
 
 // Fallback prices: only used while /upload is still in flight or if the
 // backend response is missing `prices` (old build during a partial deploy).
@@ -24,7 +24,6 @@ const FALLBACK_PRICES: PriceBundle = {
 };
 
 export default function HomePage() {
-  const router = useRouter();
   const [step, setStep] = useState<AppStep>("upload");
 
   useEffect(() => {
@@ -260,17 +259,20 @@ export default function HomePage() {
       }
       try {
         const res = await createPayment(oid, promoCode, withChat, withThreeReports, withAbonement, email);
-        if (res.redirect_url.startsWith("http")) {
-          window.location.href = res.redirect_url;
-        } else {
-          router.push(res.redirect_url);
-        }
+        // Запоминаем заказ ДО ухода на оплату: назад в эту вкладку клиент
+        // может и не вернуться, а почту мы ещё не спрашивали (баг 98ef32b087).
+        rememberPendingOrder(oid);
+        // ⚠️ Жёсткий переход и на относительный /result/{id}: Метрика
+        // инициализируется один раз за загрузку страницы, и SPA-переход унёс бы
+        // в отчёт уже включённый вебвизор — то есть запись DOM с содержимым
+        // анализа (баг 9e3084944a, см. analytics.tsx).
+        window.location.assign(res.redirect_url);
       } catch (e) {
         setError(e instanceof Error ? e.message : "Ошибка создания платежа");
         setPayLoading(false);
       }
     },
-    [ensureOrderId, router, abEmailBeforePay, abPriceV1, abCtaV1, abSkipPreview]
+    [ensureOrderId, abEmailBeforePay, abPriceV1, abCtaV1, abSkipPreview]
   );
 
   // A/B ab_example_v1: the sample-report modal was opened. Records it server-side
@@ -297,11 +299,8 @@ export default function HomePage() {
       }
       try {
         const res = await applyPromo(oid, email, promoCode, withChat);
-        if (res.redirect_url.startsWith("http")) {
-          window.location.href = res.redirect_url;
-        } else {
-          router.push(res.redirect_url);
-        }
+        // Жёсткий переход — см. комментарий в handlePay выше (вебвизор).
+        window.location.assign(res.redirect_url);
       } catch (e) {
         setError(
           e instanceof Error ? e.message : "Ошибка применения промокода"
@@ -309,7 +308,7 @@ export default function HomePage() {
         setPayLoading(false);
       }
     },
-    [ensureOrderId, router]
+    [ensureOrderId]
   );
 
   return (
@@ -331,7 +330,14 @@ export default function HomePage() {
           </div>
         )}
 
-        {step === "upload" && <UploadStep onFileSelected={handleFileSelected} />}
+        {step === "upload" && (
+          <>
+            {/* Оплаченный, но не забранный отчёт — единственная зацепка,
+                оставшаяся на устройстве клиента (баг 98ef32b087). */}
+            <PaidOrderBanner />
+            <UploadStep onFileSelected={handleFileSelected} />
+          </>
+        )}
 
         {step === "analyzing" && (
           <AnalyzingStep

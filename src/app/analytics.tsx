@@ -19,9 +19,27 @@ import { captureAttribution, captureEntryPage } from "@/lib/attribution";
  */
 const EXCLUDED_PREFIXES = ["/posev-demo"];
 
+/**
+ * Пути, где вебвизор ОБЯЗАН быть выключен (баг 9e3084944a).
+ *
+ * ⚠️ Возражение выше касалось демо-контура, где данных пациента нет вообще, —
+ * а на основном продукте они настоящие: на /result/{orderId} отрисован разбор
+ * анализа живого платящего клиента (показатели, значения, формулировки,
+ * лаборатория), на /chat/* и /ai-chat/* — переписка о его здоровье. Запись DOM
+ * означает передачу содержимого медицинского документа третьему лицу.
+ *
+ * Счётчик здесь НЕ выключается целиком (в отличие от демо): цели нужны, а
+ * `webvisor:false` убирает ровно запись сессии. Инициализация происходит один
+ * раз за загрузку страницы, поэтому значение берётся от страницы ВХОДА — и
+ * поэтому переходы в эти разделы сделаны жёсткими (page.tsx, ConsultComposer):
+ * SPA-переход унёс бы в раздел уже включённый вебвизор.
+ */
+const NO_WEBVISOR_PREFIXES = ["/result", "/chat", "/ai-chat"];
+
 export default function Analytics() {
   const pathname = usePathname();
   const excluded = !!pathname && EXCLUDED_PREFIXES.some((p) => pathname.startsWith(p));
+  const webvisor = !(pathname && NO_WEBVISOR_PREFIXES.some((p) => pathname === p || pathname.startsWith(p + "/")));
 
   // Снимок рекламной метки и страницы входа при ЛЮБОМ визите, а не только на «/».
   // Раньше captureAttribution() звался лишь из главной, поэтому переход из
@@ -61,7 +79,7 @@ export default function Analytics() {
               if (/(^|\\.)(yookassa|yoomoney|qiwi|sberbank|tinkoff)\\.[a-z]+$/.test(_ymHost)) { _ymRef = ''; }
             }
           } catch (e) {}
-          ym(108175626,'init',{ssr:true,webvisor:true,clickmap:true,ecommerce:"dataLayer",referrer:_ymRef,url:location.href,accurateTrackBounce:true,trackLinks:true});
+          ym(108175626,'init',{ssr:true,webvisor:${webvisor},clickmap:${webvisor},ecommerce:"dataLayer",referrer:_ymRef,url:location.href,accurateTrackBounce:true,trackLinks:true});
         `}</Script>
       <noscript>
         <div>

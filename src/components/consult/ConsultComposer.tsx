@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
 import { ArrowRight, Loader2, MessageCircle } from "lucide-react";
 
 import { CONSULT_TOKEN_KEY, startConsult } from "@/lib/consult-api";
@@ -39,7 +38,6 @@ export default function ConsultComposer({
   packPrice,
   packQuestions,
 }: ConsultComposerProps) {
-  const router = useRouter();
   const [value, setValue] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -98,7 +96,10 @@ export default function ConsultComposer({
       } catch {
         /* private mode: the chat page still opens, user re-types once */
       }
-      router.push(`/ai-chat/${token}`);
+      // ⚠️ Жёсткий переход, не router.push: Метрика инициализируется один раз за
+      // загрузку, и SPA-переход унёс бы в чат о здоровье уже включённый вебвизор
+      // — запись DOM переписки (баг 9e3084944a, см. analytics.tsx).
+      window.location.assign(`/ai-chat/${token}`);
     } catch (e) {
       setError((e as Error).message);
       setBusy(false);
