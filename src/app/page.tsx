@@ -81,6 +81,7 @@ export default function HomePage() {
   const [abPriceV3, setAbPriceV3] = useState<string | null>(null);
   // A/B segmented paywall. Arm is "control"/"test"; what it does depends on the
   // frozen segment ("a" 0 откл → new copy, "b" 1-4 → nothing, "c" 5+ → 399/449).
+  const [abTiersV1, setAbTiersV1] = useState<string | null>(null);
   const [abSegmentV1, setAbSegmentV1] = useState<string | null>(null);
   const [segmentBucket, setSegmentBucket] = useState<string | null>(null);
   const [prices, setPrices] = useState<PriceBundle>(FALLBACK_PRICES);
@@ -159,6 +160,7 @@ export default function HomePage() {
         setAbSaleV1(res.ab_sale_v1 ?? null);
         setAbPriceV2(res.ab_price_v2 ?? null);
         setAbPriceV3(res.ab_price_v3 ?? null);
+        setAbTiersV1(res.ab_tiers_v1 ?? null);
         setAbSegmentV1(res.ab_segment_v1 ?? null);
         setSegmentBucket(res.segment_bucket ?? null);
         if (res.prices) setPrices(res.prices);
@@ -189,6 +191,7 @@ export default function HomePage() {
       const saleGroup = res.ab_sale_v1 ?? null;
       const priceV2Group = res.ab_price_v2 ?? null;
       const priceV3Group = res.ab_price_v3 ?? null;
+      const tiersGroup = res.ab_tiers_v1 ?? null;
       const segGroup = res.ab_segment_v1 ?? null;
       const segBucket = res.segment_bucket ?? null;
       setAbEmailBeforePay(ab);
@@ -203,6 +206,7 @@ export default function HomePage() {
       setAbSaleV1(saleGroup);
       setAbPriceV2(priceV2Group);
       setAbPriceV3(priceV3Group);
+      setAbTiersV1(tiersGroup);
       setAbSegmentV1(segGroup);
       setSegmentBucket(segBucket);
       if (res.prices) setPrices(res.prices);
@@ -365,6 +369,9 @@ export default function HomePage() {
             exampleTest={abExampleV1 === "test"}
             onExampleOpen={handleExampleOpen}
             saleTest={abSaleV1 === "test"}
+            // ab_tiers_v1: тестовое плечо показывает три тарифа вместо четырёх
+            // (без «10 отчётов»). Цены в обоих плечах одинаковые.
+            tiersTest={abTiersV1 === "test"}
             // ab_segment_v1: new copy only for bucket A's test arm. Bucket C's
             // price change rides in via `prices`, so it needs no prop here.
             segmentCopyTest={abSegmentV1 === "test" && segmentBucket === "a"}

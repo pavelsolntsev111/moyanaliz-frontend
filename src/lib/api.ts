@@ -76,6 +76,9 @@ export interface UploadResponse {
   // A/B test ab_price_v3: "control" | "test" | null. "test" → LOWER ladder
   // (single 199 / combo 299 / 5-pack 499 / 10-pack 699). CLOSED — pinned control.
   ab_price_v3?: string | null;
+  // A/B test ab_tiers_v1: "control" | "test" | null. "test" → селектор без
+  // карточки «10 отчётов» (три тарифа вместо четырёх). Цены не меняет.
+  ab_tiers_v1?: string | null;
   // A/B test ab_segment_v1: "control" | "test" | null. What "test" does depends on
   // segment_bucket below (A → new copy, B → nothing, C → 399/449 via `prices`).
   ab_segment_v1?: string | null;

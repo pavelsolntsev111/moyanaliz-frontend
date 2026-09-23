@@ -888,7 +888,7 @@ function InlinePaywall({
   withAbonement, setWithAbonement,
   abEmailBeforePay, prepayEmail, setPrepayEmail,
   prices, abPriceV1, abCtaV1, premiumTest, bumpTest, packTest, exampleTest, onExampleOpen, saleTest,
-  segmentCopyTest,
+  segmentCopyTest, tiersTest,
 }: {
   promoVisible: boolean
   setPromoVisible: (v: boolean) => void
@@ -950,6 +950,8 @@ function InlinePaywall({
   saleTest?: boolean
   // ab_segment_v1 bucket-A test arm → healthy-result copy (price unchanged).
   segmentCopyTest?: boolean
+  // ab_tiers_v1=test → без карточки «10 отчётов» (три тарифа вместо четырёх).
+  tiersTest?: boolean
 }) {
   const priceTag = abPriceV1 === "test" ? "test" : "control"
   const ctaTag = abCtaV1 === "test" ? "test" : "control"
@@ -1125,7 +1127,7 @@ function InlinePaywall({
             <button
               onClick={() => { if (!bumpTest) setWithChat(false); setWithThreeReports(false); setWithAbonement(false) }}
               disabled={loading}
-              className={`relative flex w-full min-h-[56px] items-center gap-3 rounded-xl border-2 p-3 text-left transition-colors ${
+              className={`relative flex w-full min-h-[72px] items-center gap-3 rounded-xl border-2 p-3 text-left transition-colors ${
                 (bumpTest || !withChat) && !withThreeReports && !withAbonement ? "border-primary bg-primary/5" : "border-border hover:border-muted-foreground/30"
               } ${loading ? "opacity-50 pointer-events-none" : ""}`}
             >
@@ -1137,8 +1139,9 @@ function InlinePaywall({
               }`}>
                 {(bumpTest || !withChat) && !withThreeReports && !withAbonement && <div className="h-2 w-2 rounded-full bg-primary" />}
               </div>
-              <div className="flex-1">
-                <p className="text-sm font-semibold text-foreground">Полный отчёт</p>
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-sm font-semibold text-foreground">Полный отчёт</p>
+                <p className="truncate text-xs text-muted-foreground mt-0.5">разбор всех показателей</p>
               </div>
               {sale && !promoResult?.free ? (
                 <span className="flex shrink-0 flex-col items-end leading-tight">
@@ -1156,7 +1159,7 @@ function InlinePaywall({
             <button
               onClick={() => { setWithChat(true); setWithThreeReports(false); setWithAbonement(false) }}
               disabled={loading}
-              className={`relative flex w-full min-h-[56px] items-center gap-3 rounded-xl border-2 p-3 text-left transition-colors ${
+              className={`relative flex w-full min-h-[72px] items-center gap-3 rounded-xl border-2 p-3 text-left transition-colors ${
                 withChat && !withThreeReports && !withAbonement ? "border-primary bg-primary/5" : "border-border hover:border-muted-foreground/30"
               } ${loading ? "opacity-50 pointer-events-none" : ""}`}
             >
@@ -1168,8 +1171,9 @@ function InlinePaywall({
               }`}>
                 {withChat && !withThreeReports && !withAbonement && <div className="h-2 w-2 rounded-full bg-primary" />}
               </div>
-              <div className="flex-1">
-                <p className="text-sm font-semibold text-foreground">Полный отчёт + консультация с AI-ассистентом</p>
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-sm font-semibold text-foreground">Отчёт + консультация ИИ</p>
+                <p className="truncate text-xs text-muted-foreground mt-0.5">10 вопросов по вашим анализам</p>
               </div>
               {sale && !promoResult?.free ? (
                 <span className="flex shrink-0 flex-col items-end leading-tight">
@@ -1187,7 +1191,7 @@ function InlinePaywall({
             <button
               onClick={() => { setWithThreeReports(true); setWithChat(false); setWithAbonement(false) }}
               disabled={loading}
-              className={`relative flex w-full min-h-[56px] items-center gap-3 rounded-xl border-2 p-3 text-left transition-colors ${
+              className={`relative flex w-full min-h-[72px] items-center gap-3 rounded-xl border-2 p-3 text-left transition-colors ${
                 withThreeReports ? "border-emerald-500 bg-emerald-50/50 dark:bg-emerald-950/20" : "border-border hover:border-muted-foreground/30"
               } ${loading ? "opacity-50 pointer-events-none" : ""}`}
             >
@@ -1201,9 +1205,9 @@ function InlinePaywall({
               }`}>
                 {withThreeReports && <div className="h-2 w-2 rounded-full bg-emerald-600" />}
               </div>
-              <div className="flex-1">
-                <p className="text-sm font-semibold text-foreground">{packTest ? "5 отчётов" : "3 отчёта"}</p>
-                <p className="text-xs text-muted-foreground mt-0.5">
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-sm font-semibold text-foreground">{packTest ? "5 отчётов" : "3 отчёта"}</p>
+                <p className="truncate text-xs text-muted-foreground mt-0.5">
                   {/* No «выгоднее всего» here: the 10-report card right below is
                       cheaper per report, so the superlative contradicted the next
                       line on the same screen (bug aeddd01d6e). */}
@@ -1215,10 +1219,16 @@ function InlinePaywall({
               <span className="text-sm font-bold shrink-0" style={{ color: "#16a34a" }}>{prices.three_reports} ₽</span>
             </button>
 
+            {/* ── A/B ab_tiers_v1: в тестовом плече карточки «10 отчётов» на экране
+                нет — проверяем, не мешают ли четыре тарифа выбрать. Цены не
+                меняются, withAbonement в этом плече остаётся false, поэтому и
+                подпись CTA, и списываемая сумма — тариф, который выбрал человек.
+                Десятка остаётся на лендинге /abonement и в выданных кодах. ── */}
+            {!tiersTest && (
             <button
               onClick={() => { setWithAbonement(true); setWithChat(false); setWithThreeReports(false) }}
               disabled={loading}
-              className={`relative flex w-full min-h-[56px] items-center gap-3 rounded-xl border-2 p-3 text-left transition-colors ${
+              className={`relative flex w-full min-h-[72px] items-center gap-3 rounded-xl border-2 p-3 text-left transition-colors ${
                 withAbonement ? "border-amber-500 bg-amber-50/60 dark:bg-amber-950/20" : "border-border hover:border-muted-foreground/30"
               } ${loading ? "opacity-50 pointer-events-none" : ""}`}
             >
@@ -1232,12 +1242,13 @@ function InlinePaywall({
               }`}>
                 {withAbonement && <div className="h-2 w-2 rounded-full bg-amber-600" />}
               </div>
-              <div className="flex-1">
-                <p className="text-sm font-semibold text-foreground">10 отчётов</p>
-                <p className="text-xs text-muted-foreground mt-0.5">ещё дешевле! можете использовать для других членов семьи, друзей или любимых</p>
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-sm font-semibold text-foreground">10 отчётов</p>
+                <p className="truncate text-xs text-muted-foreground mt-0.5">всего {Math.round(prices.abonement / 10)} ₽ за расшифровку</p>
               </div>
               <span className="text-sm font-bold shrink-0" style={{ color: "#d97706" }}>{prices.abonement} ₽</span>
             </button>
+            )}
           </div>
           )}
 
@@ -1742,9 +1753,13 @@ interface PaywallStepProps {
   // for a healthy result. Price is unchanged (299) — bucket C's price change
   // arrives via `prices`, not this flag.
   segmentCopyTest?: boolean
+  // A/B ab_tiers_v1 (с 23.09.2026). true → в селекторе НЕТ карточки «10 отчётов»:
+  // три тарифа вместо четырёх. Цены не трогает — это тест состава селектора.
+  // Десятка остаётся на лендинге /abonement и в уже выданных кодах.
+  tiersTest?: boolean
 }
 
-export function PaywallStep({ onPay, onPromo, loading, preview, abEmailBeforePay = false, prices, abPriceV1 = null, abCtaV1 = null, skipPreview = false, premiumTest = false, bumpTest = false, packTest = false, exampleTest = false, onExampleOpen, saleTest = false, segmentCopyTest = false }: PaywallStepProps) {
+export function PaywallStep({ onPay, onPromo, loading, preview, abEmailBeforePay = false, prices, abPriceV1 = null, abCtaV1 = null, skipPreview = false, premiumTest = false, bumpTest = false, packTest = false, exampleTest = false, onExampleOpen, saleTest = false, segmentCopyTest = false, tiersTest = false }: PaywallStepProps) {
   const [promoVisible, setPromoVisible] = useState(false)
   const [promoCode, setPromoCode] = useState("")
   const [promoResult, setPromoResult] = useState<PromoValidateResponse | null>(null)
@@ -1959,6 +1974,7 @@ export function PaywallStep({ onPay, onPromo, loading, preview, abEmailBeforePay
           onExampleOpen={onExampleOpen}
           saleTest={saleTest}
           segmentCopyTest={segmentCopyTest}
+          tiersTest={tiersTest}
         />
       </div>
 
