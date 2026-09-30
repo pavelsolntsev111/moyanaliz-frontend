@@ -4,6 +4,26 @@ const nextConfig: NextConfig = {
   output: "standalone",
   images: { unoptimized: true },
   typescript: { ignoreBuildErrors: true },
+  experimental: {
+    // The /api rewrite below is the browser's path to the backend (browser →
+    // this Timeweb origin → relay → Railway), so every upload of a lab form
+    // goes through Next's proxy. Two defaults break it:
+    //
+    // 1. Next clones every request body for the proxy and TRUNCATES it at
+    //    10 MiB. The backend then waits for bytes that never come (the
+    //    Content-Length is the original one), and the request dies on the proxy
+    //    timeout below. This, not a slow network, was the "30 s ceiling" that
+    //    moved browsers off this path on 17.08: 7 MB passed, 10.2 MB → 500 at
+    //    30.5 s. Re-measured 30.09.2026: 9.9 MB → 200, 10.7 MB → 500 at 50 s.
+    //    Uploads are capped at 20 MB by the backend; the headroom lets an
+    //    oversized file reach it and get the "max 20 MB" answer instead of a
+    //    hang. The clone is held in memory per request, so don't go wild.
+    proxyClientMaxBodySize: 32 * 1024 * 1024,
+    // 2. Proxied requests time out after 30 s by default, and the upload
+    //    handler runs the light LLM analysis before it answers (Haiku fallback
+    //    can take ~40 s). 300 s matches the relay's own read/write timeouts.
+    proxyTimeout: 300_000,
+  },
   async rewrites() {
     // UPSTREAM (Railway) must stay SEPARATE from NEXT_PUBLIC_API_URL (what the
     // browser calls). RKN IP-blocks the Railway edge (69.46.46.62) for part of
